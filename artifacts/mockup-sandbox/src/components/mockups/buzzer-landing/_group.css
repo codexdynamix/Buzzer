@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --font-editorial: 'Cormorant Garamond', serif;
+  --font-sans: 'Inter', sans-serif;
+  
+  --warm-bg: #FAF6F0;
+  --warm-surface: #F2EBE1;
+  --warm-primary: #8C4B33;
+  --warm-text: #2D2522;
+  --warm-muted: #5C524E;
+  --warm-accent: #D98859;
+  --warm-border: #E5DAC9;
+}

@@ -1,0 +1,297 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=DM+Serif+Display:ital@0;1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Swiss Bank Palette ─────────────────────────────────────────
+   1. Ivory   #FAFAF7  — primary background
+   2. Midnight #0F1923  — primary text / deepest darks
+   3. Gold    #C9A96E  — accent, CTAs, highlights
+   4. Stone   #E8E2D8  — borders, subtle surfaces
+   5. Slate   #6E7A8A  — secondary text / icons
+   6. Navy    #1A3353  — sidebar, dark panels, nav
+──────────────────────────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    /* Swiss palette mapped to Tailwind tokens */
+    --background:     42 33% 97%;     /* Ivory  #FAFAF7 */
+    --foreground:     210 35% 9%;     /* Midnight #0F1923 */
+
+    --card:           0 0% 100%;
+    --card-foreground: 210 35% 9%;
+
+    --popover:        0 0% 100%;
+    --popover-foreground: 210 35% 9%;
+
+    --primary:        215 50% 22%;    /* Navy  #1A3353 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary:      40 20% 91%;     /* Stone light */
+    --secondary-foreground: 210 35% 9%;
+
+    --muted:          40 18% 93%;
+    --muted-foreground: 210 12% 42%;  /* Slate #6E7A8A */
+
+    --accent:         38 55% 61%;     /* Gold  #C9A96E */
+    --accent-foreground: 210 35% 9%;
+
+    --destructive:    0 66% 47%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border:         38 22% 86%;     /* Stone #E8E2D8 */
+    --input:          38 22% 86%;
+    --ring:           215 50% 22%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar — deep navy */
+    --sidebar-background:  215 52% 17%;   /* #162C48 */
+    --sidebar-foreground:  40 30% 90%;
+    --sidebar-primary:     38 55% 61%;    /* Gold */
+    --sidebar-primary-foreground: 210 35% 9%;
+    --sidebar-accent:      215 50% 24%;
+    --sidebar-accent-foreground: 40 30% 90%;
+    --sidebar-border:      215 40% 24%;
+    --sidebar-ring:        38 55% 61%;
+
+    /* Swiss custom */
+    --swiss-ivory:    42 33% 97%;
+    --swiss-midnight: 210 35% 9%;
+    --swiss-gold:     38 55% 61%;
+    --swiss-stone:    38 22% 86%;
+    --swiss-slate:    210 12% 42%;
+    --swiss-navy:     215 50% 22%;
+  }
+
+  /* Keep dark class minimal — light-first design */
+  .dark {
+    --background:     215 35% 8%;
+    --foreground:     40 20% 94%;
+    --card:           215 35% 11%;
+    --card-foreground: 40 20% 94%;
+    --popover:        215 35% 11%;
+    --popover-foreground: 40 20% 94%;
+    --primary:        38 55% 61%;
+    --primary-foreground: 210 35% 9%;
+    --secondary:      215 35% 16%;
+    --secondary-foreground: 40 20% 90%;
+    --muted:          215 35% 16%;
+    --muted-foreground: 215 18% 55%;
+    --accent:         38 55% 61%;
+    --accent-foreground: 210 35% 9%;
+    --destructive:    0 66% 47%;
+    --destructive-foreground: 0 0% 100%;
+    --border:         215 30% 20%;
+    --input:          215 30% 20%;
+    --ring:           38 55% 61%;
+    --sidebar-background: 215 40% 7%;
+    --sidebar-foreground: 40 20% 90%;
+    --sidebar-primary: 38 55% 61%;
+    --sidebar-primary-foreground: 210 35% 9%;
+    --sidebar-accent: 215 35% 14%;
+    --sidebar-accent-foreground: 40 20% 90%;
+    --sidebar-border: 215 35% 16%;
+    --sidebar-ring: 38 55% 61%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+
+  html {
+    /* Prevent horizontal scroll/slide on all screens */
+    overflow-x: hidden;
+    /* Prevent over-scroll bounce that looks broken on mobile */
+    overscroll-behavior: none;
+  }
+
+  html, body {
+    @apply antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02","cv03","cv04","cv11","ss01";
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.025em;
+    @apply font-semibold;
+  }
+
+  p { @apply leading-relaxed; }
+
+  /* Root fills exactly the visual viewport — no extra blank space */
+  #root {
+    width: 100%;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  /* Prevent double-tap zoom and 300ms tap delay on interactive elements */
+  button, a, input, textarea, select {
+    touch-action: manipulation;
+  }
+}
+
+@layer components {
+  /* ── Swiss card — warm white, hairline border, subtle warmth ── */
+  .card-premium {
+    background: #ffffff;
+    border: 1px solid hsl(var(--swiss-stone));
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15,25,35,0.04), 0 4px 12px rgba(15,25,35,0.03);
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  }
+  .card-premium:hover {
+    box-shadow: 0 4px 16px rgba(15,25,35,0.09), 0 1px 4px rgba(15,25,35,0.05);
+    border-color: hsl(var(--swiss-gold) / 0.4);
+  }
+
+  /* ── Section layout ── */
+  .section-padding { @apply px-6 py-7 lg:px-8 lg:py-8; }
+  .section-header { @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7; }
+
+  /* ── Swiss chip ── */
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-150 cursor-pointer select-none;
+    letter-spacing: 0.01em;
+  }
+  .chip-default {
+    background: #ffffff;
+    border: 1px solid hsl(var(--swiss-stone));
+    color: hsl(var(--swiss-slate));
+  }
+  .chip-default:hover {
+    border-color: hsl(var(--swiss-navy) / 0.4);
+    color: hsl(var(--swiss-navy));
+  }
+  .chip-active {
+    background: hsl(var(--swiss-navy));
+    color: #ffffff;
+    border: 1px solid transparent;
+  }
+
+  /* ── Swiss button overrides ── */
+  .btn-swiss-primary {
+    background: hsl(var(--swiss-navy));
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: background 0.18s, box-shadow 0.18s;
+  }
+  .btn-swiss-primary:hover {
+    background: hsl(215 55% 18%);
+    box-shadow: 0 4px 14px rgba(26,51,83,0.3);
+  }
+
+  .btn-swiss-gold {
+    background: hsl(var(--swiss-gold));
+    color: hsl(var(--swiss-midnight));
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: background 0.18s, box-shadow 0.18s;
+  }
+  .btn-swiss-gold:hover {
+    background: hsl(38 60% 55%);
+    box-shadow: 0 4px 14px rgba(201,169,110,0.35);
+  }
+
+  /* ── App container ── */
+  .app-container { @apply max-w-7xl mx-auto px-4 sm:px-6 md:px-8; }
+
+  /* ── Legacy compat ── */
+  .glass-morphism { background: #ffffff; border: 1px solid hsl(var(--swiss-stone)); box-shadow: 0 1px 4px rgba(15,25,35,0.05); }
+  .neo-morphism { background: #ffffff; box-shadow: 0 1px 3px rgba(15,25,35,0.06), 0 4px 12px rgba(15,25,35,0.04); }
+
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .input-field {
+    @apply w-full rounded-lg border border-input bg-white px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
+  .button-base {
+    @apply inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background;
+  }
+
+  /* ── Swiss divider line ── */
+  .swiss-rule {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--swiss-stone)) 20%, hsl(var(--swiss-stone)) 80%, transparent);
+  }
+
+  /* ── Swiss gold accent bar ── */
+  .gold-accent {
+    width: 32px;
+    height: 3px;
+    background: hsl(var(--swiss-gold));
+    border-radius: 2px;
+  }
+
+  /* ── Empty state ── */
+  .empty-state-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: hsl(var(--swiss-stone) / 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  .theme-transition { @apply transition-colors duration-200; }
+
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--swiss-navy)), hsl(var(--swiss-gold)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-midnight { color: hsl(var(--swiss-midnight)); }
+  .text-gold { color: hsl(var(--swiss-gold)); }
+  .text-navy { color: hsl(var(--swiss-navy)); }
+  .text-swiss-slate { color: hsl(var(--swiss-slate)); }
+  .bg-ivory { background: hsl(var(--swiss-ivory)); }
+  .bg-navy { background: hsl(var(--swiss-navy)); }
+  .bg-gold { background: hsl(var(--swiss-gold)); }
+  .border-stone { border-color: hsl(var(--swiss-stone)); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
