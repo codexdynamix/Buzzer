@@ -220,6 +220,11 @@ export default function JobsSection() {
                         <span className="flex items-center gap-1 text-xs" style={{ color:'#6E7A8A' }}>
                           <MapPin size={12} />{job.remote ? 'Remote' : job.location}
                         </span>
+                        {(job.isSponsored || job.sponsored) && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                            Sponsored Ad
+                          </span>
+                        )}
                       </div>
                       <div className="mt-2">
                         <ListingAuthor listing={job} />

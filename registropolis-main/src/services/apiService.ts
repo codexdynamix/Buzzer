@@ -94,6 +94,11 @@ export const contactsAPI = {
 };
 
 export const businessesAPI = {
-  getBusinesses: (type?: string) => apiRequest(type ? `/businesses?type=${type}` : '/businesses', 'GET', undefined, false),
+  getBusinesses: (type?: string) => apiRequest(type && type !== 'All Categories' && type !== 'All' ? `/businesses?type=${encodeURIComponent(type)}` : '/businesses', 'GET', undefined, false),
+  getAdvertisements: () => apiRequest('/advertisements', 'GET', undefined, false),
+  getBusinessById: (id: string) => apiRequest(`/businesses/${encodeURIComponent(id)}`, 'GET', undefined, false),
   createBusiness: (businessData: any) => apiRequest('/businesses', 'POST', businessData),
+  updateBusiness: (id: string, data: any) => apiRequest(`/businesses/${encodeURIComponent(id)}`, 'PATCH', data),
+  deleteBusiness: (id: string) => apiRequest(`/businesses/${encodeURIComponent(id)}`, 'DELETE'),
+  toggleSponsor: (id: string) => apiRequest(`/businesses/${encodeURIComponent(id)}/sponsor`, 'PATCH'),
 };

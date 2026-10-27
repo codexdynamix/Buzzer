@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, LayoutGrid, X, MessageCircle, ShoppingBag, Briefcase,
-  Wrench, Building2, Truck, Calendar, LayoutList, Heart, Shield, Settings, LogOut, User, Play,
+  Wrench, Building2, Truck, Calendar, LayoutList, Heart, Shield, Settings, LogOut, User, Play, Megaphone,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNotifications } from '@/context/NotificationContext';
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { label: 'Real Estate', icon: Building2,     href: '/dashboard/real-estate' },
   { label: 'Transport',   icon: Truck,         href: '/dashboard/transport' },
   { label: 'Events',      icon: Calendar,      href: '/dashboard/events' },
+  { label: 'Business & Ads', icon: Megaphone,  href: '/dashboard/business' },
   { label: 'My Listings', icon: LayoutList,    href: '/dashboard/my-listings', badge: null },
   { label: 'Saved',       icon: Heart,          href: '/dashboard/saved',        badge: null },
 ];

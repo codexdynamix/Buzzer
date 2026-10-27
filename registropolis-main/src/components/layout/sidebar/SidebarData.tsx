@@ -13,6 +13,7 @@ import {
   Shield,
   BellRing,
   Play,
+  Megaphone,
 } from 'lucide-react';
 
 export const mainMenuItems = [
@@ -61,6 +62,11 @@ export const mainMenuItems = [
     title: 'Events',
     icon: Calendar,
     href: '/dashboard/events',
+  },
+  {
+    title: 'Business & Ads',
+    icon: Megaphone,
+    href: '/dashboard/business',
   },
   {
     title: 'My Listings',

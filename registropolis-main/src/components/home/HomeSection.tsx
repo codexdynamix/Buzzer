@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flame, MapPin, TrendingUp } from 'lucide-react';
+import { Flame, MapPin, TrendingUp, Sparkles, ChevronRight } from 'lucide-react';
 import StoriesStrip from '@/components/social/StoriesStrip';
 import { listingDetailPath } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useUserListings } from '@/context/UserListingsContext';
+import { businessesAPI } from '@/services/apiService';
 
 const SECTION_META: Record<string, { bg: string; text: string; label: string }> = {
   marketplace: { bg: '#FFF7ED', text: '#C2410C', label: 'Marketplace' },
@@ -39,6 +40,13 @@ export default function HomeSection() {
   const { user } = useAuth();
   const { getAllListings } = useUserListings();
   const [activeCategory, setActiveCategory] = useState('all');
+  const [sponsoredAds, setSponsoredAds] = useState<any[]>([]);
+
+  useEffect(() => {
+    businessesAPI.getAdvertisements()
+      .then(res => setSponsoredAds(res.advertisements || res.data || []))
+      .catch(() => {});
+  }, []);
 
   const listings = useMemo(
     () => getAllListings()
@@ -139,6 +147,52 @@ export default function HomeSection() {
           </p>
         )}
       </section>
+
+      {/* ── Dynamic Sponsored Advertisements (from Database) ── */}
+      {sponsoredAds.length > 0 && (
+        <div className="rounded-2xl p-5 border border-amber-200 bg-gradient-to-r from-amber-50/70 via-white to-amber-50/40">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-amber-600" />
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-900">Featured Community Advertisements</span>
+            </div>
+            <button
+              onClick={() => navigate('/dashboard/business')}
+              className="text-xs font-semibold text-amber-700 hover:text-amber-900 flex items-center gap-1 transition-colors"
+            >
+              All Advertisements <ChevronRight size={13} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {sponsoredAds.slice(0, 3).map((ad) => (
+              <div
+                key={ad.id}
+                onClick={() => navigate('/dashboard/business')}
+                className="cursor-pointer group flex gap-3 p-3 rounded-xl border border-amber-100 bg-white hover:border-amber-300 hover:shadow-sm transition-all"
+              >
+                <img
+                  src={ad.image}
+                  alt={ad.name}
+                  className="w-16 h-16 rounded-lg object-cover shrink-0 group-hover:scale-105 transition-transform"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-[#0F1923] truncate">{ad.name}</span>
+                    <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-800 shrink-0">AD</span>
+                  </div>
+                  <p className="text-[11px] text-amber-700 font-medium line-clamp-1 mt-0.5">
+                    {ad.adHeadline || ad.category}
+                  </p>
+                  <p className="text-[10px] text-[#6E7A8A] truncate mt-1">
+                    {ad.location}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {categories.length > 0 && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>

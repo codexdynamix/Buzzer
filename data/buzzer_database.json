@@ -1,0 +1,1356 @@
+{
+  "users": [
+    {
+      "id": "u_admin",
+      "email": "admin@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Admin User",
+      "role": "admin",
+      "profileImageUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      "bio": "Buzzer Platform Superadmin & City Coordinator",
+      "location": "Downtown Center",
+      "contactPhone": "+1 (555) 010-0001",
+      "createdAt": "2026-09-26T23:54:31.389Z"
+    },
+    {
+      "id": "u_mkt_1",
+      "email": "elena.vintage@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Elena Torres",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80",
+      "bio": "Mid-Century Furniture & Decor • Curator of authentic 1950s-1970s Danish and Italian interior pieces. Restored by hand with non-toxic natural oils.",
+      "location": "Arts Quarter, Studio 4B",
+      "contactPhone": "+1 (555) 201-0101",
+      "whatsapp": true,
+      "telegram": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_mkt_2",
+      "email": "marcus.tech@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Marcus Vance",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop&q=80",
+      "bio": "High-End Optics & Pro Cameras • Professional freelance cinematographer and gear enthusiast. All camera gear tested and cleaned meticulously.",
+      "location": "Tech District, Tower 2",
+      "contactPhone": "+1 (555) 201-0102",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_mkt_3",
+      "email": "maya.ceramics@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Maya Lin",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      "bio": "Artisan Stoneware & Tableware • Wheel-thrown ceramics with textured satin glazes. Bringing tactile joy and warmth to morning coffee rituals.",
+      "location": "Metro Center",
+      "contactPhone": "+1 (555) 201-0103",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_mkt_4",
+      "email": "julian.outdoor@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Julian Brooks",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+      "bio": "Gravel & Alpine Cycling Equipment • Endurance gravel cyclist and bike builder. Sourcing premium lightweight components and adventure rigs.",
+      "location": "Greenway Basin",
+      "contactPhone": "+1 (555) 201-0104",
+      "telegram": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_mkt_5",
+      "email": "chloe.sound@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Chloe Dupont",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80",
+      "bio": "Analog Audio & Vintage Vinyl • Audio engineer collecting 70s Japanese receivers, direct-drive turntables, and rare jazz pressings.",
+      "location": "Old Town Historic",
+      "contactPhone": "+1 (555) 201-0105",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_re_1",
+      "email": "liam.properties@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Liam O'Connor",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80",
+      "bio": "Historic Townhomes & Estates • Specializing in pre-war brownstones and architectural heritage residences across the old district.",
+      "location": "Historic Center",
+      "contactPhone": "+1 (555) 301-0201",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_re_2",
+      "email": "sophia.lofts@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Sophia Rossi",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80",
+      "bio": "Waterfront Penthouses & Lofts • Luxury residential leasing specialist with a passion for high ceilings, industrial finishes, and harbor views.",
+      "location": "Waterfront Marina",
+      "contactPhone": "+1 (555) 301-0202",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_re_3",
+      "email": "daniel.villas@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Daniel Kim",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80",
+      "bio": "Modern Hills Villas & Architecture • Connecting forward-thinking buyers with architectural masterpieces in the Highland Reserve foothills.",
+      "location": "Highland Reserve",
+      "contactPhone": "+1 (555) 301-0203",
+      "whatsapp": true,
+      "telegram": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_re_4",
+      "email": "clara.spaces@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Clara Moreau",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80",
+      "bio": "Live-Work & Creative Studios • Curating dynamic light-filled studios, maker lofts, and boutique commercial hubs for creative agencies.",
+      "location": "Arts District",
+      "contactPhone": "+1 (555) 301-0204",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_re_5",
+      "email": "oliver.urban@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Oliver Thorne",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+      "bio": "Scandinavian Urban Flats • Sustainable, energy-efficient city center apartments built with clean lines and natural light.",
+      "location": "Downtown Metro",
+      "contactPhone": "+1 (555) 301-0205",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_job_1",
+      "email": "rachel.talent@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Rachel Adams",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80",
+      "bio": "Fintech Engineering Lead (Aura Payments) • Head of People at Aura Payments. We build modern distributed payment rails for the global creative economy.",
+      "location": "Tech District",
+      "contactPhone": "+1 (555) 401-0301",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_job_2",
+      "email": "kevin.robotics@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Kevin Patel",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=200&auto=format&fit=crop&q=80",
+      "bio": "Robotics & AI Talent Lead (Kinetic) • Recruiting world-class controls, perception, and embedded systems engineers at Kinetic BioSystems.",
+      "location": "Innovation Park",
+      "contactPhone": "+1 (555) 401-0302",
+      "whatsapp": true,
+      "telegram": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_job_3",
+      "email": "tara.creative@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Tara Sterling",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=200&auto=format&fit=crop&q=80",
+      "bio": "Design & Agency Director (Vanguard) • Creative partner at Vanguard Atelier. Seeking visionary product designers and art directors.",
+      "location": "Design Quarter",
+      "contactPhone": "+1 (555) 401-0303",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_job_4",
+      "email": "amir.healthtech@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Amir Hosseini",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop&q=80",
+      "bio": "HealthTech HR Director (MedPulse AI) • Scaling clinical diagnostic ML teams at MedPulse AI. Helping doctors detect anomalies faster.",
+      "location": "BioMedical Center",
+      "contactPhone": "+1 (555) 401-0304",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_job_5",
+      "email": "zoe.greentech@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Zoe Lindqvist",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80",
+      "bio": "Clean Energy Talent (Nordic Energy) • Building teams to deploy decentralized microgrids and smart battery storage systems across the region.",
+      "location": "Eco District",
+      "contactPhone": "+1 (555) 401-0305",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_srv_1",
+      "email": "nathan.electric@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Nathan Cross",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop&q=80",
+      "bio": "Master Electrician & Smart Automation • Licensed Master Electrician with 14 years experience. EV home chargers, panel upgrades, Lutron lighting systems.",
+      "location": "Metro Wide",
+      "contactPhone": "+1 (555) 501-0401",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_srv_2",
+      "email": "isabella.design@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Isabella Santos",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=200&auto=format&fit=crop&q=80",
+      "bio": "Architectural Interior Styling • Award-winning interior architect offering full-space remodels, 3D spatial renders, and custom millwork styling.",
+      "location": "Design Quarter",
+      "contactPhone": "+1 (555) 501-0402",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_srv_3",
+      "email": "lucas.music@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Lucas Reinhardt",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80",
+      "bio": "Acoustic & Classical Guitar Mentor • Conservatory graduate offering 1-on-1 guitar mastery, harmonic theory, and DAW music production coaching.",
+      "location": "Conservatory Park",
+      "contactPhone": "+1 (555) 501-0403",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_srv_4",
+      "email": "mateo.plumbing@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Mateo Vargas",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+      "bio": "Precision Plumbing & Heat Pumps • Prompt, certified residential & commercial plumbing. Heat pump water heaters, leak detection, and pipe repairs.",
+      "location": "Westside Metro",
+      "contactPhone": "+1 (555) 501-0404",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_srv_5",
+      "email": "hannah.bikes@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Hannah Lind",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      "bio": "Mobile Bicycle Overhaul & Diagnostics • Mobile bike workshop van. We come directly to your home or office for complete drivetrain overhauls and tune-ups.",
+      "location": "Greenway Trails",
+      "contactPhone": "+1 (555) 501-0405",
+      "whatsapp": true,
+      "telegram": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_trn_1",
+      "email": "darius.chauffeur@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Darius Cole",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+      "bio": "Executive Mercedes S-Class Chauffeur • Punctual, discreet airport transfers, diplomatic escorts, and gala event transportation in a luxury Mercedes S-Class.",
+      "location": "International Airport & City",
+      "contactPhone": "+1 (555) 601-0501",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_trn_2",
+      "email": "emily.evshare@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Emily Zhang",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80",
+      "bio": "High-Performance EV Car Share • Porsche Taycan 4S enthusiast. Contactless mobile access, spotless interior, and complimentary fast-charging credits.",
+      "location": "Tech Corridor",
+      "contactPhone": "+1 (555) 601-0502",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_trn_3",
+      "email": "felix.camper@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Felix Baum",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80",
+      "bio": "Custom 4x4 Sprinter Adventure Van • Fully winterized custom camper van with induction kitchen, hot shower, solar power, and Starlink satellite internet.",
+      "location": "Foothills Depot",
+      "contactPhone": "+1 (555) 601-0503",
+      "whatsapp": true,
+      "telegram": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_trn_4",
+      "email": "samira.logistics@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Samira Al-Mansoor",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80",
+      "bio": "Heavy Logistics & Moving Vans • High-roof long wheelbase vans with hydraulic lift gate. Reliable furniture delivery, studio moves, and trade expo transport.",
+      "location": "Freight Zone Hub",
+      "contactPhone": "+1 (555) 601-0504",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_trn_5",
+      "email": "tyler.moto@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Tyler Vance",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop&q=80",
+      "bio": "BMW Adventure Touring Motorcycle • Offering fully equipped BMW R 1250 GS motorcycles with GPS, aluminum hard panniers, and canyon routes guidebooks.",
+      "location": "Mountain Gateway",
+      "contactPhone": "+1 (555) 601-0505",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_evt_1",
+      "email": "gabriel.festivals@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Gabriel Silva",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=200&auto=format&fit=crop&q=80",
+      "bio": "Waterfront Acoustic Sessions Curator • Producer of intimate sunset concerts, independent acoustic showcases, and harbor listening sessions.",
+      "location": "Waterfront Marina",
+      "contactPhone": "+1 (555) 701-0601",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_evt_2",
+      "email": "nina.tasting@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Nina Kostas",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      "bio": "Artisan Food & Natural Wine Festival Director • Connecting local organic vintners, sourdough bakers, and artisanal cheesemakers for seasonal open-air tastings.",
+      "location": "Old Mill Courtyard",
+      "contactPhone": "+1 (555) 701-0602",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_evt_3",
+      "email": "ethan.hackathons@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Ethan Wright",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+      "bio": "AI Autonomous Systems Hackathon Host • Organizing 48-hour builder sprints, hackathons, and hardware-software demos with leading industry mentors.",
+      "location": "Innovation Foundry",
+      "contactPhone": "+1 (555) 701-0603",
+      "whatsapp": true,
+      "telegram": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_evt_4",
+      "email": "leila.wellness@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Leila Jamison",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80",
+      "bio": "Skyline Sound Baths & Meditation • Mindfulness practitioner leading restorative Tibetan sound bowl meditations and sunset breathwork on panoramic rooftops.",
+      "location": "Skyline Terrace",
+      "contactPhone": "+1 (555) 701-0604",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    },
+    {
+      "id": "u_evt_5",
+      "email": "victor.artfest@buzzer.com",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
+      "name": "Victor Vance",
+      "role": "user",
+      "profileImageUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80",
+      "bio": "Contemporary Light Art & Sculpture Walk • Art director curating public nocturnal light exhibitions, spatial projections, and kinetic sculptures in the botanical gardens.",
+      "location": "Civic Sculpture Gardens",
+      "contactPhone": "+1 (555) 701-0605",
+      "whatsapp": true,
+      "createdAt": "2026-10-11T23:54:31.389Z"
+    }
+  ],
+  "listings": [
+    {
+      "id": "lst_mkt_1",
+      "section": "marketplace",
+      "userId": "u_mkt_1",
+      "status": "active",
+      "createdAt": "2026-10-25T23:54:31.266Z",
+      "data": {
+        "id": "lst_mkt_1",
+        "title": "Mid-Century Teak Sideboard & Credenza",
+        "price": 680,
+        "originalPrice": 1100,
+        "condition": "Excellent",
+        "category": "Home & Living",
+        "location": "Arts Quarter",
+        "image": "https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=600&auto=format&fit=crop&q=80",
+        "description": "Solid teak Danish credenza with tambour sliding doors and sculpted brass pulls. Restored with natural Danish oil.",
+        "seller": "Elena Torres",
+        "sellerRating": 4.95,
+        "verified": true
+      }
+    },
+    {
+      "id": "lst_mkt_2",
+      "section": "marketplace",
+      "userId": "u_mkt_2",
+      "status": "active",
+      "createdAt": "2026-10-24T23:54:31.266Z",
+      "data": {
+        "id": "lst_mkt_2",
+        "title": "Sony Alpha a7 IV Mirrorless Camera Body",
+        "price": 1850,
+        "originalPrice": 2499,
+        "condition": "Like New",
+        "category": "Electronics",
+        "location": "Tech District",
+        "image": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&auto=format&fit=crop&q=80",
+        "description": "Shutter count 2,410. Pristine sensor, dual slots, includes two OEM batteries, dual charger, and cage.",
+        "seller": "Marcus Vance",
+        "sellerRating": 5,
+        "verified": true
+      }
+    },
+    {
+      "id": "lst_mkt_3",
+      "section": "marketplace",
+      "userId": "u_mkt_3",
+      "status": "active",
+      "createdAt": "2026-10-23T23:54:31.266Z",
+      "data": {
+        "id": "lst_mkt_3",
+        "title": "Wheel-Thrown Ceramic Pour-Over & Carafe Set",
+        "price": 55,
+        "originalPrice": 75,
+        "condition": "New",
+        "category": "Home & Living",
+        "location": "Metro Center",
+        "image": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80",
+        "description": "Handcrafted stoneware dripper, 600ml carafe, and two matching ribbed cups with satin ash glaze.",
+        "seller": "Maya Lin",
+        "sellerRating": 4.9,
+        "verified": true
+      }
+    },
+    {
+      "id": "lst_mkt_4",
+      "section": "marketplace",
+      "userId": "u_mkt_4",
+      "status": "active",
+      "createdAt": "2026-10-22T23:54:31.266Z",
+      "data": {
+        "id": "lst_mkt_4",
+        "title": "Specialized Diverge Gravel Bike (Carbon, 54cm)",
+        "price": 1150,
+        "originalPrice": 2100,
+        "condition": "Excellent",
+        "category": "Sports",
+        "location": "Greenway Basin",
+        "image": "https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=600&auto=format&fit=crop&q=80",
+        "description": "Shimano GRX 1x11 groupset, tubeless Pathfinder Pro 42mm tires, Future Shock 2.0. Recently tuned.",
+        "seller": "Julian Brooks",
+        "sellerRating": 4.88,
+        "verified": true
+      }
+    },
+    {
+      "id": "lst_mkt_5",
+      "section": "marketplace",
+      "userId": "u_mkt_5",
+      "status": "active",
+      "createdAt": "2026-10-21T23:54:31.266Z",
+      "data": {
+        "id": "lst_mkt_5",
+        "title": "Vintage Marantz 2270 Stereo Receiver",
+        "price": 890,
+        "originalPrice": 1250,
+        "condition": "Excellent",
+        "category": "Electronics",
+        "location": "Old Town Historic",
+        "image": "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=600&auto=format&fit=crop&q=80",
+        "description": "Recapped, calibrated, original walnut wooden cabinet, blue backlit dial. Superb warm analog sound.",
+        "seller": "Chloe Dupont",
+        "sellerRating": 4.97,
+        "verified": true
+      }
+    },
+    {
+      "id": "lst_re_1",
+      "section": "real-estate",
+      "userId": "u_re_1",
+      "status": "active",
+      "createdAt": "2026-10-24T23:54:31.266Z",
+      "data": {
+        "id": "lst_re_1",
+        "title": "Historic Brick Townhouse with Private Garden",
+        "price": 845000,
+        "priceDisplay": "$845,000",
+        "mode": "Buy",
+        "type": "House",
+        "beds": 3,
+        "baths": 2,
+        "sqft": 2200,
+        "location": "Historic Center",
+        "address": "42 Cobblestone Lane, Old Town",
+        "image": "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&auto=format&fit=crop&q=80",
+        "description": "Restored 19th-century facade, exposed brick arches, herringbone oak floors, and secluded wisteria courtyard.",
+        "seller": "Liam O'Connor",
+        "phone": "+1 (555) 301-0201"
+      }
+    },
+    {
+      "id": "lst_re_2",
+      "section": "real-estate",
+      "userId": "u_re_2",
+      "status": "active",
+      "createdAt": "2026-10-23T23:54:31.266Z",
+      "data": {
+        "id": "lst_re_2",
+        "title": "Sun-Drenched Penthouse Loft with Harbor Terrace",
+        "price": 3400,
+        "priceDisplay": "$3,400/mo",
+        "mode": "Rent",
+        "type": "Apartment",
+        "beds": 2,
+        "baths": 2,
+        "sqft": 1450,
+        "location": "Waterfront Marina",
+        "address": "88 Marina Boulevard, Penthouse 12",
+        "image": "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&auto=format&fit=crop&q=80",
+        "description": "Double-height ceilings, floor-to-ceiling glass looking over the yacht basin, private 400 sqft rooftop deck.",
+        "seller": "Sophia Rossi",
+        "phone": "+1 (555) 301-0202"
+      }
+    },
+    {
+      "id": "lst_re_3",
+      "section": "real-estate",
+      "userId": "u_re_3",
+      "status": "active",
+      "createdAt": "2026-10-22T23:54:31.266Z",
+      "data": {
+        "id": "lst_re_3",
+        "title": "Architectural Forest Villa with Infinity Pool",
+        "price": 1650000,
+        "priceDisplay": "$1.7M",
+        "mode": "Buy",
+        "type": "House",
+        "beds": 4,
+        "baths": 3,
+        "sqft": 3800,
+        "location": "Highland Reserve",
+        "address": "14 Pinewood Ridge Way",
+        "image": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&auto=format&fit=crop&q=80",
+        "description": "Cantilevered concrete and cedar residence integrated into the hillside forest. Geothermal heating, 3-car garage.",
+        "seller": "Daniel Kim",
+        "phone": "+1 (555) 301-0203"
+      }
+    },
+    {
+      "id": "lst_re_4",
+      "section": "real-estate",
+      "userId": "u_re_4",
+      "status": "active",
+      "createdAt": "2026-10-21T23:54:31.266Z",
+      "data": {
+        "id": "lst_re_4",
+        "title": "Turnkey Live-Work Creative Studio & Office",
+        "price": 2900,
+        "priceDisplay": "$2,900/mo",
+        "mode": "Rent",
+        "type": "Commercial",
+        "beds": 1,
+        "baths": 1,
+        "sqft": 1100,
+        "location": "Arts District",
+        "address": "302 Foundry Way, Studio 2",
+        "image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&auto=format&fit=crop&q=80",
+        "description": "Zoned for live/work creative studio. Polished concrete, freight elevator, sound insulation, and meeting nook.",
+        "seller": "Clara Moreau",
+        "phone": "+1 (555) 301-0204"
+      }
+    },
+    {
+      "id": "lst_re_5",
+      "section": "real-estate",
+      "userId": "u_re_5",
+      "status": "active",
+      "createdAt": "2026-10-20T23:54:31.266Z",
+      "data": {
+        "id": "lst_re_5",
+        "title": "Minimalist Scandinavian City Center Flat",
+        "price": 2100,
+        "priceDisplay": "$2,100/mo",
+        "mode": "Rent",
+        "type": "Apartment",
+        "beds": 1,
+        "baths": 1,
+        "sqft": 750,
+        "location": "Downtown Metro",
+        "address": "15 Nordic Square, Apt 6C",
+        "image": "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&auto=format&fit=crop&q=80",
+        "description": "Warm oak floors, integrated Miele appliances, triple-glazed windows, private gym, and bike storage room.",
+        "seller": "Oliver Thorne",
+        "phone": "+1 (555) 301-0205"
+      }
+    },
+    {
+      "id": "lst_job_1",
+      "section": "job",
+      "userId": "u_job_1",
+      "status": "active",
+      "createdAt": "2026-10-25T23:54:31.266Z",
+      "data": {
+        "id": "lst_job_1",
+        "title": "Staff Frontend Infrastructure Engineer",
+        "company": "Aura Payments",
+        "salary": "$165k - $195k",
+        "type": "Full-time",
+        "location": "Tech District / Hybrid",
+        "description": "Scale our next-gen merchant portal and design system architecture. React, TypeScript, high-throughput WebSockets.",
+        "seller": "Rachel Adams",
+        "isSponsored": true
+      }
+    },
+    {
+      "id": "lst_job_2",
+      "section": "job",
+      "userId": "u_job_2",
+      "status": "active",
+      "createdAt": "2026-10-24T23:54:31.266Z",
+      "data": {
+        "id": "lst_job_2",
+        "title": "Autonomous Robotics Systems Architect",
+        "company": "Kinetic BioSystems",
+        "salary": "$180k - $220k",
+        "type": "Full-time",
+        "location": "Innovation Park",
+        "description": "Lead robotics software integration for precision laboratory automation. C++, ROS2, Linux RT kernel, computer vision.",
+        "seller": "Kevin Patel"
+      }
+    },
+    {
+      "id": "lst_job_3",
+      "section": "job",
+      "userId": "u_job_3",
+      "status": "active",
+      "createdAt": "2026-10-23T23:54:31.266Z",
+      "data": {
+        "id": "lst_job_3",
+        "title": "Principal Brand & Product Design Director",
+        "company": "Vanguard Atelier",
+        "salary": "$130k - $155k",
+        "type": "Full-time",
+        "location": "Design Quarter",
+        "description": "Direct high-impact digital experiences and visual design for innovative luxury and civic technology brands.",
+        "seller": "Tara Sterling"
+      }
+    },
+    {
+      "id": "lst_job_4",
+      "section": "job",
+      "userId": "u_job_4",
+      "status": "active",
+      "createdAt": "2026-10-22T23:54:31.266Z",
+      "data": {
+        "id": "lst_job_4",
+        "title": "Senior Machine Learning Engineer (Diagnostics)",
+        "company": "MedPulse AI",
+        "salary": "$150k - $185k",
+        "type": "Full-time",
+        "location": "BioMedical Center",
+        "description": "Train and optimize transformer models on multi-modal medical imaging data. PyTorch, Triton, CUDA optimization.",
+        "seller": "Amir Hosseini"
+      }
+    },
+    {
+      "id": "lst_job_5",
+      "section": "job",
+      "userId": "u_job_5",
+      "status": "active",
+      "createdAt": "2026-10-21T23:54:31.266Z",
+      "data": {
+        "id": "lst_job_5",
+        "title": "Renewable Grid Systems Project Manager",
+        "company": "Nordic Clean Energy",
+        "salary": "$115k - $140k",
+        "type": "Full-time",
+        "location": "Eco District",
+        "description": "Manage rollout of smart urban microgrids, EV fast-charging stations, and decentralized battery energy storage.",
+        "seller": "Zoe Lindqvist"
+      }
+    },
+    {
+      "id": "lst_srv_1",
+      "section": "service",
+      "userId": "u_srv_1",
+      "status": "active",
+      "createdAt": "2026-10-24T23:54:31.266Z",
+      "data": {
+        "id": "lst_srv_1",
+        "title": "Smart Home Automation & Electrical Installations",
+        "name": "Nathan Cross",
+        "rate": "$95/hr",
+        "category": "Home Repair",
+        "rating": 4.96,
+        "reviewsCount": 38,
+        "location": "Citywide Metro",
+        "image": "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80",
+        "description": "Certified Master Electrician. Smart home setups, EV Level 2 chargers, main panel upgrades, and LED architectural lighting.",
+        "seller": "Nathan Cross",
+        "tags": [
+          "Electrical",
+          "Smart Home",
+          "EV Charger",
+          "Lighting"
+        ]
+      }
+    },
+    {
+      "id": "lst_srv_2",
+      "section": "service",
+      "userId": "u_srv_2",
+      "status": "active",
+      "createdAt": "2026-10-23T23:54:31.266Z",
+      "data": {
+        "id": "lst_srv_2",
+        "title": "High-End Architectural & Interior Styling",
+        "name": "Isabella Santos",
+        "rate": "$140/hr",
+        "category": "Design",
+        "rating": 4.98,
+        "reviewsCount": 52,
+        "location": "Design Quarter",
+        "image": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=600&auto=format&fit=crop&q=80",
+        "description": "Full-concept interior design consultations, material selection, custom joinery drawings, and bespoke furnishing curation.",
+        "seller": "Isabella Santos",
+        "tags": [
+          "Interior Design",
+          "Architecture",
+          "Remodel",
+          "3D Styling"
+        ]
+      }
+    },
+    {
+      "id": "lst_srv_3",
+      "section": "service",
+      "userId": "u_srv_3",
+      "status": "active",
+      "createdAt": "2026-10-22T23:54:31.266Z",
+      "data": {
+        "id": "lst_srv_3",
+        "title": "Classical & Jazz Guitar Performance Mentorship",
+        "name": "Lucas Reinhardt",
+        "rate": "$65/hr",
+        "category": "Tutoring",
+        "rating": 4.92,
+        "reviewsCount": 29,
+        "location": "Conservatory Park",
+        "image": "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=600&auto=format&fit=crop&q=80",
+        "description": "Private 1-on-1 coaching for intermediate to advanced guitarists. Harmony, fingerstyle, improvisation, and recording techniques.",
+        "seller": "Lucas Reinhardt",
+        "tags": [
+          "Music",
+          "Guitar Lessons",
+          "Jazz Harmony",
+          "Studio"
+        ]
+      }
+    },
+    {
+      "id": "lst_srv_4",
+      "section": "service",
+      "userId": "u_srv_4",
+      "status": "active",
+      "createdAt": "2026-10-21T23:54:31.266Z",
+      "data": {
+        "id": "lst_srv_4",
+        "title": "Emergency Commercial & Residential Plumbing",
+        "name": "Mateo Vargas",
+        "rate": "$85/hr",
+        "category": "Home Repair",
+        "rating": 4.9,
+        "reviewsCount": 64,
+        "location": "Westside Metro",
+        "image": "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=600&auto=format&fit=crop&q=80",
+        "description": "Rapid response plumbing. Water heater replacement, repiping, leak diagnostics, drain clearing, and pressure regulation.",
+        "seller": "Mateo Vargas",
+        "tags": [
+          "Plumbing",
+          "Water Heaters",
+          "Emergency Repair",
+          "Pipes"
+        ]
+      }
+    },
+    {
+      "id": "lst_srv_5",
+      "section": "service",
+      "userId": "u_srv_5",
+      "status": "active",
+      "createdAt": "2026-10-20T23:54:31.266Z",
+      "data": {
+        "id": "lst_srv_5",
+        "title": "Mobile Precision Bicycle Tune-up & Overhauls",
+        "name": "Hannah Lind",
+        "rate": "$55/hr",
+        "category": "Home Repair",
+        "rating": 4.97,
+        "reviewsCount": 43,
+        "location": "Greenway Trails",
+        "image": "https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=600&auto=format&fit=crop&q=80",
+        "description": "Mobile workshop van servicing road, mountain, and e-bikes at your doorstep. Hydraulic brake bleeds, bearing overhauls.",
+        "seller": "Hannah Lind",
+        "tags": [
+          "Bicycle Repair",
+          "Mobile Service",
+          "E-Bikes",
+          "Tune-up"
+        ]
+      }
+    },
+    {
+      "id": "lst_trn_1",
+      "section": "transport",
+      "userId": "u_trn_1",
+      "status": "active",
+      "createdAt": "2026-10-25T23:54:31.266Z",
+      "data": {
+        "id": "lst_trn_1",
+        "title": "Executive Mercedes-Benz S-Class Chauffeur Service",
+        "category": "Cars",
+        "price": 110,
+        "year": 2024,
+        "mileage": "12,000 km",
+        "fuel": "Hybrid",
+        "transmission": "Automatic",
+        "location": "International Airport & City",
+        "condition": "Like New",
+        "image": "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=600&auto=format&fit=crop&q=80",
+        "description": "Chauffeured luxury travel with professional driver. High-speed onboard Wi-Fi, refreshments, and VIP terminal pickup.",
+        "seller": "Darius Cole",
+        "electric": false
+      }
+    },
+    {
+      "id": "lst_trn_2",
+      "section": "transport",
+      "userId": "u_trn_2",
+      "status": "active",
+      "createdAt": "2026-10-24T23:54:31.266Z",
+      "data": {
+        "id": "lst_trn_2",
+        "title": "Porsche Taycan 4S Daily & Weekend Eco Drive",
+        "category": "Electric",
+        "price": 135,
+        "year": 2023,
+        "mileage": "18,500 km",
+        "fuel": "Electric",
+        "electric": true,
+        "transmission": "Automatic",
+        "location": "Tech Corridor",
+        "condition": "Like New",
+        "image": "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=600&auto=format&fit=crop&q=80",
+        "description": "0-100 in 3.8s. All-wheel drive, performance battery plus, panoramic glass roof. Instant mobile key unlock.",
+        "seller": "Emily Zhang"
+      }
+    },
+    {
+      "id": "lst_trn_3",
+      "section": "transport",
+      "userId": "u_trn_3",
+      "status": "active",
+      "createdAt": "2026-10-23T23:54:31.266Z",
+      "data": {
+        "id": "lst_trn_3",
+        "title": "Off-Grid Custom Mercedes Sprinter 4x4 Camper",
+        "category": "Trucks & Vans",
+        "price": 160,
+        "year": 2022,
+        "mileage": "34,000 km",
+        "fuel": "Diesel",
+        "transmission": "Automatic",
+        "location": "Foothills Depot",
+        "condition": "Excellent",
+        "image": "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=600&auto=format&fit=crop&q=80",
+        "description": "Full adventure build: queen bed, hot shower, induction stovetop, 400W solar, diesel heater, and mountain bike tray.",
+        "seller": "Felix Baum",
+        "electric": false
+      }
+    },
+    {
+      "id": "lst_trn_4",
+      "section": "transport",
+      "userId": "u_trn_4",
+      "status": "active",
+      "createdAt": "2026-10-22T23:54:31.266Z",
+      "data": {
+        "id": "lst_trn_4",
+        "title": "Ford Transit High-Roof Heavy Cargo Logistics Van",
+        "category": "Trucks & Vans",
+        "price": 85,
+        "year": 2023,
+        "mileage": "28,000 km",
+        "fuel": "Diesel",
+        "transmission": "Automatic",
+        "location": "Freight Zone Hub",
+        "condition": "Good",
+        "image": "https://images.unsplash.com/photo-1559297434-fae8a1916a79?w=600&auto=format&fit=crop&q=80",
+        "description": "Spacious cargo van with 500kg hydraulic lift gate, tie-down tracks, and heavy-duty furniture blankets included.",
+        "seller": "Samira Al-Mansoor",
+        "electric": false
+      }
+    },
+    {
+      "id": "lst_trn_5",
+      "section": "transport",
+      "userId": "u_trn_5",
+      "status": "active",
+      "createdAt": "2026-10-21T23:54:31.266Z",
+      "data": {
+        "id": "lst_trn_5",
+        "title": "BMW R 1250 GS Adventure Touring Motorcycle",
+        "category": "Motorcycles",
+        "price": 95,
+        "year": 2023,
+        "mileage": "9,200 km",
+        "fuel": "Gasoline",
+        "transmission": "Manual",
+        "location": "Mountain Gateway",
+        "condition": "Like New",
+        "image": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80",
+        "description": "The ultimate touring boxer engine. Dynamic ESA, ride modes pro, heated grips, aluminum panniers, and GPS mount.",
+        "seller": "Tyler Vance",
+        "electric": false
+      }
+    },
+    {
+      "id": "lst_evt_1",
+      "section": "event",
+      "userId": "u_evt_1",
+      "status": "active",
+      "createdAt": "2026-10-25T23:54:31.266Z",
+      "data": {
+        "id": "lst_evt_1",
+        "title": "Sunset Acoustic & Indie Sessions on Pier 17",
+        "category": "Music",
+        "date": "This Friday, 7:30 PM",
+        "location": "Pier 17 Amphitheater, Waterfront",
+        "price": 25,
+        "attendees": 184,
+        "image": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80",
+        "description": "Four acclaimed independent acoustic singer-songwriters perform at twilight against the harbor skyline. Craft brews available.",
+        "seller": "Gabriel Silva",
+        "featured": true,
+        "priceDisplay": "$25"
+      }
+    },
+    {
+      "id": "lst_evt_2",
+      "section": "event",
+      "userId": "u_evt_2",
+      "status": "active",
+      "createdAt": "2026-10-24T23:54:31.266Z",
+      "data": {
+        "id": "lst_evt_2",
+        "title": "Artisan Wood-Fired Pizza & Natural Wine Fair",
+        "category": "Food & Drink",
+        "date": "Saturday, 1:00 PM - 7:00 PM",
+        "location": "Old Mill Courtyard, Historic District",
+        "price": 35,
+        "attendees": 320,
+        "image": "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&auto=format&fit=crop&q=80",
+        "description": "Ten regional pizzaiolos firing mobile ovens paired with organic, low-intervention natural wine tastings and live funk.",
+        "seller": "Nina Kostas"
+      }
+    },
+    {
+      "id": "lst_evt_3",
+      "section": "event",
+      "userId": "u_evt_3",
+      "status": "active",
+      "createdAt": "2026-10-23T23:54:31.266Z",
+      "data": {
+        "id": "lst_evt_3",
+        "title": "AI & Distributed Autonomous Agent Hackathon",
+        "category": "Tech",
+        "date": "Nov 14-15, 9:00 AM",
+        "location": "The Foundry Tech Center, Innovation Hub",
+        "price": 0,
+        "attendees": 240,
+        "image": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=600&auto=format&fit=crop&q=80",
+        "description": "A 48-hour builder sprint focusing on autonomous multi-agent swarms, spatial compute, and developer infrastructure.",
+        "seller": "Ethan Wright"
+      }
+    },
+    {
+      "id": "lst_evt_4",
+      "section": "event",
+      "userId": "u_evt_4",
+      "status": "active",
+      "createdAt": "2026-10-22T23:54:31.266Z",
+      "data": {
+        "id": "lst_evt_4",
+        "title": "Rooftop Sunset Sound Bath & Guided Breathwork",
+        "category": "Arts & Culture",
+        "date": "Sunday, 5:30 PM",
+        "location": "Skyline Terrace, 22nd Floor",
+        "price": 20,
+        "attendees": 68,
+        "image": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&auto=format&fit=crop&q=80",
+        "description": "Unwind at sunset with 7-chakra frosted crystal singing bowls, guided pranayama breathwork, and lavender herbal infusions.",
+        "seller": "Leila Jamison"
+      }
+    },
+    {
+      "id": "lst_evt_5",
+      "section": "event",
+      "userId": "u_evt_5",
+      "status": "active",
+      "createdAt": "2026-10-21T23:54:31.266Z",
+      "data": {
+        "id": "lst_evt_5",
+        "title": "Buzzer Contemporary Light Art & Sculpture Walk",
+        "category": "Arts & Culture",
+        "date": "Thursday, 8:00 PM",
+        "location": "Civic Sculpture Gardens",
+        "price": 15,
+        "attendees": 142,
+        "image": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80",
+        "description": "Nighttime illuminated art walk featuring monumental interactive neon installations, spatial lasers, and ambient soundscapes.",
+        "seller": "Victor Vance"
+      }
+    }
+  ],
+  "jobApplications": [],
+  "messages": [],
+  "groups": [
+    {
+      "id": "grp_1",
+      "name": "City Creators Guild",
+      "members": [
+        "u_admin",
+        "u_jordan",
+        "u_sarah",
+        "u_alex"
+      ],
+      "createdBy": "u_jordan",
+      "createdAt": "2026-10-14T23:54:31.389Z",
+      "avatar": "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=100&auto=format&fit=crop&q=80"
+    },
+    {
+      "id": "grp_2",
+      "name": "Downtown Marketplace Hub",
+      "members": [
+        "u_admin",
+        "u_jordan",
+        "u_alex"
+      ],
+      "createdBy": "u_admin",
+      "createdAt": "2026-10-16T23:54:31.389Z",
+      "avatar": "https://images.unsplash.com/photo-1555421689-491a97ff2040?w=100&auto=format&fit=crop&q=80"
+    },
+    {
+      "id": "grp_3",
+      "name": "Tech & Careers Forum",
+      "members": [
+        "u_admin",
+        "u_sarah",
+        "u_jordan"
+      ],
+      "createdBy": "u_sarah",
+      "createdAt": "2026-10-18T23:54:31.389Z",
+      "avatar": "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=100&auto=format&fit=crop&q=80"
+    }
+  ],
+  "groupMessages": [
+    {
+      "id": "gm_1",
+      "groupId": "grp_1",
+      "senderId": "u_jordan",
+      "content": "Welcome everyone to the City Creators Guild! Let us know what projects you are building this month.",
+      "timestamp": "2026-10-24T23:54:31.389Z"
+    },
+    {
+      "id": "gm_2",
+      "groupId": "grp_1",
+      "senderId": "u_alex",
+      "content": "Excited to be here! Finishing up a new batch of restored mid-century furniture pieces.",
+      "timestamp": "2026-10-25T04:42:31.389Z"
+    },
+    {
+      "id": "gm_3",
+      "groupId": "grp_1",
+      "senderId": "u_sarah",
+      "content": "Awesome! We are hosting the Saturday evening rooftop meetup. Looking forward to seeing everyone.",
+      "timestamp": "2026-10-25T11:54:31.389Z"
+    }
+  ],
+  "adminLogs": [],
+  "featureFlags": [
+    {
+      "name": "instant_chat",
+      "enabled": true,
+      "scope": "global",
+      "lastModified": "2026-10-26T23:54:33.418Z",
+      "modifiedBy": "u_admin"
+    },
+    {
+      "name": "reels_feed",
+      "enabled": true,
+      "scope": "global",
+      "lastModified": "2026-10-26T23:54:33.418Z",
+      "modifiedBy": "u_admin"
+    }
+  ],
+  "userRestrictions": [],
+  "stories": [
+    {
+      "id": "st_1",
+      "userId": "u_jordan",
+      "userName": "Jordan Smith",
+      "userAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+      "media": [
+        {
+          "type": "image",
+          "url": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80"
+        }
+      ],
+      "content": "Morning roast and ceramic testing session ☕",
+      "timestamp": "2026-10-26T21:54:31.389Z",
+      "viewers": [
+        "u_admin",
+        "u_sarah"
+      ],
+      "isExpired": false
+    },
+    {
+      "id": "st_2",
+      "userId": "u_alex",
+      "userName": "Alex Rivera",
+      "userAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+      "media": [
+        {
+          "type": "image",
+          "url": "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&auto=format&fit=crop&q=80"
+        }
+      ],
+      "content": "Workshop tour: fresh wax on vintage leather!",
+      "timestamp": "2026-10-26T18:54:31.389Z",
+      "viewers": [
+        "u_jordan"
+      ],
+      "isExpired": false
+    }
+  ],
+  "supportTickets": [
+    {
+      "ticketId": "tck_101",
+      "userId": "u_jordan",
+      "subject": "Feature Suggestion: Category Filter Tags",
+      "description": "Would love to filter marketplace listings by multiple tags.",
+      "priority": "low",
+      "category": "feature_request",
+      "status": "open",
+      "createdAt": "2026-10-26T22:54:33.418Z",
+      "updatedAt": "2026-10-26T22:54:33.418Z"
+    }
+  ],
+  "analytics": [
+    {
+      "date": "2026-10-26",
+      "metrics": {
+        "activeUsers": 31,
+        "newUsers": 30,
+        "messagesSent": 12,
+        "avgResponseTime": 45,
+        "errorRate": 0
+      },
+      "pageViews": {
+        "home": 34,
+        "marketplace": 22,
+        "messages": 18,
+        "jobs": 12,
+        "services": 9
+      },
+      "userActions": {
+        "login": 6,
+        "view_listing": 28,
+        "send_message": 8
+      }
+    }
+  ],
+  "passwordResetTokens": [],
+  "businesses": [
+    {
+      "id": "biz_1",
+      "name": "Cafe Deluxe & Artisanal Roastery",
+      "category": "Restaurants",
+      "rating": 4.8,
+      "reviews": 142,
+      "location": "123 Main St, City Center",
+      "distance": "0.4 miles",
+      "image": "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?q=80&w=600&auto=format&fit=crop",
+      "description": "Specialty micro-roasted coffee, fresh flaky pastries, and cozy quiet workspaces with high-speed fiber internet.",
+      "phone": "+1 (555) 123-4567",
+      "email": "info@cafedeluxe.com",
+      "website": "https://cafedeluxe.com",
+      "hours": "Mon-Fri: 7AM-7PM, Sat-Sun: 8AM-6PM",
+      "verified": true,
+      "isSponsored": true,
+      "adHeadline": "Sponsored Ad • 20% Off Artisanal Morning Brews for Buzzer Members",
+      "adTag": "Featured Roastery",
+      "ownerId": "u_mkt_1",
+      "ownerName": "Elena Torres",
+      "createdAt": "2026-10-17T00:03:18.275Z"
+    },
+    {
+      "id": "biz_2",
+      "name": "Tech Solutions & Cloud Labs",
+      "category": "Technology",
+      "rating": 4.9,
+      "reviews": 98,
+      "location": "456 Tech Ave, Innovation Hub",
+      "distance": "1.2 miles",
+      "image": "https://images.unsplash.com/photo-1573164713988-8665fc963095?q=80&w=600&auto=format&fit=crop",
+      "description": "Full-stack software engineering, cybersecurity assessments, and enterprise cloud migrations for rapid startups.",
+      "phone": "+1 (555) 987-6543",
+      "email": "consult@techsolutions.io",
+      "website": "https://techsolutions.io",
+      "hours": "Mon-Fri: 9AM-6PM",
+      "verified": true,
+      "isSponsored": true,
+      "adHeadline": "Sponsored Partner • Free Cloud Infrastructure Audit for Local Startups",
+      "adTag": "Official Partner",
+      "ownerId": "u_job_1",
+      "ownerName": "Sarah Chen",
+      "createdAt": "2026-10-15T00:03:18.275Z"
+    },
+    {
+      "id": "biz_3",
+      "name": "Green Gardens & Sustainable Flora",
+      "category": "Home & Garden",
+      "rating": 4.8,
+      "reviews": 210,
+      "location": "789 Garden Rd, Highland Park",
+      "distance": "0.8 miles",
+      "image": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?q=80&w=600&auto=format&fit=crop",
+      "description": "Eco-conscious landscaping, native perennial plants, automated drip irrigation, and outdoor living architecture.",
+      "phone": "+1 (555) 234-5678",
+      "email": "hello@greengardens.com",
+      "website": "https://greengardens.com",
+      "hours": "Mon-Sat: 8AM-7PM, Sun: 9AM-5PM",
+      "verified": true,
+      "isSponsored": false,
+      "ownerId": "u_srv_2",
+      "ownerName": "Chloe Bennett",
+      "createdAt": "2026-10-13T00:03:18.275Z"
+    },
+    {
+      "id": "biz_4",
+      "name": "Elite Motion Gym & Wellness Center",
+      "category": "Health & Fitness",
+      "rating": 4.7,
+      "reviews": 175,
+      "location": "101 Fitness Blvd, Uptown",
+      "distance": "1.5 miles",
+      "image": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600&auto=format&fit=crop",
+      "description": "State-of-the-art conditioning, biometric recovery suites, Olympic lifting bays, and certified 1-on-1 personal coaches.",
+      "phone": "+1 (555) 876-5432",
+      "email": "join@elitemotion.fit",
+      "website": "https://elitemotion.fit",
+      "hours": "Mon-Fri: 5AM-11PM, Sat-Sun: 7AM-9PM",
+      "verified": true,
+      "isSponsored": true,
+      "adHeadline": "Sponsored Ad • Claim Your Free 7-Day All-Access Pass",
+      "adTag": "Featured Gym",
+      "ownerId": "u_srv_3",
+      "ownerName": "David Chen",
+      "createdAt": "2026-10-11T00:03:18.275Z"
+    },
+    {
+      "id": "biz_5",
+      "name": "Apex Prime Architecture & Real Estate",
+      "category": "Professional Services",
+      "rating": 4.9,
+      "reviews": 114,
+      "location": "550 Skyline Blvd, Suite 1200",
+      "distance": "2.0 miles",
+      "image": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=600&auto=format&fit=crop",
+      "description": "Luxury architectural design, commercial zoning, permits, and premier residential property acquisition.",
+      "phone": "+1 (555) 345-6789",
+      "email": "inquiries@apexprime.com",
+      "website": "https://apexprime.com",
+      "hours": "Mon-Fri: 9AM-6PM",
+      "verified": true,
+      "isSponsored": true,
+      "adHeadline": "Sponsored Ad • Free Feasibility Assessment on Urban Properties",
+      "adTag": "Premium Sponsor",
+      "ownerId": "u_re_1",
+      "ownerName": "Jonathan Hayes",
+      "createdAt": "2026-10-09T00:03:18.275Z"
+    },
+    {
+      "id": "biz_6",
+      "name": "Velocity Metro Freight & Express Logistics",
+      "category": "Professional Services",
+      "rating": 4.8,
+      "reviews": 88,
+      "location": "900 Logistics Way, Freight District",
+      "distance": "3.4 miles",
+      "image": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=600&auto=format&fit=crop",
+      "description": "Same-day commercial parcel delivery, temperature-controlled cargo, and dedicated heavy equipment transport.",
+      "phone": "+1 (555) 456-7890",
+      "email": "dispatch@velocitymetro.com",
+      "website": "https://velocitymetro.com",
+      "hours": "24/7 Operations",
+      "verified": true,
+      "isSponsored": false,
+      "ownerId": "u_trn_1",
+      "ownerName": "Carlos Mendez",
+      "createdAt": "2026-10-07T00:03:18.275Z"
+    }
+  ]
+}

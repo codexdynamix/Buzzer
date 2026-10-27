@@ -56,7 +56,7 @@ const BrowseRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const GUEST_BROWSE_SECTIONS = new Set([
-  'marketplace', 'jobs', 'services', 'events', 'transport', 'real-estate', 'reels',
+  'marketplace', 'jobs', 'services', 'events', 'transport', 'real-estate', 'reels', 'business',
 ]);
 
 const SectionRoute = ({ children }: { children: React.ReactNode }) => {
