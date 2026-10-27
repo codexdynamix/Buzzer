@@ -1,23 +1,21 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight, MessageSquare, ShoppingBag, Briefcase, Wrench, Home, Bus, Calendar, Menu, X, Star, Shield, Zap, Globe } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { ArrowRight, ArrowUpRight, ArrowDownRight as ArrowDownRightIcon, MessageSquare, ShoppingBag, Briefcase, Wrench, Home, Bus, Calendar, Menu, X, Star, Shield, Zap, Globe, Play, Megaphone, Sparkles, Coffee, Heart, Compass, MapPin } from 'lucide-react';
+import './Index.css';
+
+const HomeSection = React.lazy(() => import('@/components/home/HomeSection'));
 
 const FEATURES = [
   { icon: MessageSquare, title: 'Encrypted Messaging', desc: 'Military-grade end-to-end encryption for every conversation. Privacy is not a feature — it is the foundation.', section: 'messages' },
+  { icon: Play, title: 'Community Reels', desc: 'Discover short videos, creators, and community stories from around your city.', section: 'reels' },
   { icon: ShoppingBag, title: 'Marketplace', desc: 'Buy and sell locally with zero commission. Every transaction protected by our Buyer Guarantee.', section: 'marketplace' },
   { icon: Briefcase, title: 'Careers', desc: 'Curated opportunities from the world\'s most innovative companies and emerging local leaders.', section: 'jobs' },
   { icon: Wrench, title: 'Professional Services', desc: 'Verified, insured, and rated professionals. From architects to plumbers — all in one address book.', section: 'services' },
   { icon: Home, title: 'Real Estate', desc: 'Residential and commercial listings. Partner directly with licensed agents. No intermediaries.', section: 'real-estate' },
   { icon: Bus, title: 'Transport', desc: 'Premium vehicles and verified sellers. Every listing inspected and certified by our team.', section: 'transport' },
   { icon: Calendar, title: 'Events', desc: 'Curated cultural, professional, and community events. Discover what defines your city.', section: 'events' },
-];
-
-const STATS = [
-  { value: '2.4M+', label: 'Active Members' },
-  { value: '$890M', label: 'Transaction Volume' },
-  { value: '180K+', label: 'Opportunities Posted' },
-  { value: '4.9', label: 'Average Rating' },
+  { icon: Megaphone, title: 'Businesses & Advertisements', desc: 'Browse local businesses and all sponsored community advertisements.', section: 'business?tab=ads' },
 ];
 
 const PILLARS = [
@@ -27,10 +25,10 @@ const PILLARS = [
 ];
 
 const IMAGES = [
-  'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=1000&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1000&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?q=80&w=1000&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1519501025264-65ba15a82390?q=80&w=1200&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=900&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1528605248644-14dd04022da1?q=80&w=900&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=80&w=900&auto=format&fit=crop',
 ];
 
 const fade = (delay = 0) => ({
@@ -41,30 +39,31 @@ const fade = (delay = 0) => ({
 
 export default function Index() {
   const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   return (
     <div
-      className="min-h-screen overflow-x-hidden"
-      style={{ fontFamily: "'Inter', -apple-system, sans-serif", backgroundColor: '#FAFAF7', color: '#0F1923' }}
+      className="landing-page min-h-screen overflow-x-hidden"
+      style={{ backgroundColor: '#FAFAF7', color: '#0F1923' }}
     >
       {/* ── Navigation ────────────────────────────────────────── */}
       <nav
-        className="fixed top-0 w-full z-50 border-b"
-        style={{ backgroundColor: 'rgba(250,250,247,0.96)', borderColor: '#E8E2D8', backdropFilter: 'blur(8px)' }}
+        className="landing-nav fixed top-0 w-full z-50 border-b"
+        style={{ backgroundColor: '#FAFAF7', borderColor: '#E8E2D8' }}
       >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between" style={{ height: '68px' }}>
+        <div className="landing-nav-inner max-w-7xl mx-auto px-6 flex items-center justify-between" style={{ height: '68px' }}>
           {/* Logo */}
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+          <button type="button" className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')} aria-label="Buzzer home">
             <span className="text-xl font-bold tracking-tight" style={{ color: '#0F1923', letterSpacing: '-0.04em' }}>BUZZER</span>
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#C9A96E' }} />
-          </div>
+          </button>
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-7 text-sm font-medium" style={{ color: '#6E7A8A' }}>
-            <button onClick={() => navigate('/dashboard')} className="hover:text-[#0F1923] transition-colors">Platform</button>
-            <button onClick={() => navigate('/dashboard')} className="hover:text-[#0F1923] transition-colors">Community</button>
-            <button onClick={() => navigate('/dashboard')} className="hover:text-[#0F1923] transition-colors">About</button>
+            <button onClick={() => navigate('/dashboard/home')} className="hover:text-[#0F1923] transition-colors">Browse</button>
+            <button onClick={() => navigate('/dashboard/business?tab=ads')} className="hover:text-[#0F1923] transition-colors">Advertisements</button>
+            <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-[#0F1923] transition-colors">About</button>
           </div>
 
           {/* Desktop auth buttons */}
@@ -88,7 +87,7 @@ export default function Index() {
           </div>
 
           {/* Mobile hamburger */}
-          <button className="md:hidden" onClick={() => setMenuOpen(o => !o)} style={{ color: '#0F1923' }}>
+          <button className="landing-menu-button md:hidden" aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen(o => !o)} style={{ color: '#0F1923' }}>
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
@@ -96,9 +95,9 @@ export default function Index() {
         {/* Mobile menu */}
         {menuOpen && (
           <div className="md:hidden px-6 pb-5 pt-2 flex flex-col gap-3 border-t" style={{ backgroundColor: '#FAFAF7', borderColor: '#E8E2D8' }}>
-            <button onClick={() => { navigate('/dashboard'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>Platform</button>
-            <button onClick={() => { navigate('/dashboard'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>Community</button>
-            <button onClick={() => { navigate('/dashboard'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>About</button>
+            <button onClick={() => { navigate('/dashboard/home'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>Browse</button>
+            <button onClick={() => { navigate('/dashboard/business?tab=ads'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>Advertisements</button>
+            <button onClick={() => { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>About</button>
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => { navigate('/auth?mode=signin&method=email'); setMenuOpen(false); }}
@@ -120,97 +119,151 @@ export default function Index() {
       </nav>
 
       {/* ── Hero ──────────────────────────────────────────────── */}
-      <section className="pt-44 pb-28 px-6 relative" style={{ borderBottom: '1px solid #E8E2D8' }}>
-        <div className="max-w-5xl mx-auto">
-          <motion.div {...fade(0)} className="mb-5">
+      <section className="landing-hero px-6 relative" style={{ borderBottom: '1px solid #E8E2D8' }}>
+        <div className="landing-hero-inner max-w-7xl mx-auto">
+          <div className="landing-hero-copy">
+          <motion.div {...fade(0)} className="mb-6">
             <span
-              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest px-4 py-2 rounded-full"
-              style={{ backgroundColor: '#F0EBE1', color: '#C9A96E', border: '1px solid #E8D9BC' }}
+              className="landing-eyebrow inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest px-4 py-2 rounded-full"
             >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#C9A96E' }} />
-              Community Platform
+              <Sparkles size={14} strokeWidth={2} />
+              Your city, closer
             </span>
           </motion.div>
 
           <motion.h1
             {...fade(0.1)}
-            className="font-bold leading-[1.06] mb-8"
-            style={{ fontSize: 'clamp(2.8rem, 7.5vw, 5.5rem)', letterSpacing: '-0.04em', color: '#0F1923' }}
+            className="landing-hero-title font-bold leading-[1.06] mb-6"
           >
-            The platform<br />
-            your city{' '}
-            <span style={{ color: '#C9A96E', fontStyle: 'italic', fontFamily: "'DM Serif Display', Georgia, serif" }}>
-              deserves.
-            </span>
+            Good things<br />happen <span>around here.</span>
           </motion.h1>
 
           <motion.p
             {...fade(0.2)}
-            className="text-xl leading-relaxed max-w-2xl mb-12"
-            style={{ color: '#6E7A8A', fontWeight: 400 }}
+            className="landing-hero-description text-lg leading-relaxed max-w-2xl mb-9"
           >
-            One address for messaging, marketplace, careers, services, real estate, transport, and events.
-            Engineered for precision. Built for community.
+            Find your people, your next place, and the little things that make a city feel like yours — all in one place.
           </motion.p>
 
-          <motion.div {...fade(0.3)} className="flex flex-col sm:flex-row items-start gap-4">
+          <motion.div {...fade(0.3)} className="landing-hero-actions flex flex-col sm:flex-row items-start gap-3">
+            <button
+              onClick={() => navigate('/dashboard/home')}
+              className="landing-button landing-button-primary flex items-center gap-3 px-7 py-4 text-base font-semibold rounded-xl transition-all"
+            >
+              Explore your city <ArrowRight size={17} />
+            </button>
             <button
               onClick={() => navigate('/auth?mode=signup')}
-              className="flex items-center gap-3 px-8 py-4 text-base font-semibold rounded-xl transition-all"
-              style={{ backgroundColor: '#1A3353', color: '#ffffff' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#142842'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(26,51,83,0.25)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1A3353'; (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
+              className="landing-button landing-button-secondary flex items-center gap-3 px-7 py-4 text-base font-semibold rounded-xl transition-all"
             >
-              Create Free Account <ArrowRight size={17} />
+              Join for free <ArrowUpRight size={17} />
             </button>
-            <button
-              onClick={() => navigate('/auth?mode=signin&method=email')}
-              className="flex items-center gap-3 px-8 py-4 text-base font-semibold rounded-xl transition-all"
-              style={{ backgroundColor: 'transparent', color: '#0F1923', border: '1px solid #D1C9BC' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#C9A96E'; (e.currentTarget as HTMLElement).style.color = '#C9A96E'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#D1C9BC'; (e.currentTarget as HTMLElement).style.color = '#0F1923'; }}
-            >
-              Sign In
-            </button>
+          </motion.div>
+          <div className="landing-hero-note"><span className="landing-live-dot" /> A little more local. A lot more connected.</div>
+          </div>
+
+          <motion.div {...fade(0.18)} className="landing-visual" aria-label="Scenes from a connected neighborhood">
+            <div className="landing-visual-main">
+              <img src={IMAGES[0]} alt="City neighborhood at golden hour" />
+              <div className="landing-visual-label"><MapPin size={14} /> LIFE, AROUND THE CORNER</div>
+              <div className="landing-visual-caption"><span>More than a place.</span><strong>Your place.</strong></div>
+            </div>
+            <motion.div className="landing-visual-tile landing-visual-cafe" animate={reduceMotion ? undefined : { y: [0, -7, 0] }} transition={{ duration: 5, repeat: reduceMotion ? 0 : Infinity, ease: 'easeInOut' }}>
+              <img src={IMAGES[1]} alt="Neighbors sharing a meal at a local cafe" />
+              <span><Coffee size={14} /> FIND YOUR NEW FAVORITE</span>
+            </motion.div>
+            <motion.div className="landing-visual-tile landing-visual-people" animate={reduceMotion ? undefined : { y: [0, 7, 0] }} transition={{ duration: 6, repeat: reduceMotion ? 0 : Infinity, ease: 'easeInOut' }}>
+              <img src={IMAGES[2]} alt="Friends gathering in their community" />
+              <span><Heart size={14} /> GOOD PEOPLE, CLOSE BY</span>
+            </motion.div>
+            <div className="landing-visual-stamp"><span>YOUR</span><strong>CITY</strong><span>IS CALLING</span><ArrowUpRight size={17} /></div>
           </motion.div>
         </div>
       </section>
 
-      {/* ── Stats ─────────────────────────────────────────────── */}
-      <section className="py-16" style={{ backgroundColor: '#F5F2EC', borderBottom: '1px solid #E8E2D8' }}>
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-10">
-          {STATS.map((s, i) => (
-            <motion.div key={s.label} {...fade(0.05 * i)} className="text-center">
-              <div className="text-4xl md:text-5xl font-bold mb-1.5" style={{ color: '#0F1923', letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums' }}>
-                {s.value}
+      <section className="landing-discovery" aria-label="Explore Buzzer">
+        <div className="landing-discovery-inner max-w-7xl mx-auto">
+          <span className="landing-discovery-label"><Compass size={15} /> A GOOD PLACE TO START</span>
+          <div className="landing-discovery-links">
+            {[
+              { label: 'Find a place', icon: Home, path: '/dashboard/real-estate' },
+              { label: 'See your community', icon: MessageSquare, path: '/dashboard/reels' },
+              { label: 'Shop local', icon: ShoppingBag, path: '/dashboard/marketplace' },
+              { label: 'What’s happening', icon: Calendar, path: '/dashboard/events' },
+            ].map(({ label, icon: Icon, path }, index) => (
+              <motion.button
+                type="button"
+                key={label}
+                onClick={() => navigate(path)}
+                className="landing-discovery-link"
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.5 }}
+                transition={{ duration: 0.35, delay: index * 0.07 }}
+              >
+                <span><Icon size={17} /></span>{label}<ArrowUpRight size={14} />
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="browse-categories" className="landing-browse py-16 px-6" style={{ backgroundColor: '#FAFAF7', borderBottom: '1px solid #E8E2D8' }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="landing-section-heading mb-8">
+            <span className="landing-section-kicker">THE NEIGHBORHOOD BOARD</span>
+            <div className="landing-section-heading-row">
+              <div>
+                <h2 className="font-bold mb-2">A little bit of everything.<br /><em>All right around you.</em></h2>
+                <p className="text-sm">Browse public listings and local ads. Sign in when you’re ready to connect or take action.</p>
               </div>
-              <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#6E7A8A' }}>{s.label}</div>
-            </motion.div>
-          ))}
+              <button className="landing-text-link" onClick={() => navigate('/dashboard/home')}>Explore the board <ArrowRight size={16} /></button>
+            </div>
+          </div>
+          <React.Suspense fallback={<div className="py-12 text-center text-sm text-slate-500">Loading community listings…</div>}>
+            <HomeSection />
+          </React.Suspense>
+        </div>
+      </section>
+
+      <section className="landing-manifesto">
+        <div className="landing-manifesto-inner max-w-7xl mx-auto">
+          <div>
+            <span className="landing-manifesto-kicker"><Sparkles size={14} /> MADE OF THE LITTLE THINGS</span>
+            <h2>A familiar face.<br />A new <em>favorite place.</em></h2>
+          </div>
+          <div className="landing-manifesto-aside">
+            <p>The best parts of a city aren’t found in a guidebook. They’re shared by the people who call it home.</p>
+            <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>See what brings us together <ArrowRight size={16} /></button>
+          </div>
         </div>
       </section>
 
       {/* ── Photo Strip ───────────────────────────────────────── */}
-      <section className="py-14" style={{ borderBottom: '1px solid #E8E2D8' }}>
+      <section className="landing-photo-section py-14" style={{ borderBottom: '1px solid #E8E2D8' }}>
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-4 gap-3" style={{ height: 'clamp(180px,22vw,300px)' }}>
+          <div className="landing-photo-heading">
+            <span>THE CITY, IN GOOD COMPANY</span>
+            <span>Little moments. Shared places. <ArrowDownRightIcon /></span>
+          </div>
+          <div className="landing-photo-grid">
             {IMAGES.map((src, i) => (
-              <div key={i} className="relative rounded-2xl overflow-hidden group" style={{ border: '1px solid #E8E2D8' }}>
-                <img src={src} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                <div className="absolute inset-0 transition-opacity duration-300" style={{ backgroundColor: 'rgba(15,25,35,0.08)' }} />
-              </div>
+              <motion.div key={i} className={`landing-photo landing-photo-${i + 1}`} whileHover={{ y: -5 }} transition={{ duration: 0.25 }}>
+                <img src={src} alt={['A lively city street at sunset', 'A neighborhood cafe ready for guests', 'Friends getting together nearby', 'A community celebrating together'][i]} loading="lazy" />
+                <span>{['Meet me out there.', 'Your new usual.', 'Better, together.', 'Make a night of it.'][i]}</span>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
       {/* ── Pillars ───────────────────────────────────────────── */}
-      <section className="py-20" style={{ backgroundColor: '#FAFAF7', borderBottom: '1px solid #E8E2D8' }}>
+      <section className="landing-pillars py-20" style={{ backgroundColor: '#FAFAF7', borderBottom: '1px solid #E8E2D8' }}>
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-8">
           {PILLARS.map((p, i) => {
             const Icon = p.icon;
             return (
-              <motion.div key={p.title} {...fade(0.08 * i)} className="flex gap-5">
+              <motion.div key={p.title} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.35 }} transition={{ duration: 0.45, delay: 0.08 * i }} className="flex gap-5">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#F0EBE1', color: '#C9A96E' }}>
                   <Icon size={20} strokeWidth={1.8} />
                 </div>
@@ -225,24 +278,28 @@ export default function Index() {
       </section>
 
       {/* ── Features ──────────────────────────────────────────── */}
-      <section className="py-28 px-6" style={{ backgroundColor: '#F5F2EC', borderBottom: '1px solid #E8E2D8' }}>
+      <section id="features" className="landing-features py-28 px-6" style={{ backgroundColor: '#F5F2EC', borderBottom: '1px solid #E8E2D8' }}>
         <div className="max-w-7xl mx-auto">
           <motion.div {...fade(0)} className="mb-16">
             <div className="w-8 h-0.5 mb-6" style={{ backgroundColor: '#C9A96E' }} />
             <h2 className="font-bold mb-4" style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', letterSpacing: '-0.035em', color: '#0F1923' }}>
               Everything your community needs.
             </h2>
-            <p className="text-base" style={{ color: '#6E7A8A', maxWidth: '38ch' }}>Seven integrated modules. One seamless experience.</p>
+            <p className="text-base" style={{ color: '#6E7A8A', maxWidth: '38ch' }}>Explore every public section. Sign in when you are ready to connect or take action.</p>
           </motion.div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES.map((feat, i) => {
               const Icon = feat.icon;
               return (
-                <motion.div
+                <motion.button
+                  type="button"
                   key={feat.section}
-                  {...fade(0.05 * i)}
+                  initial={{ opacity: 0, y: 22 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.45, delay: (i % 3) * 0.08 }}
                   onClick={() => navigate(`/dashboard/${feat.section}`)}
-                  className={`p-8 rounded-2xl cursor-pointer group transition-all duration-250 ${i === 6 ? 'lg:col-span-3 lg:max-w-md' : ''}`}
+                  className={`landing-feature-card p-7 rounded-2xl cursor-pointer group transition-all duration-250 text-left ${i === 6 ? 'lg:col-span-3 lg:max-w-md' : ''}`}
                   style={{ backgroundColor: '#ffffff', border: '1px solid #E8E2D8' }}
                   whileHover={{ y: -3, boxShadow: '0 12px 32px rgba(15,25,35,0.09)', borderColor: '#C9A96E' }}
                 >
@@ -251,10 +308,10 @@ export default function Index() {
                   </div>
                   <h3 className="font-semibold mb-3 text-lg" style={{ color: '#0F1923', letterSpacing: '-0.02em' }}>{feat.title}</h3>
                   <p className="text-sm leading-relaxed" style={{ color: '#6E7A8A' }}>{feat.desc}</p>
-                  <div className="flex items-center gap-2 mt-6 text-sm font-semibold transition-all duration-200 opacity-0 group-hover:opacity-100" style={{ color: '#C9A96E' }}>
+                  <div className="landing-feature-link flex items-center gap-2 mt-6 text-sm font-semibold transition-all duration-200" style={{ color: '#C9A96E' }}>
                     Explore <ArrowRight size={14} />
                   </div>
-                </motion.div>
+                </motion.button>
               );
             })}
           </div>
