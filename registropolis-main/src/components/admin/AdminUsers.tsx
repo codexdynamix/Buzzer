@@ -83,7 +83,7 @@ const AdminUsers: React.FC = () => {
     }
     
     try {
-      await addAdmin(newAdminEmail, newAdminRole);
+      await addAdmin(newAdminEmail);
       await fetchUsers();
       setNewAdminEmail('');
       setNewAdminRole('admin');

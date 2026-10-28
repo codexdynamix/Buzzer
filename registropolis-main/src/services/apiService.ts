@@ -12,6 +12,9 @@ type ApiSuccessResponse<T> = {
   application?: any;
   applications?: any[];
   stats?: any;
+  businesses?: any[];
+  advertisements?: any[];
+  business?: any;
 };
 
 const getAuthHeader = (): Record<string, string> => {

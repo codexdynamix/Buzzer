@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -92,6 +93,7 @@ const PRESET_IMAGES = [
 const BusinessSection: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { openChatWithUser } = useChatContext();
+  const navigate = useNavigate();
 
   const [businesses, setBusinesses] = useState<BusinessItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -273,19 +275,29 @@ const BusinessSection: React.FC = () => {
           </p>
         </div>
 
-        {/* Post Business / Advertisement Modal */}
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold shadow-sm transition-all"
-              style={{ backgroundColor: '#1A3353', color: '#ffffff' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#142842'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1A3353'; }}
-            >
-              <Megaphone className="h-4 w-4" />
-              <span>Post Advertisement</span>
-            </Button>
-          </DialogTrigger>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/admin?tab=merchants')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold border-[#C9A96E]/50 text-[#1A3353] bg-amber-50/50 hover:bg-amber-100/70 transition-all shadow-sm"
+          >
+            <Sparkles className="h-4 w-4 text-amber-600" />
+            <span>Merchant Extranet</span>
+          </Button>
+
+          {/* Post Business / Advertisement Modal */}
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold shadow-sm transition-all"
+                style={{ backgroundColor: '#1A3353', color: '#ffffff' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#142842'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1A3353'; }}
+              >
+                <Megaphone className="h-4 w-4" />
+                <span>Post Advertisement</span>
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl font-bold text-[#0F1923]">
@@ -459,6 +471,7 @@ const BusinessSection: React.FC = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* ── Search & Filter Bar ───────────────────────────────── */}

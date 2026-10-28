@@ -6,7 +6,12 @@ import { MessageCircle } from 'lucide-react';
 import { useChatSelection } from '@/hooks/useChatSelection';
 import { useToast } from '@/hooks/use-toast';
 import { useMessages } from '@/hooks/useMessages';
-import { BusinessMessageProps } from '../messages/business/BusinessMessageTemplate';
+export interface BusinessMessageProps {
+  title?: string;
+  description?: string;
+  onButtonClick?: () => void;
+  [key: string]: any;
+}
 import { useGuestGate } from '@/context/GuestGateContext';
 
 interface ContactButtonProps extends ButtonProps {
@@ -45,7 +50,7 @@ const ContactButton: React.FC<ContactButtonProps> = ({
     
     // If product info is available, prepare the product inquiry
     if (productInfo) {
-      simulateProductInquiry(contactId, productInfo.title, productInfo.price);
+      simulateProductInquiry(contactId, `${productInfo.title} (${productInfo.price})`);
     }
     
     // If business message template is available, it would be handled here

@@ -1,6 +1,22 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { ChatItemProps } from '@/components/messages/ChatItem';
+export interface ChatItemProps {
+  id: string;
+  name: string;
+  lastMessage?: string;
+  message?: string;
+  time?: string;
+  unread?: number;
+  avatar?: string;
+  imageUrl?: string;
+  online?: boolean;
+  isOnline?: boolean;
+  businessInfo?: any;
+  businessType?: string;
+  verified?: boolean;
+  onClick?: () => void;
+  [key: string]: any;
+}
 import { GroupChatProps } from '@/components/groups/GroupChat';
 
 // Define a more detailed user type with business roles

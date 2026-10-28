@@ -24,7 +24,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 const restrictionSchema = z.object({
   userId: z.string().min(1, { message: "User ID is required" }),
   type: z.enum(["ban", "suspend", "restrict"], { 
-    required_error: "Type of restriction is required" 
+    message: "Type of restriction is required" 
   }),
   reason: z.string().min(10, { message: "Reason must be at least 10 characters" }),
   endDate: z.string().optional(),

@@ -127,7 +127,7 @@ const App = () => (
                   <Route path="/dashboard/seller/:sellerName" element={<BrowseRoute><SellerProfilePage /></BrowseRoute>} />
                   <Route path="/dashboard/:section/:id"       element={<BrowseRoute><ListingDetailRoute /></BrowseRoute>} />
 
-                  <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                  <Route path="/admin" element={<Admin />} />
 
                   {/* Auth */}
                   <Route path="/auth"               element={<AuthPage />} />

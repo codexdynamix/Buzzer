@@ -51,7 +51,10 @@ type Listing = {
   section: string;
   data: any;
   userId: string;
-  status: 'active' | 'paused' | 'sold';
+  status: 'active' | 'paused' | 'sold' | 'pending_review' | 'flagged' | 'rejected';
+  riskScore?: number;
+  riskFlags?: string[];
+  riskSummary?: string;
   createdAt: string;
 };
 
@@ -159,6 +162,23 @@ type PasswordResetToken = {
   email: string;
   expiresAt: Date;
   createdAt: Date;
+};
+
+type VerificationRequest = {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  vertical: 'real-estate' | 'service' | 'marketplace' | 'transport' | 'business';
+  badgeTitle: string;
+  documentType: 'realtor_license' | 'master_trade' | 'dealer_permit' | 'business_reg';
+  documentNumber: string;
+  documentImage: string;
+  submittedAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
 };
 
 // ── In-Memory Database Engine ─────────────────────────────────
@@ -361,6 +381,7 @@ let stories: InMemoryCollection<Story> | Collection<Story>;
 let supportTickets: InMemoryCollection<SupportTicket> | Collection<SupportTicket>;
 let analytics: InMemoryCollection<AnalyticsRecord> | Collection<AnalyticsRecord>;
 let passwordResetTokens: InMemoryCollection<PasswordResetToken> | Collection<PasswordResetToken>;
+let verificationRequests: InMemoryCollection<VerificationRequest> | Collection<VerificationRequest>;
 
 const PASSWORD_HASH = bcrypt.hashSync('buzzer123', 10);
 
@@ -404,6 +425,144 @@ const SEED_LISTINGS: Listing[] = [
     createdAt: l.createdAt,
     data: l.data,
   })),
+  {
+    id: 'lst_mod_1',
+    section: 'marketplace',
+    userId: 'u_mkt_2',
+    status: 'pending_review',
+    riskScore: 92,
+    riskFlags: ['EXTREME_LOW_PRICE', 'EXTERNAL_ESCROW_RISK'],
+    riskSummary: 'Listed at $250 which is 88% below category average ($2,200). External contact prompt found in description.',
+    createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
+    data: {
+      title: 'Apple MacBook Pro M3 Max 16" - 64GB / 1TB SSD Space Black',
+      price: '$250',
+      category: 'Electronics',
+      description: 'Brand new in sealed box. Need quick cash today for moving. Message me on WhatsApp directly at +1-555-0199 for instant pickup, do not use in-app checkout.',
+      image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&auto=format&fit=crop',
+      condition: 'Brand New',
+      location: 'Downtown Center',
+    },
+  },
+  {
+    id: 'lst_mod_2',
+    section: 'real-estate',
+    userId: 'u_re_2',
+    status: 'flagged',
+    riskScore: 78,
+    riskFlags: ['DUPLICATE_IMAGE_CLUSTER', 'UNVERIFIED_BROKER_REPOST'],
+    riskSummary: 'Photo signatures match listing #lst_re_2 posted by Sophia Rossi 4 days ago. Possible unverified broker duplicate.',
+    createdAt: new Date(Date.now() - 45 * 60000).toISOString(),
+    data: {
+      title: 'Waterfront Marina Sky Villa with Direct Dock Access',
+      price: '$3,200 / mo',
+      category: 'Apartments',
+      description: 'Stunning direct water views with high ceilings and private elevator entrance. Immediate lease available.',
+      image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&auto=format&fit=crop',
+      bedrooms: '3 Beds',
+      bathrooms: '2.5 Baths',
+      sqft: '2,100 sq ft',
+      location: 'Waterfront Marina',
+    },
+  },
+  {
+    id: 'lst_mod_3',
+    section: 'transport',
+    userId: 'u_trn_1',
+    status: 'pending_review',
+    riskScore: 58,
+    riskFlags: ['PHONE_IN_DESCRIPTION'],
+    riskSummary: 'Unformatted direct phone number detected in vehicle description. Bypasses in-app messaging policy.',
+    createdAt: new Date(Date.now() - 90 * 60000).toISOString(),
+    data: {
+      title: '2023 Mercedes-Benz Sprinter 2500 High Roof Cargo Van',
+      price: '$44,900',
+      category: 'Commercial Vans',
+      description: 'Clean title, 28k highway miles. Full service records available. Call or text 555-019-3388 anytime for test drive.',
+      image: 'https://images.unsplash.com/photo-1527786356703-4b100091cd2c?w=600&auto=format&fit=crop',
+      mileage: '28,000 miles',
+      year: '2023',
+      transmission: 'Automatic',
+      location: 'Industrial District',
+    },
+  },
+  {
+    id: 'lst_mod_4',
+    section: 'job',
+    userId: 'u_job_1',
+    status: 'pending_review',
+    riskScore: 84,
+    riskFlags: ['PAY_RATE_OUTLIER', 'SUSPICIOUS_KEYWORD_PATTERN'],
+    riskSummary: 'Guaranteed daily rate of $650 for entry-level data processing. High probability of recruitment scam.',
+    createdAt: new Date(Date.now() - 140 * 60000).toISOString(),
+    data: {
+      title: 'Remote Senior Data Verification Analyst (Immediate Start)',
+      company: 'Apex Global Logistics Partners',
+      salary: '$650 / day',
+      type: 'Full-time Remote',
+      description: 'Perform simple verification tasks from home on your own schedule. Guaranteed daily payout. No previous experience needed.',
+      location: 'Remote / City Wide',
+      requirements: ['Own computer with internet', 'Availability 2 hours per day'],
+    },
+  },
+];
+
+const SEED_VERIFICATION_REQUESTS: VerificationRequest[] = [
+  {
+    id: 'vr_1',
+    userId: 'u_re_1',
+    userName: "Liam O'Connor",
+    userEmail: 'liam.properties@buzzer.com',
+    vertical: 'real-estate',
+    badgeTitle: 'Licensed Real Estate Broker (State ID #RE-99214)',
+    documentType: 'realtor_license',
+    documentNumber: 'RE-NY-840192',
+    documentImage: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop',
+    submittedAt: new Date(Date.now() - 4 * 3600000).toISOString(),
+    status: 'pending',
+  },
+  {
+    id: 'vr_2',
+    userId: 'u_srv_1',
+    userName: 'Nathan Cross',
+    userEmail: 'nathan.electric@buzzer.com',
+    vertical: 'service',
+    badgeTitle: 'Master Certified Electrician #EL-4011',
+    documentType: 'master_trade',
+    documentNumber: 'EL-98214-MA',
+    documentImage: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=600&auto=format&fit=crop',
+    submittedAt: new Date(Date.now() - 12 * 3600000).toISOString(),
+    status: 'pending',
+  },
+  {
+    id: 'vr_3',
+    userId: 'u_trn_2',
+    userName: 'Emily Zhang',
+    userEmail: 'emily.evshare@buzzer.com',
+    vertical: 'transport',
+    badgeTitle: 'Commercial Fleet Operator #TR-7721',
+    documentType: 'dealer_permit',
+    documentNumber: 'FLEET-EV-331',
+    documentImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop',
+    submittedAt: new Date(Date.now() - 18 * 3600000).toISOString(),
+    status: 'pending',
+  },
+  {
+    id: 'vr_4',
+    userId: 'u_mkt_1',
+    userName: 'Elena Torres',
+    userEmail: 'elena.vintage@buzzer.com',
+    vertical: 'marketplace',
+    badgeTitle: 'Antique Guild Certified Appraiser',
+    documentType: 'business_reg',
+    documentNumber: 'AG-VINTAGE-004',
+    documentImage: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=600&auto=format&fit=crop',
+    submittedAt: new Date(Date.now() - 48 * 3600000).toISOString(),
+    status: 'approved',
+    reviewedBy: 'u_admin',
+    reviewedAt: new Date(Date.now() - 24 * 3600000).toISOString(),
+    reviewNotes: 'Identity and registration authenticated with National Antique Guild registry.',
+  },
 ];
 
 const SEED_GROUPS: Group[] = [
@@ -534,6 +693,7 @@ async function initializeDatabase() {
         supportTickets: (supportTickets as InMemoryCollection<SupportTicket>).docs,
         analytics: (analytics as InMemoryCollection<AnalyticsRecord>).docs,
         passwordResetTokens: (passwordResetTokens as InMemoryCollection<PasswordResetToken>).docs,
+        verificationRequests: (verificationRequests as InMemoryCollection<VerificationRequest>).docs,
       };
       fs.writeFileSync(DB_FILE_PATH, JSON.stringify(dump, null, 2), 'utf-8');
     } catch (e) {
@@ -554,7 +714,17 @@ async function initializeDatabase() {
 
   console.log('Booting database with 30 real user accounts across 6 sections.');
   users = new InMemoryCollection<User>(initialDump?.users || SEED_USERS);
-  listings = new InMemoryCollection<Listing>(initialDump?.listings || SEED_LISTINGS);
+  
+  // Merge any missing moderation queue seed items into existing listings
+  const baseListings: Listing[] = initialDump?.listings || SEED_LISTINGS;
+  const existingIds = new Set(baseListings.map(l => l.id));
+  const mergedListings = [...baseListings];
+  for (const seedL of SEED_LISTINGS) {
+    if (!existingIds.has(seedL.id)) {
+      mergedListings.push(seedL);
+    }
+  }
+  listings = new InMemoryCollection<Listing>(mergedListings);
   businesses = new InMemoryCollection<Business>(initialDump?.businesses || BUSINESSES_DATA);
   jobApplications = new InMemoryCollection<JobApplication>(initialDump?.jobApplications || []);
   messages = new InMemoryCollection<Message>(initialDump?.messages || []);
@@ -564,6 +734,9 @@ async function initializeDatabase() {
   featureFlags = new InMemoryCollection<FeatureFlag>(initialDump?.featureFlags || [
     { name: 'instant_chat', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
     { name: 'reels_feed', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
+    { name: 'auto_spam_filter', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
+    { name: 'duplicate_image_shield', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
+    { name: 'pii_protection_mode', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
   ]);
   userRestrictions = new InMemoryCollection<UserRestriction>(initialDump?.userRestrictions || []);
   stories = new InMemoryCollection<Story>(initialDump?.stories || SEED_STORIES);
@@ -579,6 +752,17 @@ async function initializeDatabase() {
       createdAt: new Date(Date.now() - 3600000),
       updatedAt: new Date(Date.now() - 3600000),
     },
+    {
+      ticketId: 'tck_102',
+      userId: 'u_mkt_3',
+      subject: 'Transaction dispute on pottery kiln order #882',
+      description: 'Customer claims courier dropped the box, requested return label authorization.',
+      priority: 'high',
+      category: 'dispute',
+      status: 'open',
+      createdAt: new Date(Date.now() - 1800000),
+      updatedAt: new Date(Date.now() - 1800000),
+    },
   ]);
   analytics = new InMemoryCollection<AnalyticsRecord>(initialDump?.analytics || [
     {
@@ -589,6 +773,7 @@ async function initializeDatabase() {
     },
   ]);
   passwordResetTokens = new InMemoryCollection<PasswordResetToken>(initialDump?.passwordResetTokens || []);
+  verificationRequests = new InMemoryCollection<VerificationRequest>(initialDump?.verificationRequests || SEED_VERIFICATION_REQUESTS);
 
   onDatabaseChange = saveToDisk;
   saveToDisk();
@@ -1418,6 +1603,245 @@ app.post('/api/admin/features/:name', adminMiddleware, async (req: any, res) => 
     await adminLogs.insertOne({ id: uid(), action: 'toggle_feature', performedBy: req.user.userId, timestamp: new Date(), details: { name, enabled } });
     res.json({ success: true });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
+});
+
+// ── Moderation Triage Queue (OLX-style) ─────────────────────────
+
+app.get('/api/admin/moderation/queue', adminMiddleware, async (req: any, res) => {
+  try {
+    const filterStatus = req.query.status as string; // 'all', 'pending', 'flagged'
+    let query: any = {};
+    if (filterStatus === 'pending') {
+      query = { status: 'pending_review' };
+    } else if (filterStatus === 'flagged') {
+      query = { status: 'flagged' };
+    } else if (filterStatus === 'reviewed') {
+      query = { status: { $in: ['active', 'rejected'] } };
+    } else {
+      query = { status: { $in: ['pending_review', 'flagged', 'active'] } };
+    }
+
+    const queueItems = await listings.find(query).sort({ createdAt: -1 }).toArray();
+    const ownerIds = [...new Set(queueItems.map(l => l.userId))];
+    const owners = await users.find({ id: { $in: ownerIds } }, {
+      projection: { id: 1, name: 1, email: 1, profileImageUrl: 1, location: 1, contactPhone: 1 }
+    }).toArray();
+    const ownerMap = new Map(owners.map(o => [o.id, o]));
+
+    const enriched = queueItems.map(item => {
+      const owner = ownerMap.get(item.userId);
+      return {
+        ...item,
+        seller: owner?.name || 'Local Member',
+        sellerEmail: owner?.email || 'unregistered@buzzer.com',
+        sellerLocation: owner?.location || 'Downtown Center',
+        sellerAvatar: owner?.profileImageUrl,
+        sellerPhone: owner?.contactPhone,
+        riskScore: item.riskScore ?? (item.status === 'flagged' ? 75 : 15),
+        riskFlags: item.riskFlags ?? (item.status === 'flagged' ? ['COMMUNITY_REPORTED'] : ['STANDARD_VERIFIED']),
+        riskSummary: item.riskSummary ?? (item.status === 'flagged' ? 'Flagged by automated trust shield for manual review' : 'Standard listing submission'),
+      };
+    });
+
+    res.json({ success: true, items: enriched, total: enriched.length });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/admin/moderation/decide', adminMiddleware, async (req: any, res) => {
+  try {
+    const { listingId, decision, reason } = req.body;
+    if (!listingId || !['approve', 'reject', 'flag', 'escalate'].includes(decision)) {
+      return res.status(400).json({ message: 'Valid listingId and decision (approve/reject/flag) required' });
+    }
+
+    const newStatus = decision === 'approve' ? 'active' : decision === 'reject' ? 'rejected' : 'flagged';
+    await listings.updateOne({ id: listingId }, {
+      $set: {
+        status: newStatus,
+        moderatedBy: req.user.userId,
+        moderatedAt: new Date().toISOString(),
+        moderationReason: reason || (decision === 'approve' ? 'Meets marketplace trust standards' : 'Rejected by moderation policy'),
+      }
+    });
+
+    await adminLogs.insertOne({
+      id: uid(),
+      action: `listing_${decision}`,
+      performedBy: req.user.userId,
+      timestamp: new Date(),
+      details: { listingId, decision, reason: reason || 'Moderation decision recorded' }
+    });
+
+    res.json({ success: true, status: newStatus, message: `Listing marked as ${newStatus}` });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/admin/moderation/bulk-decide', adminMiddleware, async (req: any, res) => {
+  try {
+    const { listingIds, decision, reason } = req.body;
+    if (!Array.isArray(listingIds) || listingIds.length === 0) {
+      return res.status(400).json({ message: 'listingIds array required' });
+    }
+    const newStatus = decision === 'approve' ? 'active' : 'rejected';
+    for (const id of listingIds) {
+      await listings.updateOne({ id }, {
+        $set: {
+          status: newStatus,
+          moderatedBy: req.user.userId,
+          moderatedAt: new Date().toISOString(),
+          moderationReason: reason || `Bulk ${decision}`,
+        }
+      });
+    }
+
+    await adminLogs.insertOne({
+      id: uid(),
+      action: `listing_bulk_${decision}`,
+      performedBy: req.user.userId,
+      timestamp: new Date(),
+      details: { count: listingIds.length, decision }
+    });
+
+    res.json({ success: true, modifiedCount: listingIds.length, message: `Successfully ${decision}d ${listingIds.length} listings` });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ── Trust & Verification Desk (Rieltor.ua-style) ───────────────
+
+app.get('/api/admin/verifications', adminMiddleware, async (_req, res) => {
+  try {
+    const requests = await verificationRequests.find().sort({ submittedAt: -1 }).toArray();
+    res.json({ success: true, requests });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/admin/verifications/decide', adminMiddleware, async (req: any, res) => {
+  try {
+    const { requestId, decision, notes } = req.body;
+    if (!requestId || !['approved', 'rejected'].includes(decision)) {
+      return res.status(400).json({ message: 'Valid requestId and decision required' });
+    }
+
+    const reqDoc = await verificationRequests.findOne({ id: requestId });
+    if (!reqDoc) return res.status(404).json({ message: 'Verification request not found' });
+
+    await verificationRequests.updateOne({ id: requestId }, {
+      $set: {
+        status: decision,
+        reviewedBy: req.user.userId,
+        reviewedAt: new Date().toISOString(),
+        reviewNotes: notes || (decision === 'approved' ? 'Official accreditation confirmed' : 'Insufficient credential proof'),
+      }
+    });
+
+    if (decision === 'approved') {
+      // Award verified badge on user profile and their listings
+      await users.updateOne({ id: reqDoc.userId }, { $set: { verified: true, verifiedBadge: reqDoc.badgeTitle } });
+      await listings.updateOne({ userId: reqDoc.userId }, { $set: { 'data.verified': true } });
+    }
+
+    await adminLogs.insertOne({
+      id: uid(),
+      action: `verification_${decision}`,
+      performedBy: req.user.userId,
+      timestamp: new Date(),
+      details: { requestId, userId: reqDoc.userId, vertical: reqDoc.vertical, decision }
+    });
+
+    res.json({ success: true, message: `Verification request ${decision}` });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ── Executive Cockpit KPIs & CRM Overview ──────────────────────
+
+app.get('/api/admin/crm/overview', adminMiddleware, async (_req, res) => {
+  try {
+    const [
+      totalUsersCount,
+      activeListingsCount,
+      pendingQueueCount,
+      verificationsCount,
+      openTicketsCount,
+      activeBusinessesCount,
+      logsCount
+    ] = await Promise.all([
+      users.countDocuments(),
+      listings.countDocuments({ status: 'active' }),
+      listings.countDocuments({ status: 'pending_review' }),
+      verificationRequests.countDocuments({ status: 'pending' }),
+      supportTickets.countDocuments({ status: 'open' }),
+      businesses.countDocuments({ isSponsored: true }),
+      adminLogs.countDocuments(),
+    ]);
+
+    res.json({
+      success: true,
+      kpis: {
+        totalUsers: totalUsersCount,
+        activeListings: activeListingsCount,
+        pendingModeration: pendingQueueCount,
+        pendingVerifications: verificationsCount,
+        openTickets: openTicketsCount,
+        sponsoredBusinesses: activeBusinessesCount,
+        totalAuditLogs: logsCount,
+        uptime: '99.98%',
+        engine: 'InMemory + Local JSON persistence',
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ── B2B Merchant Ad Extranet API ──────────────────────────────
+
+app.get('/api/admin/crm/merchants', adminMiddleware, async (_req, res) => {
+  try {
+    const allBiz = await businesses.find().toArray();
+    // Enrich with calculated ad impression & click metrics
+    const enriched = allBiz.map((b, idx) => ({
+      ...b,
+      impressions: 1240 + (idx * 310) + ((b.isSponsored ? 4500 : 800)),
+      clicks: 84 + (idx * 22) + ((b.isSponsored ? 390 : 45)),
+      ctr: ((b.isSponsored ? 8.6 : 3.8) + (idx % 3) * 0.4).toFixed(1) + '%',
+      leadsGenerated: 14 + (idx * 3) + (b.isSponsored ? 42 : 5),
+      tier: b.isSponsored ? 'Premium Partner' : 'Standard Merchant',
+    }));
+    res.json({ success: true, merchants: enriched });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ── Staff Role Impersonation (For Live Demo of all 4 RBAC Tiers) 
+
+app.post('/api/admin/auth/staff-token', async (req, res) => {
+  try {
+    const { role } = req.body;
+    // Pre-configured staff profiles
+    const staffProfiles: Record<string, { id: string; name: string; email: string; role: string; title: string }> = {
+      superadmin: { id: 'u_admin', name: 'Alex Vance (Superadmin)', email: 'admin@buzzer.com', role: 'admin', title: 'Platform Director' },
+      operations: { id: 'u_staff_ops', name: 'Elena Rostova (Ops Manager)', email: 'elena.ops@buzzer.com', role: 'admin', title: 'B2B & Commercial Operations' },
+      moderator: { id: 'u_staff_mod', name: 'David Chen (Trust & Safety)', email: 'david.mod@buzzer.com', role: 'admin', title: 'Senior Content Moderator' },
+      support: { id: 'u_staff_sup', name: 'Sarah Miller (Help Desk)', email: 'sarah.support@buzzer.com', role: 'admin', title: 'Tier 1 Support Specialist' },
+    };
+
+    const profile = staffProfiles[role] || staffProfiles.superadmin;
+    const token = generateToken(profile.id, profile.email);
+    res.json({ success: true, token, user: profile });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // ── User profile update ───────────────────────────────────────

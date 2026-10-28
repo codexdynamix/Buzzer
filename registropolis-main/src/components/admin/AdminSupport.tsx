@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supportService } from '@/services/supportService';
-import { SupportTicket } from '@/types/supportTypes';
+import { supportService, SupportTicket } from '@/services/supportService';
 import {
   Table,
   TableBody,
@@ -32,7 +31,7 @@ const AdminSupport = () => {
     queryFn: () => supportService.getTickets(),
   });
 
-  const getPriorityColor = (priority: SupportTicket['priority']) => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent':
         return 'bg-red-500';
@@ -45,11 +44,12 @@ const AdminSupport = () => {
     }
   };
 
-  const getStatusColor = (status: SupportTicket['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'open':
         return 'bg-blue-500';
       case 'in-progress':
+      case 'in_progress':
         return 'bg-yellow-500';
       case 'resolved':
         return 'bg-green-500';
@@ -143,7 +143,7 @@ const AdminSupport = () => {
                       </div>
                       <div className="flex space-x-2">
                         <Button
-                          onClick={() => selectedTicket && handleStatusChange(selectedTicket.ticketId, 'in-progress')}
+                          onClick={() => selectedTicket && handleStatusChange(selectedTicket.ticketId, 'in_progress')}
                         >
                           Mark In Progress
                         </Button>

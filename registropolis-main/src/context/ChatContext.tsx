@@ -17,6 +17,7 @@ export interface ListingChatInfo {
 interface ChatContextType {
   pendingChat: ListingChatInfo | null;
   openChatWithListing: (info: ListingChatInfo) => void;
+  openChatWithUser: (userId: string, userName: string) => void;
   clearPendingChat: () => void;
   unreadByListing: Record<string, number>;
   totalUnread: number;
@@ -81,6 +82,21 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     navigate('/dashboard/messages');
   }, [isAuthenticated, showGuestModal, navigate, markListingRead]);
 
+  const openChatWithUser = useCallback((userId: string, userName: string) => {
+    if (!isAuthenticated) {
+      showGuestModal();
+      return;
+    }
+    setPendingChat({
+      listingId: userId,
+      listingTitle: `Chat with ${userName}`,
+      listingPrice: '',
+      listingCategory: 'messages',
+      sellerName: userName,
+    });
+    navigate('/dashboard/messages');
+  }, [isAuthenticated, showGuestModal, navigate]);
+
   const clearPendingChat = useCallback(() => {
     setPendingChat(null);
   }, []);
@@ -91,6 +107,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     <ChatContext.Provider value={{
       pendingChat,
       openChatWithListing,
+      openChatWithUser,
       clearPendingChat,
       unreadByListing,
       totalUnread,

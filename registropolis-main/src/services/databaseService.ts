@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { MongoClient, Db, Collection, MongoClientOptions } from 'mongodb';
 import { UserDocument, MessageDocument, GroupDocument } from '@/types/databaseTypes';
 

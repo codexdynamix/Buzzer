@@ -1012,7 +1012,7 @@ export default function ReelsSection() {
       sellerAvatar: reel.sellerAvatar,
       listingId: reel.id,
       listingTitle: reel.productTitle,
-      listingPrice: reel.price,
+      listingPrice: String(reel.price),
       listingImage: reel.posterUrl,
       listingCategory: reel.category,
     });

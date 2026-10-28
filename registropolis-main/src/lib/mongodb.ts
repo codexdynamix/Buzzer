@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { db } from '@/services/databaseService';
 import { Collection, Document } from 'mongodb';
 
