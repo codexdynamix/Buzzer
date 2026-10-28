@@ -16,6 +16,7 @@ import {
   Star
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { adminCRMAPI, businessesAPI } from '@/services/apiService';
 
 export interface MerchantItem {
   id: string;
@@ -46,14 +47,9 @@ export const AdminMerchantPortal: React.FC = () => {
   const fetchMerchants = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/crm/merchants', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
-        },
-      });
-      const data = await res.json();
+      const data = await adminCRMAPI.getMerchants();
       if (data.success) {
-        setMerchants(data.merchants || []);
+        setMerchants((data.merchants as MerchantItem[] | undefined) || []);
       }
     } catch {
       toast.error('Failed to load merchant data');
@@ -68,18 +64,7 @@ export const AdminMerchantPortal: React.FC = () => {
 
   const toggleSponsor = async (merchantId: string) => {
     try {
-      const res = await fetch(`/api/businesses/${merchantId}/sponsor`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
-        },
-        body: JSON.stringify({
-          adTag: 'Sponsored Partner',
-          adHeadline: 'Featured Community Partner • Verified Buzzer Merchant',
-        }),
-      });
-      const data = await res.json();
+      const data = await businessesAPI.toggleSponsor(merchantId, { adTag: 'Sponsored Partner', adHeadline: 'Featured Community Partner • Verified Buzzer Merchant' });
       if (data.success) {
         toast.success(data.message || 'Updated merchant ad status');
         setMerchants(prev => prev.map(m => m.id === merchantId ? { ...m, isSponsored: data.isSponsored } : m));
@@ -105,7 +90,7 @@ export const AdminMerchantPortal: React.FC = () => {
     <div className="space-y-6">
       {/* Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl p-5 backdrop-blur-md">
+        <div className="bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl p-5">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
             <Store size={14} className="text-[#C9A96E]" /> Total Businesses
           </div>
@@ -113,7 +98,7 @@ export const AdminMerchantPortal: React.FC = () => {
           <div className="text-xs text-slate-400 mt-1">Across 6 local districts</div>
         </div>
 
-        <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl p-5 backdrop-blur-md">
+        <div className="bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl p-5">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
             <Sparkles size={14} className="text-[#C9A96E]" /> Sponsored Partners
           </div>
@@ -121,7 +106,7 @@ export const AdminMerchantPortal: React.FC = () => {
           <div className="text-xs text-slate-400 mt-1">Receiving premium home placement</div>
         </div>
 
-        <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl p-5 backdrop-blur-md">
+        <div className="bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl p-5">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
             <Eye size={14} className="text-blue-400" /> Ad Impressions (30d)
           </div>
@@ -129,7 +114,7 @@ export const AdminMerchantPortal: React.FC = () => {
           <div className="text-xs text-slate-400 mt-1">Impression analytics are not connected</div>
         </div>
 
-        <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl p-5 backdrop-blur-md">
+        <div className="bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl p-5">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
             <MousePointerClick size={14} className="text-emerald-400" /> Customer Actions
           </div>
@@ -139,7 +124,7 @@ export const AdminMerchantPortal: React.FC = () => {
       </div>
 
       {/* Control bar */}
-      <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl p-4 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
           <input
@@ -175,10 +160,10 @@ export const AdminMerchantPortal: React.FC = () => {
       {isLoading ? (
         <div className="py-20 text-center text-slate-400">Loading merchant Extranet data...</div>
       ) : (
-        <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl overflow-hidden backdrop-blur-md">
+        <div className="bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-200">
-              <thead className="bg-[#0F1923]/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
+              <thead className="bg-[#0F1923] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
                 <tr>
                   <th className="p-3.5">Business & Category</th>
                   <th className="p-3.5">Location & Contact</th>

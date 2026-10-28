@@ -3,13 +3,6 @@ import { APP_FEATURES } from '@/config/features';
 export interface AdminFeatureControl {
   featureId: string;
   enabled: boolean;
-  moderationEnabled: boolean;
-  restrictedToRoles?: string[];
-  moderationRules?: {
-    requiresApproval?: boolean;
-    autoModeration?: boolean;
-    maxDailySubmissions?: number;
-  };
 }
 
 function getAuthHeader(): Record<string, string> {
@@ -29,42 +22,31 @@ async function apiFetch(path: string, method = 'GET', body?: any) {
 }
 
 export async function updateFeatureControls(featureId: string, controls: Partial<AdminFeatureControl>) {
-  const { featureId: _featureId, ...updates } = controls;
-  await apiFetch(`/admin/features/${featureId}`, 'POST', updates);
+  if (typeof controls.enabled !== 'boolean') {
+    throw new Error('A feature enabled state is required');
+  }
+  await apiFetch(`/admin/features/${featureId}`, 'POST', {
+    enabled: controls.enabled,
+    scope: 'global',
+  });
 }
 
 export async function getFeatureControls(featureId: string): Promise<AdminFeatureControl | null> {
   const data = await apiFetch('/admin/features');
-  if (!data?.features) throw new Error('Feature controls response is invalid');
+  if (!Array.isArray(data.features)) throw new Error('Feature settings response is invalid');
   const flag = data.features.find((f: any) => f.name === featureId);
-  if (!flag) {
-    return {
-      featureId,
-      enabled: false,
-      moderationEnabled: false,
-      moderationRules: {},
-    };
-  }
-  return {
-    featureId: flag.name,
-    enabled: flag.enabled,
-    moderationEnabled: flag.moderationEnabled ?? false,
-    restrictedToRoles: flag.restrictedToRoles || [],
-    moderationRules: flag.moderationRules || {},
-  };
+  return { featureId, enabled: flag?.enabled ?? true };
 }
 
 export async function initializeFeatureControls() {
   const data = await apiFetch('/admin/features');
-  if (!data?.features) throw new Error('Feature controls response is invalid');
-  const existingNames = data.features.map((f: any) => f.name);
-  for (const feature of Object.values(APP_FEATURES)) {
-    if (!existingNames.includes(feature)) {
-      await apiFetch(`/admin/features/${feature}`, 'POST', {
+  if (!Array.isArray(data.features)) throw new Error('Feature settings response is invalid');
+  const existingNames = new Set(data.features.map((feature: any) => feature.name));
+  await Promise.all(Object.values(APP_FEATURES)
+    .filter(feature => !existingNames.has(feature))
+    .map(feature => apiFetch(`/admin/features/${feature}`, 'POST', {
         enabled: true,
         scope: 'global',
         targetUsers: [],
-      });
-    }
-  }
+      })));
 }

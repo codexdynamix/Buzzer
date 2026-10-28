@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 interface JobApplication {
   id: string;
@@ -45,6 +46,7 @@ const TYPE_STYLE: Record<string,{ bg:string; text:string; border:string }> = {
 };
 
 export default function JobsSection() {
+  const { t } = useLocalization();
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
   const { isSaved, toggleSaved } = useSaved();
@@ -141,7 +143,7 @@ export default function JobsSection() {
       <div className="section-header">
         <div>
           <div className="gold-accent mb-3" />
-          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>Careers</h1>
+          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>{t('Jobs')}</h1>
           <p className="text-sm mt-1" style={{ color:'#6E7A8A' }}>Opportunities posted by your community</p>
         </div>
         <button
@@ -290,7 +292,6 @@ export default function JobsSection() {
                           listingImage: '',
                           listingCategory: 'Jobs',
                           sellerName: job.company,
-                          sellerUserId: job.userId ?? job.employerId ?? job.owner?.id ?? '',
                         });
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all"

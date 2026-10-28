@@ -7,10 +7,10 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { isStaffRole } from '@/config/adminAccess';
 import { realAuthAPI } from '@/services/authService';
 import { toast } from 'sonner';
 import AppLayout from '@/components/layout/AppLayout';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 const PLATFORMS = [
   { key: 'whatsapp', label: 'WhatsApp', color: '#25D366', emoji: '💬' },
@@ -51,6 +51,7 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, updateUser, signOut, refreshUser } = useAuth();
+  const { t } = useLocalization();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // ── Profile state ──────────────────────────────────────────
@@ -90,7 +91,7 @@ export default function ProfilePage() {
   };
 
   const handleSaveProfile = async () => {
-    if (!profile.name.trim()) return toast.error('Name is required');
+    if (!profile.name.trim()) return toast.error(t('Name is required'));
     setIsSaving(true);
     try {
       const data = await realAuthAPI.updateProfile({
@@ -106,7 +107,7 @@ export default function ProfilePage() {
         messenger: profile.messenger,
       });
       updateUser(data.user ?? profile);
-      toast.success('Profile saved!');
+      toast.success(t('Profile saved!'));
       setIsEditing(false);
     } catch (err: any) {
       toast.error(err.message || 'Could not save profile');
@@ -116,13 +117,13 @@ export default function ProfilePage() {
   };
 
   const handleChangePassword = async () => {
-    if (!newPw) return toast.error('Enter a new password');
-    if (newPw.length < 6) return toast.error('Password must be at least 6 characters');
-    if (newPw !== confirmPw) return toast.error('Passwords do not match');
+    if (!newPw) return toast.error(t('Enter a new password'));
+    if (newPw.length < 6) return toast.error(t('At least 6 characters'));
+    if (newPw !== confirmPw) return toast.error(t("Passwords don't match"));
     setSavingPw(true);
     try {
       await realAuthAPI.changePassword(currentPw, newPw);
-      toast.success('Password updated!');
+      toast.success(t('Password updated!'));
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
       setPwSection(false);
     } catch (err: any) {
@@ -145,10 +146,10 @@ export default function ProfilePage() {
             className="flex items-center gap-1.5 text-sm font-medium mb-4 transition-colors hover:text-[#0F1923]"
             style={{ color: '#6E7A8A' }}
           >
-            <ArrowLeft size={14} /> Back
+            <ArrowLeft size={14} /> {t('Back')}
           </button>
-          <h1 className="text-2xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>Profile & Settings</h1>
-          <p className="text-sm mt-1" style={{ color: '#6E7A8A' }}>Manage your identity, contact details, and security</p>
+          <h1 className="text-2xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>{t('Profile & Settings')}</h1>
+          <p className="text-sm mt-1" style={{ color: '#6E7A8A' }}>{t('Manage your identity, contact details, and security')}</p>
         </motion.div>
 
         <div className="space-y-4">
@@ -186,11 +187,11 @@ export default function ProfilePage() {
                       className="text-xs font-semibold px-3 py-1 rounded-full transition-all"
                       style={{ backgroundColor: '#F0EBE1', color: '#C9A96E', border: '1px solid #E8D9BC' }}
                     >
-                      Change photo
+                      {t('Change photo')}
                     </button>
-                    {(isStaffRole(user?.staffRole) || user?.role === 'moderator') && (
+                    {user?.role === 'admin' && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#fef3c7', color: '#d97706' }}>
-                        {user?.staffRole?.replace(/(^|-)(\w)/g, (_, separator, character) => `${separator ? ' ' : ''}${character.toUpperCase()}`) || 'Moderator'}
+                        Admin
                       </span>
                     )}
                   </div>
@@ -204,8 +205,8 @@ export default function ProfilePage() {
             <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #E8E2D8', backgroundColor: '#fff' }}>
               <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #F0EBE1' }}>
                 <div>
-                  <p className="font-bold text-sm" style={{ color: '#0F1923' }}>Profile Information</p>
-                  <p className="text-xs mt-0.5" style={{ color: '#6E7A8A' }}>Your public display name, bio, and location</p>
+                  <p className="font-bold text-sm" style={{ color: '#0F1923' }}>{t('Profile Information')}</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#6E7A8A' }}>{t('Your public display name, bio, and location')}</p>
                 </div>
                 {!isEditing ? (
                   <button
@@ -213,7 +214,7 @@ export default function ProfilePage() {
                     className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all"
                     style={{ backgroundColor: '#F0EBE1', color: '#1A3353', border: '1px solid #E8D9BC' }}
                   >
-                    <Edit2 size={11} /> Edit
+                    <Edit2 size={11} /> {t('Edit')}
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -226,7 +227,7 @@ export default function ProfilePage() {
                       className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all disabled:opacity-50"
                       style={{ backgroundColor: '#1A3353', color: '#fff' }}
                     >
-                      {isSaving ? <Loader2 size={11} className="animate-spin" /> : <><Save size={11} /> Save</>}
+                      {isSaving ? <Loader2 size={11} className="animate-spin" /> : <><Save size={11} /> {t('Save')}</>}
                     </button>
                   </div>
                 )}
@@ -235,11 +236,11 @@ export default function ProfilePage() {
               <div className="p-5 space-y-4">
                 {isEditing ? (
                   <>
-                    <Field label="Full Name" icon={User}>
+                    <Field label={t('Full name')} icon={User}>
                       <input
                         value={profile.name}
                         onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
-                        placeholder="Your full name"
+                        placeholder={t('Your full name')}
                         className={inputCls + ' pl-9'}
                         style={inputStyle}
                       />
@@ -248,18 +249,18 @@ export default function ProfilePage() {
                       <input
                         value={profile.location}
                         onChange={e => setProfile(p => ({ ...p, location: e.target.value }))}
-                        placeholder="e.g. London, UK"
+                        placeholder={t('e.g. London, UK')}
                         className={inputCls + ' pl-9'}
                         style={inputStyle}
                       />
                     </Field>
                     <div>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: '#6E7A8A' }}>Bio</label>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: '#6E7A8A' }}>{t('Bio')}</label>
                       <textarea
                         value={profile.bio}
                         onChange={e => setProfile(p => ({ ...p, bio: e.target.value }))}
                         rows={3}
-                        placeholder="A short description about yourself…"
+                        placeholder={t('A short description about yourself…')}
                         className="w-full px-4 py-2.5 rounded-xl text-sm font-medium outline-none resize-none transition-all"
                         style={inputStyle}
                       />
@@ -268,10 +269,10 @@ export default function ProfilePage() {
                 ) : (
                   <div className="space-y-3">
                     {[
-                      { label: 'Name', value: profile.name, Icon: User },
-                      { label: 'Email', value: user?.email || 'Not provided', Icon: Mail },
-                      { label: 'Location', value: profile.location || 'Not provided', Icon: MapPin },
-                      { label: 'Bio', value: profile.bio || 'Not provided', Icon: Info },
+                      { label: t('Name'), value: profile.name, Icon: User },
+                      { label: t('Email'), value: user?.email || t('Not provided'), Icon: Mail },
+                      { label: t('Location'), value: profile.location || t('Not provided'), Icon: MapPin },
+                      { label: t('Bio'), value: profile.bio || t('Not provided'), Icon: Info },
                     ].map(({ label, value, Icon }) => (
                       <div key={label} className="flex items-start gap-3">
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#F5F2EC' }}>
@@ -291,21 +292,21 @@ export default function ProfilePage() {
 
           {/* ── Contact / Phone ── */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, delay: 0.12 }}>
-            <Section title="Contact Details" subtitle="Phone number shown on your listings so buyers can reach you">
+            <Section title={t('Contact Details')} subtitle={t('Phone number shown on your listings so buyers can reach you')}>
               <div className="space-y-4">
                 {/* Registered account phone (read-only) */}
                 {user?.phoneNumber && (
                   <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: '#F9F7F4', border: '1px solid #E8E2D8' }}>
                     <Phone size={14} style={{ color: '#C9A96E' }} />
                     <div>
-                      <p className="text-xs" style={{ color: '#6E7A8A' }}>Account phone (WhatsApp sign-in)</p>
+                      <p className="text-xs" style={{ color: '#6E7A8A' }}>{t('Account phone (WhatsApp sign-in)')}</p>
                       <p className="text-sm font-semibold" style={{ color: '#0F1923' }}>{user.phoneNumber}</p>
                     </div>
                   </div>
                 )}
 
                 {/* Seller contact phone (editable) */}
-                <Field label="Public Contact Number" icon={Phone}>
+                <Field label={t('Public Contact Number')} icon={Phone}>
                   <input
                     value={profile.contactPhone}
                     onChange={e => setProfile(p => ({ ...p, contactPhone: e.target.value }))}
@@ -317,7 +318,7 @@ export default function ProfilePage() {
 
                 {/* Platform toggles */}
                 <div>
-                  <label className="block text-xs font-semibold mb-2" style={{ color: '#6E7A8A' }}>Reachable via</label>
+                  <label className="block text-xs font-semibold mb-2" style={{ color: '#6E7A8A' }}>{t('Reachable via')}</label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {PLATFORMS.map(pl => {
                       const isOn = profile[pl.key as keyof typeof profile] as boolean;
@@ -347,7 +348,7 @@ export default function ProfilePage() {
                   className="w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
                   style={{ backgroundColor: '#1A3353', color: '#fff' }}
                 >
-                  {isSaving ? <Loader2 size={15} className="animate-spin mx-auto" /> : 'Save Contact Settings'}
+                  {isSaving ? <Loader2 size={15} className="animate-spin mx-auto" /> : t('Save Contact Settings')}
                 </button>
               </div>
             </Section>
@@ -367,15 +368,15 @@ export default function ProfilePage() {
                   </div>
                   <div className="text-left">
                     <p className="font-bold text-sm" style={{ color: '#0F1923' }}>
-                      {hasPassword ? 'Change Password' : 'Set a Password'}
+                      {hasPassword ? t('Change Password') : t('Set a Password')}
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: '#6E7A8A' }}>
-                      {hasPassword ? 'Update your account password' : 'Add email/password login to your account'}
+                      {hasPassword ? t('Update your account password') : t('Add email/password login to your account')}
                     </p>
                   </div>
                 </div>
                 <span className="text-xs font-semibold px-3 py-1 rounded-full transition-all" style={{ backgroundColor: '#F0EBE1', color: '#1A3353' }}>
-                  {pwSection ? 'Cancel' : 'Change'}
+                  {pwSection ? t('Cancel') : t('Change')}
                 </span>
               </button>
 
@@ -383,13 +384,13 @@ export default function ProfilePage() {
                 <div className="p-5 space-y-4">
                   {hasPassword && (
                     <div>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: '#6E7A8A' }}>Current Password</label>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: '#6E7A8A' }}>{t('Current Password')}</label>
                       <div className="relative">
                         <input
                           type={showCurrent ? 'text' : 'password'}
                           value={currentPw}
                           onChange={e => setCurrentPw(e.target.value)}
-                          placeholder="Your current password"
+                          placeholder={t('Your current password')}
                           className={inputCls + ' pr-10'}
                           style={inputStyle}
                           autoFocus
@@ -402,13 +403,13 @@ export default function ProfilePage() {
                   )}
 
                   <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#6E7A8A' }}>New Password</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#6E7A8A' }}>{t('New Password')}</label>
                     <div className="relative">
                       <input
                         type={showNew ? 'text' : 'password'}
                         value={newPw}
                         onChange={e => setNewPw(e.target.value)}
-                        placeholder="At least 6 characters"
+                        placeholder={t('At least 6 characters')}
                         className={inputCls + ' pr-10'}
                         style={inputStyle}
                         autoFocus={!hasPassword}
@@ -420,18 +421,18 @@ export default function ProfilePage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#6E7A8A' }}>Confirm New Password</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#6E7A8A' }}>{t('Confirm New Password')}</label>
                     <input
                       type="password"
                       value={confirmPw}
                       onChange={e => setConfirmPw(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
-                      placeholder="Repeat your new password"
+                      placeholder={t('Repeat your new password')}
                       className={inputCls}
                       style={inputStyle}
                     />
                     {confirmPw && newPw !== confirmPw && (
-                      <p className="mt-1 text-xs" style={{ color: '#ef4444' }}>Passwords don't match</p>
+                      <p className="mt-1 text-xs" style={{ color: '#ef4444' }}>{t("Passwords don't match")}</p>
                     )}
                   </div>
 
@@ -441,7 +442,7 @@ export default function ProfilePage() {
                     className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-40"
                     style={{ backgroundColor: '#1A3353', color: '#fff' }}
                   >
-                    {savingPw ? <Loader2 size={15} className="animate-spin" /> : <><ShieldCheck size={14} /> Update Password</>}
+                    {savingPw ? <Loader2 size={15} className="animate-spin" /> : <><ShieldCheck size={14} /> {t('Update Password')}</>}
                   </button>
                 </div>
               )}
@@ -451,13 +452,13 @@ export default function ProfilePage() {
           {/* ── Account / sign out ── */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, delay: 0.20 }}>
             <div className="rounded-2xl p-5" style={{ border: '1px solid #E8E2D8', backgroundColor: '#fff' }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: '#6E7A8A' }}>Account</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: '#6E7A8A' }}>{t('Account')}</p>
               <button
                 onClick={signOut}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold border transition-all hover:bg-red-50"
                 style={{ borderColor: '#fecaca', color: '#dc2626' }}
               >
-                <LogOut size={15} /> Sign Out
+                <LogOut size={15} /> {t('Sign out')}
               </button>
             </div>
           </motion.div>

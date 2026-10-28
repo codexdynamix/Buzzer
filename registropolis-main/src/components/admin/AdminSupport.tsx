@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supportService, SupportTicket } from '@/services/supportService';
+import { supportService } from '@/services/supportService';
+import { SupportTicket } from '@/types/supportTypes';
 import {
   Table,
   TableBody,
@@ -12,9 +13,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Send, UserCheck, AlertTriangle } from 'lucide-react';
+import { MessageSquare, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
@@ -27,7 +27,6 @@ import {
 const AdminSupport = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [reply, setReply] = useState('');
 
@@ -36,7 +35,7 @@ const AdminSupport = () => {
     queryFn: () => supportService.getTickets(),
   });
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: SupportTicket['priority']) => {
     switch (priority) {
       case 'urgent':
         return 'bg-red-500';
@@ -49,11 +48,10 @@ const AdminSupport = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: SupportTicket['status']) => {
     switch (status) {
       case 'open':
         return 'bg-blue-500';
-      case 'in-progress':
       case 'in_progress':
         return 'bg-yellow-500';
       case 'resolved':
@@ -67,8 +65,7 @@ const AdminSupport = () => {
     try {
       await supportService.updateTicket(ticketId, { status: newStatus });
       await queryClient.invalidateQueries({ queryKey: ['support-tickets'] });
-      const updated = (await supportService.getTickets()).find(ticket => ticket.ticketId === ticketId);
-      if (updated) setSelectedTicket(updated);
+      setSelectedTicket(current => current?.ticketId === ticketId ? { ...current, status: newStatus } : current);
       toast({
         title: "Status Updated",
         description: `Ticket status changed to ${newStatus}`,
@@ -76,7 +73,7 @@ const AdminSupport = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update ticket status",
+        description: "Failed to update ticket status",
         variant: "destructive",
       });
     }
@@ -85,53 +82,20 @@ const AdminSupport = () => {
   const handleReply = async () => {
     if (!selectedTicket || !reply.trim()) return;
     try {
-      await supportService.addResponse({
+      const response = await supportService.addResponse({
         ticketId: selectedTicket.ticketId,
-        userId: user?.id || '',
         message: reply.trim(),
       });
+      setSelectedTicket(current => current?.ticketId === selectedTicket.ticketId
+        ? { ...current, responses: [...(current.responses ?? []), response] }
+        : current);
       setReply('');
       await queryClient.invalidateQueries({ queryKey: ['support-tickets'] });
-      const updated = (await supportService.getTickets()).find(ticket => ticket.ticketId === selectedTicket.ticketId);
-      if (updated) setSelectedTicket(updated);
-      toast({ title: 'Reply sent', description: 'The response is now part of the ticket history.' });
+      toast({ title: 'Response sent', description: 'Your reply was added to the support ticket.' });
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to send reply',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleAssignToMe = async () => {
-    if (!selectedTicket || !user?.id) return;
-    try {
-      await supportService.updateTicket(selectedTicket.ticketId, { assignedTo: user.id });
-      await queryClient.invalidateQueries({ queryKey: ['support-tickets'] });
-      const updated = (await supportService.getTickets()).find(ticket => ticket.ticketId === selectedTicket.ticketId);
-      if (updated) setSelectedTicket(updated);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to assign ticket',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleEscalate = async () => {
-    if (!selectedTicket) return;
-    try {
-      await supportService.escalateTicket(selectedTicket.ticketId);
-      await queryClient.invalidateQueries({ queryKey: ['support-tickets'] });
-      const updated = (await supportService.getTickets()).find(ticket => ticket.ticketId === selectedTicket.ticketId);
-      if (updated) setSelectedTicket(updated);
-      toast({ title: 'Ticket escalated', description: 'Priority has been raised to urgent.' });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to escalate ticket',
+        description: error instanceof Error ? error.message : 'Failed to send support response',
         variant: 'destructive',
       });
     }
@@ -143,11 +107,9 @@ const AdminSupport = () => {
 
   if (isError) {
     return (
-      <div role="alert" className="space-y-3 rounded-lg border border-destructive/30 p-4">
-        <p className="text-sm text-destructive">
-          {error instanceof Error ? error.message : 'Failed to load support tickets'}
-        </p>
-        <Button variant="outline" onClick={() => void refetch()}>Try again</Button>
+      <div role="alert" className="space-y-3 py-8">
+        <p>Could not load support tickets: {error instanceof Error ? error.message : 'Unknown error'}</p>
+        <Button variant="outline" onClick={() => void refetch()}>Retry</Button>
       </div>
     );
   }
@@ -166,13 +128,12 @@ const AdminSupport = () => {
             <TableHead>Category</TableHead>
             <TableHead>Priority</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>SLA</TableHead>
             <TableHead>Created</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {tickets?.length ? tickets.map((ticket) => (
+          {tickets?.map((ticket) => (
             <TableRow key={ticket.ticketId}>
               <TableCell>{ticket.ticketId.slice(0, 8)}</TableCell>
               <TableCell>{ticket.subject}</TableCell>
@@ -185,19 +146,9 @@ const AdminSupport = () => {
                 </Badge>
               </TableCell>
               <TableCell>
-                <div className="space-y-1">
-                  <Badge className={getStatusColor(ticket.status)}>{ticket.status}</Badge>
-                  {ticket.assignedTo && <div className="text-xs text-muted-foreground">Assigned</div>}
-                </div>
-              </TableCell>
-              <TableCell>
-                {ticket.slaDueAt ? (
-                  <span className={new Date(ticket.slaDueAt).getTime() < Date.now() && !['resolved', 'closed'].includes(ticket.status)
-                    ? 'font-semibold text-red-600'
-                    : 'text-muted-foreground'}>
-                    {new Date(ticket.slaDueAt).toLocaleString()}
-                  </span>
-                ) : <span className="text-muted-foreground">Not set</span>}
+                <Badge className={getStatusColor(ticket.status)}>
+                  {ticket.status}
+                </Badge>
               </TableCell>
               <TableCell>
                 {new Date(ticket.createdAt).toLocaleDateString()}
@@ -226,47 +177,35 @@ const AdminSupport = () => {
                         <h3 className="font-semibold">Description</h3>
                         <p>{selectedTicket?.description}</p>
                       </div>
-                      <div className="flex items-center justify-between gap-2 text-sm">
-                        <span>Assigned to: {selectedTicket?.assignedTo === user?.id ? 'You' : selectedTicket?.assignedTo || 'Unassigned'}</span>
-                        <Button variant="outline" size="sm" onClick={() => void handleAssignToMe()}>
-                          <UserCheck className="mr-2 h-4 w-4" /> Assign to me
-                        </Button>
-                      </div>
                       <div className="space-y-2">
-                        <h3 className="font-semibold">Reply history</h3>
-                        <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border p-3">
-                          {(selectedTicket?.responses || []).map(response => (
-                            <div key={response.responseId} className="rounded-md bg-muted p-2 text-sm">
-                              <p>{response.message}</p>
-                              <time className="text-xs text-muted-foreground">
-                                {new Date(response.createdAt).toLocaleString()}
-                              </time>
-                            </div>
-                            ))}
-                          {!selectedTicket?.responses?.length && <p className="text-sm text-muted-foreground">No replies yet.</p>}
-                        </div>
-                        <select
-                          aria-label="Insert canned reply"
-                          className="w-full rounded-md border bg-background p-2 text-sm"
-                          value=""
-                          onChange={event => {
-                            if (event.target.value) setReply(event.target.value);
-                          }}
-                        >
-                          <option value="">Insert a saved response…</option>
-                          <option value="Thanks for contacting Buzzer Support. We are reviewing your request and will follow up shortly.">We’re reviewing this</option>
-                          <option value="Your request has been resolved. Please reply to this ticket if you still need help.">Resolved follow-up</option>
-                          <option value="We need a little more information to investigate. Please reply with the relevant details.">Request more information</option>
-                        </select>
-                        <Textarea value={reply} onChange={event => setReply(event.target.value)} maxLength={5000} placeholder="Write a reply..." />
-                        <Button disabled={!reply.trim()} onClick={() => void handleReply()}>
-                          <Send className="mr-2 h-4 w-4" /> Send reply
+                        <h3 className="font-semibold">Conversation</h3>
+                        {selectedTicket?.responses?.map(response => (
+                          <div key={response.responseId} className="rounded-md border p-3">
+                            <p>{response.message}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {response.isAdminResponse ? 'Staff' : 'Customer'} · {new Date(response.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                        ))}
+                        {tickets?.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                              No support tickets have been submitted.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        <Textarea
+                          value={reply}
+                          onChange={event => setReply(event.target.value)}
+                          placeholder="Write a reply to the customer"
+                          maxLength={4000}
+                        />
+                        <Button onClick={handleReply} disabled={!reply.trim()}>
+                          <Send className="mr-2 h-4 w-4" />
+                          Send reply
                         </Button>
                       </div>
                       <div className="flex space-x-2">
-                        <Button variant="outline" onClick={() => void handleEscalate()}>
-                          <AlertTriangle className="mr-2 h-4 w-4" /> Escalate
-                        </Button>
                         <Button
                           onClick={() => selectedTicket && handleStatusChange(selectedTicket.ticketId, 'in_progress')}
                         >
@@ -283,13 +222,7 @@ const AdminSupport = () => {
                 </Dialog>
               </TableCell>
             </TableRow>
-          )) : (
-            <TableRow>
-              <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
-                No support tickets to display.
-              </TableCell>
-            </TableRow>
-          )}
+          ))}
         </TableBody>
       </Table>
     </div>

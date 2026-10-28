@@ -11,18 +11,16 @@ export interface SupportTicket {
   createdAt: Date;
   updatedAt: Date;
   userWarned?: boolean;
-  assignedTo?: string;
-  escalatedAt?: Date;
-  slaDueAt?: Date;
   responses?: TicketResponse[];
 }
 
 export interface TicketResponse {
   responseId: string;
   ticketId: string;
-  userId: string;
+  responderId: string;
   message: string;
   createdAt: Date;
+  isAdminResponse: boolean;
 }
 
 export interface UserWarning {
@@ -59,7 +57,10 @@ class SupportService {
 
   async createTicket(ticket: Omit<SupportTicket, 'ticketId' | 'createdAt' | 'updatedAt' | 'status'>): Promise<string> {
     const data = await apiFetch('/support/tickets', 'POST', ticket);
-    return data.ticket?.ticketId || '';
+    if (typeof data.ticket?.ticketId !== 'string') {
+      throw new Error('Support request was not assigned a ticket ID');
+    }
+    return data.ticket.ticketId;
   }
 
   async getTickets(filters?: Partial<SupportTicket>): Promise<SupportTicket[]> {
@@ -77,17 +78,16 @@ class SupportService {
     await apiFetch(`/support/tickets/${ticketId}`, 'PATCH', updates);
   }
 
-  async addResponse(response: Omit<TicketResponse, 'responseId' | 'createdAt'>): Promise<void> {
-    await apiFetch(`/support/tickets/${response.ticketId}/replies`, 'POST', { message: response.message });
+  async addResponse(response: Pick<TicketResponse, 'ticketId' | 'message'>): Promise<TicketResponse> {
+    const data = await apiFetch(`/support/tickets/${encodeURIComponent(response.ticketId)}/responses`, 'POST', {
+      message: response.message,
+    });
+    return { ...data.response, ticketId: response.ticketId };
   }
 
   async getResponses(ticketId: string): Promise<TicketResponse[]> {
-    const tickets = await this.getTickets();
-    return tickets.find(ticket => ticket.ticketId === ticketId)?.responses || [];
-  }
-
-  async escalateTicket(ticketId: string): Promise<void> {
-    await apiFetch(`/support/tickets/${ticketId}/escalate`, 'POST');
+    const ticket = (await this.getTickets()).find(item => item.ticketId === ticketId);
+    return ticket?.responses ?? [];
   }
 
   async issueWarning(warning: Omit<UserWarning, 'createdAt'>): Promise<void> {

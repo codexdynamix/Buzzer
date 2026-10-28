@@ -1,25 +1,37 @@
 import { toast } from 'sonner';
-import type { StaffRole } from '@/config/adminAccess';
 
 type ApiSuccessResponse<T> = {
   success: boolean;
   message: string;
   data?: T;
+  businesses?: T;
+  advertisements?: T;
+  kpis?: {
+    totalUsers: number;
+    activeListings: number;
+    pendingModeration: number;
+    pendingVerifications: number;
+    openTickets: number;
+    sponsoredBusinesses: number;
+  };
+  results?: Array<{ type: string; id: string; label: string; detail?: string; href: string }>;
+  items?: unknown;
+  merchants?: unknown;
+  requests?: unknown;
+  modifiedCount?: number;
+  modifiedIds?: string[];
+  failedIds?: string[];
+  isSponsored?: boolean;
+  account?: { id: string; name: string; email?: string; role: string; createdAt: string };
+  timeline?: Array<{ id: string; type: string; timestamp: string; summary: string; status: string }>;
   user?: any;
   token?: string;
   messages?: any[];
-  conversations?: any[];
   groups?: any[];
   stories?: any[];
   application?: any;
   applications?: any[];
   stats?: any;
-  businesses?: any[];
-  advertisements?: any[];
-  business?: any;
-  results?: Array<{ type: string; id: string; label: string; detail?: string; href: string }>;
-  account?: any;
-  timeline?: any[];
 };
 
 const getAuthHeader = (): Record<string, string> => {
@@ -31,7 +43,8 @@ export const apiRequest = async (
   endpoint: string,
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
   data?: any,
-  requiresAuth: boolean = true
+  requiresAuth: boolean = true,
+  signal?: AbortSignal
 ): Promise<ApiSuccessResponse<any>> => {
   if (requiresAuth && !localStorage.getItem('auth_token')) {
     throw new Error('Authentication required');
@@ -41,6 +54,7 @@ export const apiRequest = async (
       method,
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
       body: data !== undefined ? JSON.stringify(data) : undefined,
+      signal,
     });
     const json = await response.json();
     if (!response.ok) throw new Error(json.message || `HTTP ${response.status}`);
@@ -57,42 +71,44 @@ export const authAPI = {
   getCurrentUser: () => apiRequest('/auth/me'),
   refreshToken: () => apiRequest('/auth/refresh-token', 'POST'),
   logout: () => apiRequest('/auth/logout', 'POST'),
-  addAdmin: (email: string, staffRole: StaffRole) =>
-    apiRequest('/admin/users/add-admin', 'POST', { email, staffRole }),
+  addAdmin: (email: string, staffRole?: string) =>
+    apiRequest('/admin/users/add-admin', 'POST', { email, role: 'admin', staffRole }),
 };
 
 export const adminAPI = {
-  getUsers: (unmaskPii = false) => apiRequest(`/admin/users${unmaskPii ? '?unmask=true' : ''}`),
-  getUserTimeline: (userId: string) => apiRequest(`/admin/users/${encodeURIComponent(userId)}/timeline`),
-  search: (query: string) => apiRequest(`/admin/search?q=${encodeURIComponent(query)}`),
+  getUsers: (includePii = false) => apiRequest(`/admin/users${includePii ? '?includePii=true' : ''}`),
   getDashboardStats: () => apiRequest('/admin/stats'),
   getMessages: () => apiRequest('/admin/messages'),
   getGroups: () => apiRequest('/admin/groups'),
-  addAdminRole: (email: string, staffRole: StaffRole) =>
-    apiRequest('/admin/users/add-admin', 'POST', { email, staffRole }),
+  addAdminRole: (email: string) => apiRequest('/admin/users/add-admin', 'POST', { email }),
+  async getUserTimeline(userId: string) {
+    const response = await apiRequest(`/admin/users/${encodeURIComponent(userId)}/timeline`);
+    return {
+      ...response,
+      account: response.account!,
+      timeline: response.timeline || [],
+    };
+  },
+};
+
+export const adminCRMAPI = {
+  getOverview: (signal?: AbortSignal) => apiRequest('/admin/crm/overview', 'GET', undefined, true, signal),
+  search: (query: string, signal?: AbortSignal) =>
+    apiRequest(`/admin/search?q=${encodeURIComponent(query)}`, 'GET', undefined, true, signal),
+  getModerationQueue: () => apiRequest('/admin/moderation/queue'),
+  decideModeration: (decision: { listingId: string; decision: 'approve' | 'reject' | 'flag'; reason?: string }) =>
+    apiRequest('/admin/moderation/decide', 'POST', decision),
+  bulkDecideModeration: (decision: { listingIds: string[]; decision: 'approve' | 'reject' | 'flag' }) =>
+    apiRequest('/admin/moderation/bulk-decide', 'POST', decision),
+  getMerchants: () => apiRequest('/admin/crm/merchants'),
+  getVerifications: () => apiRequest('/admin/verifications'),
+  decideVerification: (decision: { requestId: string; decision: 'approved' | 'rejected'; notes: string }) =>
+    apiRequest('/admin/verifications/decide', 'POST', decision),
 };
 
 export const messagesAPI = {
-  getInbox: () => apiRequest('/messages'),
-  getMessages: (peerId: string) => apiRequest(`/messages/${encodeURIComponent(peerId)}`),
-  sendMessage: (
-    recipientId: string,
-    content: string,
-    replyTo?: { id: string; content: string; sender: string },
-    listing?: { id: string; title: string; price: string; image?: string; category: string },
-    offerData?: {
-      listingTitle: string;
-      listingImage?: string;
-      askingPrice: number;
-      offerPrice: number;
-      status: 'pending' | 'accepted' | 'declined' | 'countered' | 'expired';
-      isCounter?: boolean;
-      expiresAt?: number;
-    },
-  ) =>
-    apiRequest('/messages', 'POST', { recipientId, content, replyTo, listing, offerData }),
-  respondToOffer: (messageId: string, action: 'accept' | 'decline' | 'counter', offerPrice?: number) =>
-    apiRequest(`/messages/${encodeURIComponent(messageId)}/offer`, 'PATCH', { action, offerPrice }),
+  getMessages: (chatId: string) => apiRequest(`/messages/${chatId}`),
+  sendMessage: (chatId: string, content: string, replyTo?: any) => apiRequest('/messages', 'POST', { chatId, content, replyTo }),
   updateMessageStatus: (messageId: string, status: 'sent' | 'delivered' | 'read') => apiRequest(`/messages/${messageId}/status`, 'PATCH', { status }),
 };
 
@@ -130,5 +146,6 @@ export const businessesAPI = {
   createBusiness: (businessData: any) => apiRequest('/businesses', 'POST', businessData),
   updateBusiness: (id: string, data: any) => apiRequest(`/businesses/${encodeURIComponent(id)}`, 'PATCH', data),
   deleteBusiness: (id: string) => apiRequest(`/businesses/${encodeURIComponent(id)}`, 'DELETE'),
-  toggleSponsor: (id: string) => apiRequest(`/businesses/${encodeURIComponent(id)}/sponsor`, 'PATCH'),
+  toggleSponsor: (id: string, adDetails?: { adTag: string; adHeadline: string }) =>
+    apiRequest(`/businesses/${encodeURIComponent(id)}/sponsor`, 'PATCH', adDetails),
 };

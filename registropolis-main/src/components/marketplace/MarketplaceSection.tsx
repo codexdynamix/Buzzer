@@ -10,6 +10,7 @@ import { listingDetailPath } from '@/lib/utils';
 import { useReviews } from '@/context/ReviewsContext';
 import { useSellerCompare, buildPinnedSeller } from '@/context/SellerCompareContext';
 import { usePriceAlerts } from '@/context/PriceAlertContext';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 const CATEGORIES = ['All', 'Electronics', 'Clothing', 'Home & Living', 'Sports', 'Vehicles', 'Books'];
 const CONDITIONS = ['New', 'Like New', 'Good', 'Fair'];
@@ -40,6 +41,7 @@ function formatTimeAgo(value?: Date | string): string {
 }
 
 export default function MarketplaceSection() {
+  const { t } = useLocalization();
   const [activeCat, setActiveCat] = useState('All');
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -251,7 +253,7 @@ export default function MarketplaceSection() {
       <div className="section-header">
         <div>
           <div className="gold-accent mb-3" />
-          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>Marketplace</h1>
+          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>{t('Marketplace')}</h1>
           <p className="text-sm mt-1" style={{ color:'#6E7A8A' }}>Discover curated deals from your community</p>
         </div>
         <button
@@ -471,7 +473,6 @@ export default function MarketplaceSection() {
                           listingImage: p.image,
                           listingCategory: 'Marketplace',
                           sellerName: p.seller,
-                          sellerUserId: p.userId ?? '',
                           triggerOffer: true,
                         });
                       }}
@@ -494,7 +495,6 @@ export default function MarketplaceSection() {
                             listingImage: p.image,
                             listingCategory: 'Marketplace',
                             sellerName: p.seller,
-                            sellerUserId: p.userId ?? '',
                           });
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"

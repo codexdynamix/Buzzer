@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Eye, EyeOff, KeyRound, Loader2, CheckCircle } from 'lucide-react';
 import { realAuthAPI } from '@/services/authService';
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') || '';
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,15 +15,33 @@ export default function ResetPasswordPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!isSupabaseConfigured()) return;
+
+    getSupabaseClient().auth.getSession()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (active) setHasSession(Boolean(data.session));
+      })
+      .catch(error => {
+        console.error('Unable to verify password recovery session:', error);
+        if (active) setHasSession(false);
+      });
+
+    return () => { active = false; };
+  }, []);
 
   const handleReset = async () => {
     if (!newPassword.trim()) return toast.error('Enter a new password');
     if (newPassword.length < 6) return toast.error('Password must be at least 6 characters');
     if (newPassword !== confirmPassword) return toast.error('Passwords do not match');
-    if (!token) return toast.error('Invalid reset link');
+    if (!hasSession) return toast.error('Invalid or expired reset link');
     setLoading(true);
     try {
-      await realAuthAPI.resetPassword(token, newPassword);
+      await realAuthAPI.resetPassword('', newPassword);
       setDone(true);
     } catch (err: any) {
       toast.error(err.message || 'Reset failed');
@@ -77,9 +94,9 @@ export default function ResetPasswordPage() {
                   </div>
                 </div>
 
-                {!token && (
+                {!hasSession && (
                   <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-                    <p className="text-sm text-red-600 font-medium">Invalid or missing reset link. Please request a new one.</p>
+                    <p className="text-sm text-red-600 font-medium">Verifying the password reset session. If the link is invalid or expired, request a new one.</p>
                   </div>
                 )}
 
@@ -125,7 +142,7 @@ export default function ResetPasswordPage() {
 
                   <button
                     onClick={handleReset}
-                    disabled={loading || !token}
+                    disabled={loading || !hasSession}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-[#1a1f36] text-white rounded-xl font-semibold text-sm transition-all hover:bg-[#252d4a] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? <Loader2 size={17} className="animate-spin" /> : <>Update Password <ArrowRight size={15} /></>}

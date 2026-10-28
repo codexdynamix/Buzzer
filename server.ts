@@ -1,35 +1,28 @@
 import 'dotenv/config';
 import fs from 'fs';
-import { randomBytes } from 'crypto';
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import { MongoClient, Db, Collection } from 'mongodb';
+import { createClient } from '@supabase/supabase-js';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer as createViteServer } from 'vite';
 import { SEED_USERS as ACCOUNTS_DATA, SEED_LISTINGS as LISTINGS_DATA, SEED_BUSINESSES as BUSINESSES_DATA, SeedBusiness } from './registropolis-main/src/data/seedAccounts';
-import { AdminPermission, StaffRole, hasAdminPermission, isStaffRole } from './registropolis-main/src/config/adminAccess';
+import { SupabaseCollection, type RecordCollection } from './supabaseStore';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
-let socketServer: SocketIOServer | undefined;
 
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 
-const JWT_SECRET = process.env.JWT_SECRET || 'buzzer-dev-jwt-secret-key-123456';
-const MONGODB_URI = process.env.MONGODB_URI;
-const DATABASE_FILE_PATH = path.resolve(
-  __dirname,
-  process.env.BUZZER_DATABASE_FILE || 'data/buzzer_database.json',
-);
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let supabaseAdmin: ReturnType<typeof createClient> | null = null;
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -37,10 +30,11 @@ type User = {
   id: string;
   phoneNumber?: string;
   email?: string;
-  passwordHash?: string;
   name: string;
   profileImageUrl?: string;
   role: string;
+  staffRole?: 'superadmin' | 'operations' | 'moderator' | 'support';
+  staffTitle?: string;
   createdAt: string;
   bio?: string;
   location?: string;
@@ -50,7 +44,6 @@ type User = {
   telegram?: boolean;
   signal?: boolean;
   messenger?: boolean;
-  staffRole?: StaffRole;
 };
 
 type Listing = {
@@ -59,10 +52,10 @@ type Listing = {
   data: any;
   userId: string;
   status: 'active' | 'paused' | 'sold' | 'pending_review' | 'flagged' | 'rejected';
+  createdAt: string;
   riskScore?: number;
   riskFlags?: string[];
   riskSummary?: string;
-  createdAt: string;
 };
 
 type JobApplication = {
@@ -80,22 +73,10 @@ type Message = {
   id: string;
   chatId: string;
   senderId: string;
-  recipientId?: string;
   content: string;
   timestamp: string;
   status: 'sent' | 'delivered' | 'read';
-  listing?: { id: string; title: string; price: string; image?: string; category: string };
   replyTo?: { id: string; content: string; sender: string };
-  type?: 'offer';
-  offerData?: {
-    listingTitle: string;
-    listingImage?: string;
-    askingPrice: number;
-    offerPrice: number;
-    status: 'pending' | 'accepted' | 'declined' | 'countered' | 'expired';
-    isCounter?: boolean;
-    expiresAt?: number;
-  };
 };
 
 type Group = {
@@ -128,12 +109,6 @@ type FeatureFlag = {
   enabled: boolean;
   scope: 'global' | 'user';
   targetUsers?: string[];
-  moderationEnabled?: boolean;
-  moderationRules?: {
-    requiresApproval?: boolean;
-    autoModeration?: boolean;
-    maxDailySubmissions?: number;
-  };
   lastModified: Date;
   modifiedBy: string;
 };
@@ -141,15 +116,14 @@ type FeatureFlag = {
 type UserRestriction = {
   id: string;
   userId: string;
-  type: 'ban' | 'suspend' | 'restrict';
+  type: string;
   reason: string;
-  status: 'active' | 'lifted';
+  status: 'active' | 'expired' | 'lifted';
   createdBy: string;
-  startDate: Date;
-  endDate?: Date;
   createdAt: Date;
-  liftedBy?: string;
-  liftedAt?: Date;
+  startDate?: Date;
+  endDate?: Date;
+  expiresAt?: Date;
 };
 
 type Story = {
@@ -175,17 +149,13 @@ type SupportTicket = {
   createdAt: Date;
   updatedAt: Date;
   userWarned?: boolean;
-  assignedTo?: string | null;
-  escalatedAt?: Date;
-  slaDueAt?: Date;
-  responses?: SupportTicketResponse[];
-};
-
-type SupportTicketResponse = {
-  responseId: string;
-  userId: string;
-  message: string;
-  createdAt: Date;
+  responses?: Array<{
+    responseId: string;
+    responderId: string;
+    message: string;
+    createdAt: Date;
+    isAdminResponse: boolean;
+  }>;
 };
 
 type AnalyticsRecord = {
@@ -195,26 +165,13 @@ type AnalyticsRecord = {
   userActions: Record<string, number>;
 };
 
-type PasswordResetToken = {
-  token: string;
-  userId: string;
-  email: string;
-  expiresAt: Date;
-  createdAt: Date;
-};
-
 type VerificationRequest = {
   id: string;
   userId: string;
-  userName: string;
-  userEmail: string;
-  vertical: 'real-estate' | 'service' | 'marketplace' | 'transport' | 'business';
+  vertical: string;
   badgeTitle: string;
-  documentType: 'realtor_license' | 'master_trade' | 'dealer_permit' | 'business_reg';
-  documentNumber: string;
-  documentImage: string;
-  submittedAt: string;
   status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
   reviewedBy?: string;
   reviewedAt?: string;
   reviewNotes?: string;
@@ -346,20 +303,14 @@ class InMemoryCollection<T extends Record<string, any>> {
       return { acknowledged: true, modifiedCount: 0 };
     }
 
-    const doc = this.docs[idx];
+    const doc = this.docs[idx] as any;
     if (update.$set) this.applySet(doc, update.$set);
     if (update.$inc) this.applyInc(doc, update.$inc);
-    const mutableDoc = doc as Record<string, any>;
+    if (update.$unset) this.applyUnset(doc, update.$unset);
     if (update.$addToSet) {
       for (const [k, v] of Object.entries(update.$addToSet)) {
-        if (!Array.isArray(mutableDoc[k])) mutableDoc[k] = [];
-        if (!mutableDoc[k].includes(v)) mutableDoc[k].push(v);
-      }
-    }
-    if (update.$push) {
-      for (const [k, v] of Object.entries(update.$push)) {
-        if (!Array.isArray(mutableDoc[k])) mutableDoc[k] = [];
-        mutableDoc[k].push(v);
+        if (!Array.isArray(doc[k])) doc[k] = [];
+        if (!doc[k].includes(v)) doc[k].push(v);
       }
     }
     onDatabaseChange?.();
@@ -391,6 +342,21 @@ class InMemoryCollection<T extends Record<string, any>> {
     }
   }
 
+  private applyUnset(target: any, fields: Record<string, unknown>) {
+    for (const path of Object.keys(fields)) {
+      const parts = path.split('.');
+      let current = target;
+      for (const part of parts.slice(0, -1)) {
+        if (!current[part] || typeof current[part] !== 'object') {
+          current = undefined;
+          break;
+        }
+        current = current[part];
+      }
+      if (current) delete current[parts[parts.length - 1]];
+    }
+  }
+
   async deleteOne(filter: any): Promise<{ acknowledged: boolean; deletedCount: number }> {
     const idx = this.docs.findIndex(doc => matchesFilter(doc, filter));
     if (idx !== -1) {
@@ -413,33 +379,29 @@ class InMemoryCollection<T extends Record<string, any>> {
 
 // ── Database Instances ────────────────────────────────────────
 
-let users: InMemoryCollection<User> | Collection<User>;
-let listings: InMemoryCollection<Listing> | Collection<Listing>;
-let businesses: InMemoryCollection<Business> | Collection<Business>;
-let jobApplications: InMemoryCollection<JobApplication> | Collection<JobApplication>;
-let messages: InMemoryCollection<Message> | Collection<Message>;
-let groups: InMemoryCollection<Group> | Collection<Group>;
-let groupMessages: InMemoryCollection<GroupMessage> | Collection<GroupMessage>;
-let adminLogs: InMemoryCollection<AdminLog> | Collection<AdminLog>;
-let featureFlags: InMemoryCollection<FeatureFlag> | Collection<FeatureFlag>;
-let userRestrictions: InMemoryCollection<UserRestriction> | Collection<UserRestriction>;
-let stories: InMemoryCollection<Story> | Collection<Story>;
-let supportTickets: InMemoryCollection<SupportTicket> | Collection<SupportTicket>;
-let analytics: InMemoryCollection<AnalyticsRecord> | Collection<AnalyticsRecord>;
-let passwordResetTokens: InMemoryCollection<PasswordResetToken> | Collection<PasswordResetToken>;
-let verificationRequests: InMemoryCollection<VerificationRequest> | Collection<VerificationRequest>;
-
-const PASSWORD_HASH = bcrypt.hashSync('buzzer123', 10);
+let users: RecordCollection<User>;
+let listings: RecordCollection<Listing>;
+let businesses: RecordCollection<Business>;
+let jobApplications: RecordCollection<JobApplication>;
+let messages: RecordCollection<Message>;
+let groups: RecordCollection<Group>;
+let groupMessages: RecordCollection<GroupMessage>;
+let adminLogs: RecordCollection<AdminLog>;
+let featureFlags: RecordCollection<FeatureFlag>;
+let userRestrictions: RecordCollection<UserRestriction>;
+let stories: RecordCollection<Story>;
+let supportTickets: RecordCollection<SupportTicket>;
+let analytics: RecordCollection<AnalyticsRecord>;
+let verificationRequests: RecordCollection<VerificationRequest>;
+let databaseProvider: 'supabase' | 'local' = 'local';
 
 const SEED_USERS: User[] = [
   // Superadmin account preserved for system health and administration
   {
     id: 'u_admin',
     email: 'admin@buzzer.com',
-    passwordHash: PASSWORD_HASH,
     name: 'Admin User',
     role: 'admin',
-    staffRole: 'superadmin',
     profileImageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
     bio: 'Buzzer Platform Superadmin & City Coordinator',
     location: 'Downtown Center',
@@ -450,7 +412,6 @@ const SEED_USERS: User[] = [
   ...ACCOUNTS_DATA.map(u => ({
     id: u.id,
     email: u.email,
-    passwordHash: PASSWORD_HASH,
     name: u.name,
     role: 'user' as const,
     profileImageUrl: u.profileImageUrl,
@@ -463,13 +424,6 @@ const SEED_USERS: User[] = [
   })),
 ];
 
-const ADMIN_FEATURE_NAMES = [
-  'messaging', 'file_sharing', 'group_creation', 'story_sharing', 'business_features',
-  'marketplace', 'real_estate', 'taxi_service', 'food_delivery', 'job_posting',
-  'event_creation', 'user_verification', 'content_moderation', 'analytics',
-  'user_management', 'system_settings',
-];
-
 const SEED_LISTINGS: Listing[] = [
   ...LISTINGS_DATA.map(l => ({
     id: l.id,
@@ -479,144 +433,6 @@ const SEED_LISTINGS: Listing[] = [
     createdAt: l.createdAt,
     data: l.data,
   })),
-  {
-    id: 'lst_mod_1',
-    section: 'marketplace',
-    userId: 'u_mkt_2',
-    status: 'pending_review',
-    riskScore: 92,
-    riskFlags: ['EXTREME_LOW_PRICE', 'EXTERNAL_ESCROW_RISK'],
-    riskSummary: 'Listed at $250 which is 88% below category average ($2,200). External contact prompt found in description.',
-    createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
-    data: {
-      title: 'Apple MacBook Pro M3 Max 16" - 64GB / 1TB SSD Space Black',
-      price: '$250',
-      category: 'Electronics',
-      description: 'Brand new in sealed box. Need quick cash today for moving. Message me on WhatsApp directly at +1-555-0199 for instant pickup, do not use in-app checkout.',
-      image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&auto=format&fit=crop',
-      condition: 'Brand New',
-      location: 'Downtown Center',
-    },
-  },
-  {
-    id: 'lst_mod_2',
-    section: 'real-estate',
-    userId: 'u_re_2',
-    status: 'flagged',
-    riskScore: 78,
-    riskFlags: ['DUPLICATE_IMAGE_CLUSTER', 'UNVERIFIED_BROKER_REPOST'],
-    riskSummary: 'Photo signatures match listing #lst_re_2 posted by Sophia Rossi 4 days ago. Possible unverified broker duplicate.',
-    createdAt: new Date(Date.now() - 45 * 60000).toISOString(),
-    data: {
-      title: 'Waterfront Marina Sky Villa with Direct Dock Access',
-      price: '$3,200 / mo',
-      category: 'Apartments',
-      description: 'Stunning direct water views with high ceilings and private elevator entrance. Immediate lease available.',
-      image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&auto=format&fit=crop',
-      bedrooms: '3 Beds',
-      bathrooms: '2.5 Baths',
-      sqft: '2,100 sq ft',
-      location: 'Waterfront Marina',
-    },
-  },
-  {
-    id: 'lst_mod_3',
-    section: 'transport',
-    userId: 'u_trn_1',
-    status: 'pending_review',
-    riskScore: 58,
-    riskFlags: ['PHONE_IN_DESCRIPTION'],
-    riskSummary: 'Unformatted direct phone number detected in vehicle description. Bypasses in-app messaging policy.',
-    createdAt: new Date(Date.now() - 90 * 60000).toISOString(),
-    data: {
-      title: '2023 Mercedes-Benz Sprinter 2500 High Roof Cargo Van',
-      price: '$44,900',
-      category: 'Commercial Vans',
-      description: 'Clean title, 28k highway miles. Full service records available. Call or text 555-019-3388 anytime for test drive.',
-      image: 'https://images.unsplash.com/photo-1527786356703-4b100091cd2c?w=600&auto=format&fit=crop',
-      mileage: '28,000 miles',
-      year: '2023',
-      transmission: 'Automatic',
-      location: 'Industrial District',
-    },
-  },
-  {
-    id: 'lst_mod_4',
-    section: 'job',
-    userId: 'u_job_1',
-    status: 'pending_review',
-    riskScore: 84,
-    riskFlags: ['PAY_RATE_OUTLIER', 'SUSPICIOUS_KEYWORD_PATTERN'],
-    riskSummary: 'Guaranteed daily rate of $650 for entry-level data processing. High probability of recruitment scam.',
-    createdAt: new Date(Date.now() - 140 * 60000).toISOString(),
-    data: {
-      title: 'Remote Senior Data Verification Analyst (Immediate Start)',
-      company: 'Apex Global Logistics Partners',
-      salary: '$650 / day',
-      type: 'Full-time Remote',
-      description: 'Perform simple verification tasks from home on your own schedule. Guaranteed daily payout. No previous experience needed.',
-      location: 'Remote / City Wide',
-      requirements: ['Own computer with internet', 'Availability 2 hours per day'],
-    },
-  },
-];
-
-const SEED_VERIFICATION_REQUESTS: VerificationRequest[] = [
-  {
-    id: 'vr_1',
-    userId: 'u_re_1',
-    userName: "Liam O'Connor",
-    userEmail: 'liam.properties@buzzer.com',
-    vertical: 'real-estate',
-    badgeTitle: 'Licensed Real Estate Broker (State ID #RE-99214)',
-    documentType: 'realtor_license',
-    documentNumber: 'RE-NY-840192',
-    documentImage: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop',
-    submittedAt: new Date(Date.now() - 4 * 3600000).toISOString(),
-    status: 'pending',
-  },
-  {
-    id: 'vr_2',
-    userId: 'u_srv_1',
-    userName: 'Nathan Cross',
-    userEmail: 'nathan.electric@buzzer.com',
-    vertical: 'service',
-    badgeTitle: 'Master Certified Electrician #EL-4011',
-    documentType: 'master_trade',
-    documentNumber: 'EL-98214-MA',
-    documentImage: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=600&auto=format&fit=crop',
-    submittedAt: new Date(Date.now() - 12 * 3600000).toISOString(),
-    status: 'pending',
-  },
-  {
-    id: 'vr_3',
-    userId: 'u_trn_2',
-    userName: 'Emily Zhang',
-    userEmail: 'emily.evshare@buzzer.com',
-    vertical: 'transport',
-    badgeTitle: 'Commercial Fleet Operator #TR-7721',
-    documentType: 'dealer_permit',
-    documentNumber: 'FLEET-EV-331',
-    documentImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop',
-    submittedAt: new Date(Date.now() - 18 * 3600000).toISOString(),
-    status: 'pending',
-  },
-  {
-    id: 'vr_4',
-    userId: 'u_mkt_1',
-    userName: 'Elena Torres',
-    userEmail: 'elena.vintage@buzzer.com',
-    vertical: 'marketplace',
-    badgeTitle: 'Antique Guild Certified Appraiser',
-    documentType: 'business_reg',
-    documentNumber: 'AG-VINTAGE-004',
-    documentImage: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=600&auto=format&fit=crop',
-    submittedAt: new Date(Date.now() - 48 * 3600000).toISOString(),
-    status: 'approved',
-    reviewedBy: 'u_admin',
-    reviewedAt: new Date(Date.now() - 24 * 3600000).toISOString(),
-    reviewNotes: 'Identity and registration authenticated with National Antique Guild registry.',
-  },
 ];
 
 const SEED_GROUPS: Group[] = [
@@ -696,65 +512,93 @@ const SEED_STORIES: Story[] = [
 ];
 
 async function initializeDatabase() {
-  if (MONGODB_URI) {
-    try {
-      console.log('Connecting to MongoDB...');
-      const mongoClient = new MongoClient(MONGODB_URI, {
-        serverSelectionTimeoutMS: 2000,
-        connectTimeoutMS: 2000,
-      });
-      await mongoClient.connect();
-      const mongoDb = mongoClient.db('buzzer');
-      users = mongoDb.collection('users');
-      listings = mongoDb.collection('listings');
-      jobApplications = mongoDb.collection('job_applications');
-      messages = mongoDb.collection('messages');
-      groups = mongoDb.collection('groups');
-      groupMessages = mongoDb.collection('group_messages');
-      adminLogs = mongoDb.collection('admin_logs');
-      featureFlags = mongoDb.collection('feature_flags');
-      userRestrictions = mongoDb.collection('user_restrictions');
-      stories = mongoDb.collection('stories');
-      supportTickets = mongoDb.collection('support_tickets');
-      analytics = mongoDb.collection('analytics');
-      businesses = mongoDb.collection('businesses');
-      passwordResetTokens = mongoDb.collection('password_reset_tokens');
-      verificationRequests = mongoDb.collection('verification_requests');
-
-      const seedEmails = SEED_USERS.map(user => user.email);
-      const existingSeedUsers = await users.find({ email: { $in: seedEmails } }).toArray();
-      const existingSeedEmails = new Set(existingSeedUsers.map(user => user.email?.toLowerCase()));
-      const missingSeedUsers = SEED_USERS.filter(user => !existingSeedEmails.has(user.email?.toLowerCase() || ''));
-      if (missingSeedUsers.length > 0) {
-        await Promise.all(missingSeedUsers.map(user => users.insertOne(user)));
-      }
-      for (const user of existingSeedUsers) {
-        if (!user.passwordHash) {
-          await users.updateOne({ id: user.id }, { $set: { passwordHash: PASSWORD_HASH } });
-        }
-      }
-      const ownerSeed = SEED_USERS.find(user => user.id === 'u_admin');
-      if (!ownerSeed) throw new Error('The primary staff account seed is missing');
-      await users.updateOne(
-        { email: ownerSeed.email },
-        { $set: { role: 'admin', staffRole: 'superadmin' } },
-      );
-      await Promise.all(ADMIN_FEATURE_NAMES.map(name => featureFlags.updateOne(
-        { name },
-        { $setOnInsert: { name, enabled: true, scope: 'global', targetUsers: [], moderationEnabled: false, moderationRules: {}, lastModified: new Date(), modifiedBy: 'system' } },
-        { upsert: true },
-      )));
-
-      console.log('Connected to MongoDB');
-      return;
-    } catch (err: any) {
-      console.warn('MongoDB connection unavailable (' + err.message + '). Falling back to fast in-memory store.');
+  const hasSupabaseConfig = Boolean(SUPABASE_URL || SUPABASE_SERVICE_ROLE_KEY);
+  if (hasSupabaseConfig) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Set both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable Supabase persistence.');
     }
+
+    console.log('Connecting to Supabase...');
+    supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { error } = await supabaseAdmin.from('app_records').select('id').limit(1);
+    if (error) {
+      throw new Error(`Supabase connection failed: ${error.message}. Apply the SQL migration in supabase/migrations first.`);
+    }
+
+    users = new SupabaseCollection<User>(supabaseAdmin, 'users');
+    listings = new SupabaseCollection<Listing>(supabaseAdmin, 'listings');
+    businesses = new SupabaseCollection<Business>(supabaseAdmin, 'businesses');
+    jobApplications = new SupabaseCollection<JobApplication>(supabaseAdmin, 'job_applications');
+    messages = new SupabaseCollection<Message>(supabaseAdmin, 'messages');
+    groups = new SupabaseCollection<Group>(supabaseAdmin, 'groups');
+    groupMessages = new SupabaseCollection<GroupMessage>(supabaseAdmin, 'group_messages');
+    adminLogs = new SupabaseCollection<AdminLog>(supabaseAdmin, 'admin_logs');
+    featureFlags = new SupabaseCollection<FeatureFlag>(supabaseAdmin, 'feature_flags');
+    userRestrictions = new SupabaseCollection<UserRestriction>(supabaseAdmin, 'user_restrictions');
+    stories = new SupabaseCollection<Story>(supabaseAdmin, 'stories');
+    supportTickets = new SupabaseCollection<SupportTicket>(supabaseAdmin, 'support_tickets');
+    analytics = new SupabaseCollection<AnalyticsRecord>(supabaseAdmin, 'analytics');
+    verificationRequests = new SupabaseCollection<VerificationRequest>(supabaseAdmin, 'verification_requests');
+
+    const seedMissingRecords = async <T extends Record<string, any>>(
+      collection: RecordCollection<T>,
+      records: T[],
+    ) => {
+      const existingIds = new Set((await collection.find().toArray()).map(record => String(record.id ?? record.name ?? record.date ?? record.ticketId ?? record.token)));
+      for (const record of records) {
+        const key = String(record.id ?? record.name ?? record.date ?? record.ticketId ?? record.token);
+        if (!existingIds.has(key)) await collection.insertOne(record);
+      }
+    };
+
+    const initialAnalytics: AnalyticsRecord[] = [{
+      date: new Date().toISOString().split('T')[0],
+      metrics: { activeUsers: 31, newUsers: 30, messagesSent: 12, avgResponseTime: 45, errorRate: 0 },
+      pageViews: { home: 34, marketplace: 22, messages: 18, jobs: 12, services: 9 },
+      userActions: { login: 6, view_listing: 28, send_message: 8 },
+    }];
+
+    await Promise.all([
+      seedMissingRecords(users, SEED_USERS),
+      seedMissingRecords(listings, SEED_LISTINGS),
+      seedMissingRecords(businesses, BUSINESSES_DATA),
+      seedMissingRecords(groups, SEED_GROUPS),
+      seedMissingRecords(groupMessages, SEED_GROUP_MESSAGES),
+      seedMissingRecords(stories, SEED_STORIES),
+      seedMissingRecords(featureFlags, [
+        { name: 'instant_chat', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
+        { name: 'reels_feed', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
+      ]),
+      seedMissingRecords(supportTickets, [{
+        ticketId: 'tck_101',
+        userId: 'u_jordan',
+        subject: 'Feature Suggestion: Category Filter Tags',
+        description: 'Would love to filter marketplace listings by multiple tags.',
+        priority: 'low',
+        category: 'feature_request',
+        status: 'open',
+        createdAt: new Date(Date.now() - 3600000),
+        updatedAt: new Date(Date.now() - 3600000),
+      }]),
+      seedMissingRecords(analytics, initialAnalytics),
+    ]);
+
+    databaseProvider = 'supabase';
+    onDatabaseChange = null;
+    console.log('Connected to Supabase Postgres');
+    return;
   }
+
+  databaseProvider = 'local';
+  console.warn('Supabase is not configured. Using the local development data store; authentication and persistence require Supabase.');
+  const DB_FILE_PATH = path.resolve(__dirname, 'data/buzzer_database.json');
 
   function saveToDisk() {
     try {
-      const dir = path.dirname(DATABASE_FILE_PATH);
+      const dir = path.dirname(DB_FILE_PATH);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       const dump = {
         users: (users as InMemoryCollection<User>).docs,
@@ -770,10 +614,9 @@ async function initializeDatabase() {
         stories: (stories as InMemoryCollection<Story>).docs,
         supportTickets: (supportTickets as InMemoryCollection<SupportTicket>).docs,
         analytics: (analytics as InMemoryCollection<AnalyticsRecord>).docs,
-        passwordResetTokens: (passwordResetTokens as InMemoryCollection<PasswordResetToken>).docs,
         verificationRequests: (verificationRequests as InMemoryCollection<VerificationRequest>).docs,
       };
-      fs.writeFileSync(DATABASE_FILE_PATH, JSON.stringify(dump, null, 2), 'utf-8');
+      fs.writeFileSync(DB_FILE_PATH, JSON.stringify(dump, null, 2), 'utf-8');
     } catch (e) {
       console.warn('Failed to save database to disk:', e);
     }
@@ -781,10 +624,10 @@ async function initializeDatabase() {
 
   let initialDump: any = null;
   try {
-    if (fs.existsSync(DATABASE_FILE_PATH)) {
-      const raw = fs.readFileSync(DATABASE_FILE_PATH, 'utf-8');
+    if (fs.existsSync(DB_FILE_PATH)) {
+      const raw = fs.readFileSync(DB_FILE_PATH, 'utf-8');
       initialDump = JSON.parse(raw);
-      console.log(`Loaded database from disk: ${path.relative(__dirname, DATABASE_FILE_PATH)}`);
+      console.log('Loaded database from disk: data/buzzer_database.json');
     }
   } catch (e) {
     console.warn('Could not read existing database file, bootstrapping clean data:', e);
@@ -792,25 +635,7 @@ async function initializeDatabase() {
 
   console.log('Booting database with 30 real user accounts across 6 sections.');
   users = new InMemoryCollection<User>(initialDump?.users || SEED_USERS);
-  const ownerSeed = SEED_USERS.find(user => user.id === 'u_admin');
-  if (!ownerSeed) throw new Error('The primary staff account seed is missing');
-  const owner = await users.findOne({ email: ownerSeed.email });
-  if (owner) {
-    await users.updateOne({ email: ownerSeed.email }, { $set: { role: 'admin', staffRole: 'superadmin' } });
-  } else {
-    await users.insertOne(ownerSeed);
-  }
-  
-  // Merge any missing moderation queue seed items into existing listings
-  const baseListings: Listing[] = initialDump?.listings || SEED_LISTINGS;
-  const existingIds = new Set(baseListings.map(l => l.id));
-  const mergedListings = [...baseListings];
-  for (const seedL of SEED_LISTINGS) {
-    if (!existingIds.has(seedL.id)) {
-      mergedListings.push(seedL);
-    }
-  }
-  listings = new InMemoryCollection<Listing>(mergedListings);
+  listings = new InMemoryCollection<Listing>(initialDump?.listings || SEED_LISTINGS);
   businesses = new InMemoryCollection<Business>(initialDump?.businesses || BUSINESSES_DATA);
   jobApplications = new InMemoryCollection<JobApplication>(initialDump?.jobApplications || []);
   messages = new InMemoryCollection<Message>(initialDump?.messages || []);
@@ -820,15 +645,7 @@ async function initializeDatabase() {
   featureFlags = new InMemoryCollection<FeatureFlag>(initialDump?.featureFlags || [
     { name: 'instant_chat', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
     { name: 'reels_feed', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
-    { name: 'auto_spam_filter', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
-    { name: 'duplicate_image_shield', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
-    { name: 'pii_protection_mode', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
   ]);
-  await Promise.all(ADMIN_FEATURE_NAMES.map(name => featureFlags.updateOne(
-    { name },
-    { $setOnInsert: { name, enabled: true, scope: 'global', targetUsers: [], moderationEnabled: false, moderationRules: {}, lastModified: new Date(), modifiedBy: 'system' } },
-    { upsert: true },
-  )));
   userRestrictions = new InMemoryCollection<UserRestriction>(initialDump?.userRestrictions || []);
   stories = new InMemoryCollection<Story>(initialDump?.stories || SEED_STORIES);
   supportTickets = new InMemoryCollection<SupportTicket>(initialDump?.supportTickets || [
@@ -843,17 +660,6 @@ async function initializeDatabase() {
       createdAt: new Date(Date.now() - 3600000),
       updatedAt: new Date(Date.now() - 3600000),
     },
-    {
-      ticketId: 'tck_102',
-      userId: 'u_mkt_3',
-      subject: 'Transaction dispute on pottery kiln order #882',
-      description: 'Customer claims courier dropped the box, requested return label authorization.',
-      priority: 'high',
-      category: 'dispute',
-      status: 'open',
-      createdAt: new Date(Date.now() - 1800000),
-      updatedAt: new Date(Date.now() - 1800000),
-    },
   ]);
   analytics = new InMemoryCollection<AnalyticsRecord>(initialDump?.analytics || [
     {
@@ -863,8 +669,7 @@ async function initializeDatabase() {
       userActions: { login: 6, view_listing: 28, send_message: 8 },
     },
   ]);
-  passwordResetTokens = new InMemoryCollection<PasswordResetToken>(initialDump?.passwordResetTokens || []);
-  verificationRequests = new InMemoryCollection<VerificationRequest>(initialDump?.verificationRequests || SEED_VERIFICATION_REQUESTS);
+  verificationRequests = new InMemoryCollection<VerificationRequest>(initialDump?.verificationRequests || []);
 
   onDatabaseChange = saveToDisk;
   saveToDisk();
@@ -876,55 +681,17 @@ function setupSocketIO() {
   const io = new SocketIOServer(server, {
     cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
   });
-  socketServer = io;
-
-  io.use((socket, next) => {
-    const token = socket.handshake.auth?.token;
-    if (typeof token !== 'string') return next(new Error('Unauthorized'));
-    try {
-      const claims = jwt.verify(token, JWT_SECRET) as { userId?: string };
-      if (!claims.userId) return next(new Error('Unauthorized'));
-      (socket.data as { userId: string }).userId = claims.userId;
-      next();
-    } catch {
-      next(new Error('Unauthorized'));
-    }
-  });
 
   io.on('connection', (socket) => {
-    const userId = (socket.data as { userId: string }).userId;
+    socket.on('join-room', (roomId: string) => socket.join(roomId));
+    socket.on('leave-room', (roomId: string) => socket.leave(roomId));
 
-    socket.on('join-room', async (peerId: string) => {
-      if (typeof peerId !== 'string' || !peerId || peerId === userId) return;
-      if (!await users.findOne({ id: peerId })) return;
-      socket.join(directChatId(userId, peerId));
+    socket.on('send-message', (data: { roomId: string; message: any }) => {
+      io.to(data.roomId).emit('new-message', data.message);
     });
 
-    socket.on('leave-room', (peerId: string) => {
-      if (typeof peerId === 'string' && peerId && peerId !== userId) {
-        socket.leave(directChatId(userId, peerId));
-      }
-    });
-
-    socket.on('send-message', async (data: { messageId?: string }) => {
-      if (typeof data?.messageId !== 'string') return;
-      const message = await messages.findOne({ id: data.messageId, senderId: userId });
-      if (message?.recipientId) {
-        const sender = await users.findOne({ id: userId });
-        socket.to(message.chatId).emit('new-message', {
-          ...message,
-          senderName: sender?.name ?? 'Buzzer user',
-          senderAvatar: sender?.profileImageUrl ?? '',
-        });
-      }
-    });
-
-    socket.on('typing', (data: { peerId: string; isTyping: boolean }) => {
-      if (typeof data?.peerId !== 'string' || !data.peerId || data.peerId === userId) return;
-      socket.to(directChatId(userId, data.peerId)).emit('user-typing', {
-        userId,
-        isTyping: Boolean(data.isTyping),
-      });
+    socket.on('typing', (data: { roomId: string; userId: string; isTyping: boolean }) => {
+      socket.to(data.roomId).emit('user-typing', data);
     });
   });
 
@@ -933,21 +700,74 @@ function setupSocketIO() {
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function generateToken(userId: string, identifier: string, claims: Record<string, unknown> = {}) {
-  return jwt.sign({ userId, identifier, ...claims }, JWT_SECRET, { expiresIn: '7d' });
+function safeUser(u: User) {
+  const safe = { ...u } as User & { passwordHash?: string };
+  delete safe.passwordHash;
+  return safe;
 }
 
-function safeUser(u: User) {
-  const { passwordHash, ...safe } = u;
-  return safe;
+async function getOrCreateAuthProfile(authUser: {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+}): Promise<User> {
+  const email = authUser.email?.trim().toLowerCase();
+  const profileById = await users.findOne({ id: authUser.id });
+  const profileByEmail = email
+    ? (await users.find().toArray()).find(
+      user => user.email?.trim().toLowerCase() === email,
+    ) ?? null
+    : null;
+
+  if (profileById) {
+    if (profileByEmail && profileByEmail.id !== authUser.id) {
+      const linkedProfile: User = {
+        ...profileByEmail,
+        ...profileById,
+        id: authUser.id,
+        email: email ?? profileById.email,
+        name: profileByEmail.name || profileById.name,
+        role: profileByEmail.role === 'admin' ? 'admin' : profileById.role,
+        ...(profileByEmail.role === 'admin' ? {
+          staffRole: profileByEmail.staffRole ?? 'superadmin',
+          staffTitle: profileByEmail.staffTitle,
+        } : {}),
+      };
+      const { id: _id, ...profileFields } = linkedProfile;
+      await users.updateOne({ id: authUser.id }, { $set: profileFields });
+      await users.deleteOne({ id: profileByEmail.id });
+      return linkedProfile;
+    }
+    return profileById;
+  }
+
+  if (profileByEmail) {
+    const linkedProfile = { ...profileByEmail, id: authUser.id, email: email ?? profileByEmail.email };
+    if (databaseProvider === 'supabase') {
+      await users.insertOne(linkedProfile);
+      await users.deleteOne({ id: profileByEmail.id });
+    } else {
+      await users.updateOne({ id: profileByEmail.id }, { $set: { id: authUser.id, email } });
+    }
+    return linkedProfile;
+  }
+
+  const metadataName = authUser.user_metadata?.name;
+  const createdProfile: User = {
+    id: authUser.id,
+    email,
+    name: typeof metadataName === 'string' && metadataName.trim()
+      ? metadataName.trim()
+      : email?.split('@')[0] ?? 'Buzzer user',
+    role: 'user',
+    createdAt: new Date().toISOString(),
+  };
+  await users.insertOne(createdProfile);
+  return createdProfile;
 }
 
 function uid() {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
-
-function directChatId(firstUserId: string, secondUserId: string) {
-  return [firstUserId, secondUserId].sort().join(':');
 }
 
 function listingDataForOwner(section: string, data: Record<string, any>, id: string, ownerName: string) {
@@ -966,185 +786,120 @@ function listingDataForOwner(section: string, data: Record<string, any>, id: str
   };
 }
 
-function authMiddleware(req: any, res: any, next: any) {
+async function authenticateRequest(req: any, res: any): Promise<boolean> {
   const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) return res.status(401).json({ message: 'Unauthorized' });
+  if (!header?.startsWith('Bearer ')) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return false;
+  }
+  if (!supabaseAdmin) {
+    res.status(503).json({ message: 'Supabase Auth is not configured on the server' });
+    return false;
+  }
+
   try {
-    req.user = jwt.verify(header.split(' ')[1], JWT_SECRET) as any;
-    next();
-  } catch {
-    res.status(401).json({ message: 'Invalid or expired token' });
+    const { data, error } = await supabaseAdmin.auth.getUser(header.slice('Bearer '.length));
+    if (error || !data.user) {
+      res.status(401).json({ message: 'Invalid or expired token' });
+      return false;
+    }
+
+    req.user = {
+      userId: data.user.id,
+      identifier: data.user.email ?? '',
+    };
+    req.authUser = data.user;
+    return true;
+  } catch (error) {
+    console.error('Supabase token verification failed:', error);
+    res.status(503).json({ message: 'Unable to verify the Supabase session' });
+    return false;
   }
 }
 
-function requirePermission(permission: AdminPermission) {
-  return (req: any, res: any, next: any) => {
-    if (!req.staffRole || !hasAdminPermission(req.staffRole, permission)) {
-      return res.status(403).json({ message: 'You do not have permission to perform this action' });
-    }
-    next();
-  };
+async function authMiddleware(req: any, res: any, next: any) {
+  if (await authenticateRequest(req, res)) next();
 }
 
-function requireFeature(featureName: string) {
-  return async (_req: any, res: any, next: any) => {
-    try {
-      const feature = await featureFlags.findOne({ name: featureName });
-      if (feature?.enabled === false) {
-        return res.status(503).json({ message: 'This feature is currently unavailable' });
-      }
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
-}
-
-function listingFeatureName(section: string) {
-  const featureNameBySection: Record<string, string> = {
-    marketplace: 'marketplace',
-    job: 'job_posting',
-    service: 'business_features',
-    'real-estate': 'real_estate',
-    transport: 'taxi_service',
-    event: 'event_creation',
-  };
-  return featureNameBySection[section];
-}
-
-async function listingFeatureEnabled(section: string) {
-  const featureName = listingFeatureName(section);
-  if (!featureName) return true;
-  const feature = await featureFlags.findOne({ name: featureName });
-  return feature?.enabled !== false;
-}
-
-function staffRoleForUser(user: User | null | undefined): StaffRole | undefined {
-  const role = user?.staffRole ??
-    (user?.role === 'moderator' ? 'moderator' : undefined);
-  return isStaffRole(role) ? role : undefined;
-}
-
-function adminMiddleware(req: any, res: any, next: any) {
-  authMiddleware(req, res, async () => {
-    const tokenRole = req.user?.staffRole;
-    if (req.user?.demoStaff === true) {
-      if (process.env.NODE_ENV === 'production' || !isStaffRole(tokenRole)) {
-        return res.status(403).json({ message: 'Development staff sessions are disabled' });
-      }
-      const demoUser = await users.findOne({ id: req.user.userId });
-      if (!demoUser || demoUser.role !== 'admin') {
-        return res.status(403).json({ message: 'Admin access required' });
-      }
-      req.staffRole = tokenRole;
-      return next();
-    }
-
+async function adminMiddleware(req: any, res: any, next: any) {
+  if (!(await authenticateRequest(req, res))) return;
+  try {
     const user = await users.findOne({ id: req.user.userId });
-    const staffRole = staffRoleForUser(user);
-    if (!user || !staffRole || !isStaffRole(staffRole)) {
-      return res.status(403).json({ message: 'Staff access required' });
+    const staffRole = user?.role === 'admin'
+      ? user.staffRole ?? 'superadmin'
+      : user?.role === 'moderator' ? 'moderator' : undefined;
+    const validRoles: AdminStaffRole[] = ['superadmin', 'operations', 'moderator', 'support'];
+    if (!user || !staffRole || !validRoles.includes(staffRole)) {
+      return res.status(403).json({ message: 'Admin access required' });
     }
     req.staffRole = staffRole;
     next();
-  });
+  } catch (error) {
+    console.error('Admin authorization lookup failed:', error);
+    res.status(500).json({ message: 'Unable to verify admin access' });
+  }
+}
+
+type AdminStaffRole = 'superadmin' | 'operations' | 'moderator' | 'support';
+type AdminPermission =
+  | 'overview:read' | 'users:read' | 'users:write' | 'users:ban' | 'users:pii'
+  | 'listings:review' | 'listings:delete' | 'verification:review' | 'ads:manage'
+  | 'ads:pricing' | 'support:reply' | 'support:escalate' | 'system:flags'
+  | 'system:audit_logs' | 'system:export' | 'messaging:audit';
+
+const STAFF_PERMISSIONS: Record<AdminStaffRole, ReadonlySet<AdminPermission>> = {
+  superadmin: new Set(['overview:read', 'users:read', 'users:write', 'users:ban', 'users:pii', 'listings:review', 'listings:delete', 'verification:review', 'ads:manage', 'ads:pricing', 'support:reply', 'support:escalate', 'system:flags', 'system:audit_logs', 'system:export', 'messaging:audit']),
+  operations: new Set(['overview:read', 'users:read', 'ads:manage', 'ads:pricing', 'system:export']),
+  moderator: new Set(['overview:read', 'users:read', 'users:ban', 'listings:review', 'listings:delete', 'verification:review']),
+  support: new Set(['overview:read', 'users:read', 'support:reply', 'support:escalate']),
+} as const;
+
+function requirePermission(permission: AdminPermission) {
+  return (req: any, res: any, next: any) => {
+    const role = req.staffRole as AdminStaffRole | undefined;
+    if (!role || !STAFF_PERMISSIONS[role].has(permission)) {
+      return res.status(403).json({ message: `Permission required: ${permission}` });
+    }
+    next();
+  };
+}
+
+async function isFeatureEnabled(name: string) {
+  const flag = await featureFlags.findOne({ name });
+  return flag?.enabled !== false;
+}
+
+function requireFeature(name: string) {
+  return async (_req: any, res: any, next: any) => {
+    try {
+      if (!(await isFeatureEnabled(name))) {
+        return res.status(403).json({ success: false, message: `The ${name} feature is currently disabled` });
+      }
+      next();
+    } catch (error) {
+      console.error(`Feature flag lookup failed for ${name}:`, error);
+      res.status(500).json({ success: false, message: 'Could not verify feature availability' });
+    }
+  };
 }
 
 // ── Auth API Routes ───────────────────────────────────────────
 
-app.post('/api/auth/email-signup', async (req, res) => {
-  const { email, password, name } = req.body;
-  if (!email || !password || !name) return res.status(400).json({ message: 'Email, password and name are required' });
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ message: 'Invalid email address' });
-  if (password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
-  const normalizedEmail = email.toLowerCase();
-  const existing = await users.findOne({ email: normalizedEmail });
-  if (existing) return res.status(409).json({ message: 'An account with this email already exists' });
-  const passwordHash = await bcrypt.hash(password, 10);
-  const userId = uid();
-  const user: User = { id: userId, email: normalizedEmail, passwordHash, name, role: 'user', createdAt: new Date().toISOString() };
-  await users.insertOne(user);
-  const token = generateToken(userId, normalizedEmail);
-  res.json({ success: true, token, user: safeUser(user) });
-});
-
-app.post('/api/auth/email-login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
-  const user = await users.findOne({ email: email.toLowerCase() });
-  if (!user || !user.passwordHash) return res.status(401).json({ message: 'No account found with this email' });
-  const match = await bcrypt.compare(password, user.passwordHash);
-  if (!match) return res.status(401).json({ message: 'Incorrect password' });
-  const token = generateToken(user.id, email.toLowerCase());
-  res.json({ success: true, token, user: safeUser(user) });
-});
-
 app.get('/api/auth/me', authMiddleware, async (req: any, res) => {
-  if (req.user?.demoStaff === true && process.env.NODE_ENV === 'production') {
-    return res.status(401).json({ message: 'Development staff sessions are disabled' });
+  try {
+    const user = await getOrCreateAuthProfile(req.authUser);
+    res.json({ success: true, user: safeUser(user) });
+  } catch (error) {
+    console.error('Authenticated user profile lookup failed:', error);
+    res.status(500).json({ message: 'Could not load the authenticated user profile' });
   }
-  const user = await users.findOne({ id: req.user.userId });
-  if (!user) return res.status(404).json({ message: 'User not found' });
-  const demoRole: unknown = req.user?.staffRole;
-  if (req.user?.demoStaff === true && process.env.NODE_ENV !== 'production' && isStaffRole(demoRole)) {
-    const demoProfiles: Record<StaffRole, { name: string; email: string; title: string }> = {
-      superadmin: { name: 'Alex Vance', email: 'admin@buzzer.com', title: 'Platform Director & Superadmin' },
-      operations: { name: 'Elena Rostova', email: 'elena.ops@buzzer.com', title: 'Commercial Operations & Partner CRM' },
-      moderator: { name: 'David Chen', email: 'david.mod@buzzer.com', title: 'Trust & Safety Lead Moderator' },
-      support: { name: 'Sarah Miller', email: 'sarah.support@buzzer.com', title: 'Customer Experience & Help Desk' },
-    };
-    const profile = demoProfiles[demoRole];
-    return res.json({
-      success: true,
-      user: {
-        ...safeUser(user),
-        name: profile.name,
-        email: profile.email,
-        role: 'admin',
-        staffRole: demoRole,
-        demoStaff: true,
-        staffTitle: profile.title,
-      },
-    });
-  }
-  res.json({ success: true, user: safeUser(user) });
-});
-
-app.post('/api/auth/logout', (_req, res) => res.json({ success: true, message: 'Logged out' }));
-
-app.post('/api/auth/forgot-password', async (_req, res) => {
-  res.status(503).json({ message: 'Password reset email delivery is not configured' });
-});
-
-app.post('/api/auth/reset-password', async (req, res) => {
-  const { token, newPassword } = req.body;
-  if (!token || !newPassword) return res.status(400).json({ message: 'Token and new password are required' });
-  if (newPassword.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
-  const resetToken = await passwordResetTokens.findOne({ token });
-  if (!resetToken) return res.status(400).json({ message: 'Invalid or expired reset link. Please request a new one.' });
-  if (new Date() > resetToken.expiresAt) {
-    await passwordResetTokens.deleteOne({ token });
-    return res.status(400).json({ message: 'This reset link has expired. Please request a new one.' });
-  }
-  const passwordHash = await bcrypt.hash(newPassword, 10);
-  await users.updateOne({ id: resetToken.userId }, { $set: { passwordHash } });
-  await passwordResetTokens.deleteOne({ token });
-  res.json({ success: true, message: 'Password reset successfully. You can now sign in.' });
 });
 
 // ── Listings API ──────────────────────────────────────────────
 
 app.get('/api/listings', async (_req, res) => {
   try {
-    const [activeListings, configuredFlags] = await Promise.all([
-      listings.find({ status: 'active' }).sort({ createdAt: -1 }).toArray(),
-      featureFlags.find().toArray(),
-    ]);
-    const disabled = new Set(configuredFlags.filter(flag => !flag.enabled).map(flag => flag.name));
-    const all = activeListings.filter(listing => {
-      const featureName = listingFeatureName(listing.section);
-      return !featureName || !disabled.has(featureName);
-    });
+    const all = await listings.find({ status: 'active' }).sort({ createdAt: -1 }).toArray();
     const ownerIds = [...new Set(all.map(listing => listing.userId))];
     const owners = await users.find(
       { id: { $in: ownerIds } },
@@ -1186,22 +941,18 @@ app.post('/api/listings', authMiddleware, async (req: any, res) => {
   if (!supportedSections.includes(section) || !data || typeof data !== 'object' || Array.isArray(data)) {
     return res.status(400).json({ message: 'A supported section and listing data are required' });
   }
-  if (!(await listingFeatureEnabled(section))) {
-    return res.status(403).json({ message: 'Listing submissions are temporarily disabled for this category' });
+  const sectionFeature: Record<string, string> = {
+    marketplace: 'marketplace',
+    job: 'job_posting',
+    service: 'business_features',
+    'real-estate': 'real_estate',
+    transport: 'taxi_service',
+    event: 'event_creation',
+  };
+  if (!(await isFeatureEnabled(sectionFeature[section]))) {
+    return res.status(403).json({ success: false, message: `New ${section} listings are currently disabled` });
   }
-  const featureFlagName = listingFeatureName(section);
-  const featureFlag = featureFlagName ? await featureFlags.findOne({ name: featureFlagName }) : null;
-  if (featureFlag?.moderationRules?.maxDailySubmissions !== undefined) {
-    const midnight = new Date();
-    midnight.setHours(0, 0, 0, 0);
-    const todayListings = await listings.find({ userId: req.user.userId }).toArray();
-    const submissionsToday = todayListings.filter(listing =>
-      new Date(listing.createdAt).getTime() >= midnight.getTime(),
-    ).length;
-    if (submissionsToday >= featureFlag.moderationRules.maxDailySubmissions) {
-      return res.status(429).json({ message: 'You have reached the daily listing submission limit' });
-    }
-  }
+  const moderationEnabled = await isFeatureEnabled('content_moderation');
   const owner = await users.findOne({ id: req.user.userId }, {
     projection: { id: 1, name: 1, profileImageUrl: 1, bio: 1, location: 1 },
   });
@@ -1212,9 +963,7 @@ app.post('/api/listings', authMiddleware, async (req: any, res) => {
     section,
     data: listingDataForOwner(section, data, id, owner.name),
     userId: req.user.userId,
-    status: featureFlag?.moderationEnabled || featureFlag?.moderationRules?.requiresApproval
-      ? 'pending_review'
-      : 'active',
+    status: moderationEnabled ? 'pending_review' : 'active',
     createdAt: new Date().toISOString(),
   };
   try {
@@ -1247,20 +996,22 @@ app.put('/api/listings/:id', authMiddleware, async (req: any, res) => {
   const listing = await listings.findOne({ id });
   if (!listing) return res.status(404).json({ message: 'Listing not found' });
   if (listing.userId !== req.user.userId) return res.status(403).json({ message: 'Not your listing' });
-  if (!(await listingFeatureEnabled(listing.section))) {
-    return res.status(403).json({ message: 'Listing updates are temporarily disabled for this category' });
-  }
   const owner = await users.findOne({ id: req.user.userId }, {
     projection: { id: 1, name: 1, profileImageUrl: 1, bio: 1, location: 1 },
   });
   if (!owner) return res.status(401).json({ message: 'Sign in again to update this listing' });
   const updatedData = listingDataForOwner(listing.section, data, id, owner.name);
-  await listings.updateOne({ id }, { $set: { data: updatedData } });
+  const moderationEnabled = await isFeatureEnabled('content_moderation');
+  const updatedStatus = moderationEnabled && ['active', 'flagged', 'rejected'].includes(listing.status)
+    ? 'pending_review'
+    : listing.status;
+  await listings.updateOne({ id }, { $set: { data: updatedData, status: updatedStatus } });
   res.json({
     success: true,
     listing: {
       ...listing,
       data: updatedData,
+      status: updatedStatus,
       sellerName: owner.name,
       owner: {
         id: owner.id,
@@ -1280,8 +1031,11 @@ app.patch('/api/listings/:id/status', authMiddleware, async (req: any, res) => {
   const listing = await listings.findOne({ id });
   if (!listing) return res.status(404).json({ message: 'Listing not found' });
   if (listing.userId !== req.user.userId) return res.status(403).json({ message: 'Not your listing' });
-  if (status === 'active' && !(await listingFeatureEnabled(listing.section))) {
-    return res.status(403).json({ message: 'Listing activation is temporarily disabled for this category' });
+  const isAwaitingReview = ['pending_review', 'flagged', 'rejected'].includes(listing.status);
+  const canPublishWithoutReview = isAwaitingReview && status === 'active' &&
+    !(await isFeatureEnabled('content_moderation'));
+  if (isAwaitingReview && !canPublishWithoutReview) {
+    return res.status(409).json({ message: 'This listing must be approved by moderation before it can be published or changed' });
   }
   await listings.updateOne({ id }, { $set: { status } });
   res.json({ success: true });
@@ -1383,180 +1137,38 @@ app.get('/api/contacts', authMiddleware, async (req: any, res) => {
 
 // ── Messages ──────────────────────────────────────────────────
 
-app.get('/api/messages', authMiddleware, requireFeature('messaging'), async (req: any, res) => {
+app.get('/api/messages/:chatId', authMiddleware, async (req: any, res) => {
   try {
-    const userId = req.user.userId;
-    const allMessages = await messages.find().sort({ timestamp: 1 }).toArray();
-    const relevantMessages = allMessages.filter(message =>
-      message.senderId === userId || message.recipientId === userId
-    );
-    const latestByPeer = new Map<string, Message>();
-    const categoryByPeer = new Map<string, string>();
-    for (const message of relevantMessages) {
-      const peerId = message.senderId === userId ? message.recipientId : message.senderId;
-      if (peerId) {
-        latestByPeer.set(peerId, message);
-        if (message.listing?.category) categoryByPeer.set(peerId, message.listing.category);
-      }
-    }
-    const peerIds = [...latestByPeer.keys()];
-    const peerUsers = await users.find({ id: { $in: peerIds } }).toArray();
-    const usersById = new Map(peerUsers.map(peer => [peer.id, peer]));
-    const conversations = peerIds
-      .map(peerId => {
-        const peer = usersById.get(peerId);
-        const lastMessage = latestByPeer.get(peerId);
-        if (!peer || !lastMessage) return null;
-        return {
-          peer: { id: peer.id, name: peer.name, profileImageUrl: peer.profileImageUrl },
-          lastMessage,
-          category: categoryByPeer.get(peerId) ?? 'Messages',
-        };
-      })
-      .filter(Boolean)
-      .reverse();
-    res.json({ success: true, conversations });
-  } catch (err: any) { res.status(500).json({ message: err.message }); }
-});
-
-app.get('/api/messages/:peerId', authMiddleware, requireFeature('messaging'), async (req: any, res) => {
-  try {
-    const { peerId } = req.params;
-    const userId = req.user.userId;
-    if (peerId === userId || !await users.findOne({ id: peerId })) {
-      return res.status(404).json({ message: 'Conversation not found' });
-    }
-    const chatId = directChatId(userId, peerId);
-    const msgs = (await messages.find({ chatId }).sort({ timestamp: 1 }).toArray())
-      .filter(message => message.senderId === userId || message.recipientId === userId);
+    const { chatId } = req.params;
+    const msgs = await messages.find({ chatId }).sort({ timestamp: 1 }).toArray();
     res.json({ success: true, messages: msgs });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
 app.post('/api/messages', authMiddleware, requireFeature('messaging'), async (req: any, res) => {
   try {
-    const { recipientId, content, replyTo, listing, offerData } = req.body;
-    const userId = req.user.userId;
-    const hasContent = typeof content === 'string' && Boolean(content.trim());
-    const validListing = listing && typeof listing.id === 'string' && typeof listing.title === 'string'
-      && typeof listing.price === 'string' && typeof listing.category === 'string';
-    const validOffer = offerData && typeof offerData.listingTitle === 'string'
-      && Number.isFinite(offerData.askingPrice) && offerData.askingPrice >= 0
-      && Number.isFinite(offerData.offerPrice) && offerData.offerPrice > 0
-      && (offerData.askingPrice === 0 || offerData.offerPrice < offerData.askingPrice);
-    if (typeof recipientId !== 'string' || !recipientId || (!hasContent && !validListing && !validOffer)) {
-      return res.status(400).json({ message: 'recipientId and message content or a listing are required' });
-    }
-    if (offerData && !validOffer) return res.status(400).json({ message: 'Invalid offer details' });
-    if (recipientId === userId) return res.status(400).json({ message: 'You cannot message yourself' });
-    if (!await users.findOne({ id: recipientId })) {
-      return res.status(404).json({ message: 'Recipient not found' });
-    }
-    if (hasContent && content.length > 5000) return res.status(400).json({ message: 'Message exceeds the 5000 character limit' });
+    const { chatId, content, replyTo } = req.body;
+    if (!chatId || !content) return res.status(400).json({ message: 'chatId and content are required' });
     const msg: Message = {
       id: uid(),
-      chatId: directChatId(userId, recipientId),
-      senderId: userId,
-      recipientId,
-      content: hasContent ? content.trim() : '',
+      chatId,
+      senderId: req.user.userId,
+      content,
       timestamp: new Date().toISOString(),
       status: 'sent',
-      ...(validListing && { listing }),
       ...(replyTo && { replyTo }),
-      ...(validOffer && {
-        type: 'offer' as const,
-        offerData: {
-          listingTitle: offerData.listingTitle,
-          ...(typeof offerData.listingImage === 'string' && { listingImage: offerData.listingImage }),
-          askingPrice: offerData.askingPrice,
-          offerPrice: offerData.offerPrice,
-          status: 'pending' as const,
-          ...(offerData.isCounter === true && { isCounter: true }),
-          ...(Number.isFinite(offerData.expiresAt) && { expiresAt: offerData.expiresAt }),
-        },
-      }),
     };
     await messages.insertOne(msg);
     res.json({ success: true, message: msg });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
-app.patch('/api/messages/:id/offer', authMiddleware, requireFeature('messaging'), async (req: any, res) => {
-  try {
-    const { id } = req.params;
-    const { action, offerPrice } = req.body;
-    const message = await messages.findOne({ id });
-    if (!message || message.type !== 'offer' || !message.offerData || message.recipientId !== req.user.userId) {
-      return res.status(404).json({ message: 'Offer not found' });
-    }
-    if (message.offerData.status !== 'pending') {
-      return res.status(409).json({ message: 'This offer is no longer pending' });
-    }
-    if (action === 'accept' || action === 'decline') {
-      const status = action === 'accept' ? 'accepted' : 'declined';
-      await messages.updateOne({ id, chatId: message.chatId }, { $set: { 'offerData.status': status } });
-      socketServer?.to(message.chatId).emit('offer-status', { messageId: id, status });
-      return res.json({ success: true, status });
-    }
-    if (action !== 'counter' || !Number.isFinite(offerPrice) || offerPrice <= 0
-      || (message.offerData.askingPrice > 0 && offerPrice >= message.offerData.askingPrice)) {
-      return res.status(400).json({ message: 'Enter a valid counter-offer below the asking price' });
-    }
-
-    await messages.updateOne({ id, chatId: message.chatId }, { $set: { 'offerData.status': 'countered' } });
-    socketServer?.to(message.chatId).emit('offer-status', { messageId: id, status: 'countered' });
-    const counterMessage: Message = {
-      id: uid(),
-      chatId: message.chatId,
-      senderId: req.user.userId,
-      recipientId: message.senderId,
-      content: '',
-      timestamp: new Date().toISOString(),
-      status: 'sent',
-      type: 'offer',
-      offerData: {
-        listingTitle: message.offerData.listingTitle,
-        ...(message.offerData.listingImage && { listingImage: message.offerData.listingImage }),
-        askingPrice: message.offerData.askingPrice,
-        offerPrice,
-        status: 'pending',
-        isCounter: true,
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      },
-      ...(message.listing && { listing: message.listing }),
-    };
-    await messages.insertOne(counterMessage);
-    const sender = await users.findOne({ id: req.user.userId });
-    socketServer?.to(message.chatId).emit('new-message', {
-      ...counterMessage,
-      senderName: sender?.name ?? 'Buzzer user',
-      senderAvatar: sender?.profileImageUrl ?? '',
-    });
-    res.json({ success: true, message: counterMessage });
-  } catch (err: any) { res.status(500).json({ message: err.message }); }
-});
-
-app.patch('/api/messages/:id/status', authMiddleware, requireFeature('messaging'), async (req: any, res) => {
+app.patch('/api/messages/:id/status', authMiddleware, async (req: any, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
     if (!['sent', 'delivered', 'read'].includes(status)) return res.status(400).json({ message: 'Invalid status' });
-    const message = await messages.findOne({ id });
-    if (!message || (message.senderId !== req.user.userId && message.recipientId !== req.user.userId)) {
-      return res.status(404).json({ message: 'Message not found' });
-    }
-    if (status === 'sent' && message.senderId !== req.user.userId) {
-      return res.status(403).json({ message: 'Only the sender can set the sent status' });
-    }
-    if (status !== 'sent' && message.recipientId !== req.user.userId) {
-      return res.status(403).json({ message: 'Only the recipient can update delivery status' });
-    }
-    await messages.updateOne({ id, chatId: message.chatId }, { $set: { status } });
-    socketServer?.to(message.chatId).emit('message-status', {
-      messageId: id,
-      status,
-      userId: req.user.userId,
-    });
+    await messages.updateOne({ id }, { $set: { status } });
     res.json({ success: true });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
@@ -1587,7 +1199,7 @@ app.post('/api/groups', authMiddleware, requireFeature('group_creation'), async 
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
-app.get('/api/groups/:id/messages', authMiddleware, requireFeature('messaging'), async (req: any, res) => {
+app.get('/api/groups/:id/messages', authMiddleware, async (req: any, res) => {
   try {
     const { id } = req.params;
     const group = await groups.findOne({ id });
@@ -1598,7 +1210,7 @@ app.get('/api/groups/:id/messages', authMiddleware, requireFeature('messaging'),
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
-app.post('/api/groups/:id/messages', authMiddleware, requireFeature('messaging'), async (req: any, res) => {
+app.post('/api/groups/:id/messages', authMiddleware, requireFeature('group_creation'), async (req: any, res) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
@@ -1620,7 +1232,7 @@ app.post('/api/groups/:id/messages', authMiddleware, requireFeature('messaging')
 
 // ── Stories ───────────────────────────────────────────────────
 
-app.get('/api/stories', authMiddleware, requireFeature('story_sharing'), async (_req, res) => {
+app.get('/api/stories', authMiddleware, async (_req, res) => {
   try {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const activeStories = await stories.find({ timestamp: { $gte: oneDayAgo }, isExpired: false }).sort({ timestamp: -1 }).toArray();
@@ -1649,14 +1261,14 @@ app.post('/api/stories', authMiddleware, requireFeature('story_sharing'), async 
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
-app.patch('/api/stories/:id/view', authMiddleware, requireFeature('story_sharing'), async (req: any, res) => {
+app.patch('/api/stories/:id/view', authMiddleware, async (req: any, res) => {
   try {
     await stories.updateOne({ id: req.params.id }, { $addToSet: { viewers: req.user.userId } } as any);
     res.json({ success: true });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
-app.patch('/api/stories/:id/expire', authMiddleware, requireFeature('story_sharing'), async (req: any, res) => {
+app.patch('/api/stories/:id/expire', authMiddleware, async (req: any, res) => {
   try {
     await stories.updateOne({ id: req.params.id }, { $set: { isExpired: true } });
     res.json({ success: true });
@@ -1668,11 +1280,13 @@ app.patch('/api/stories/:id/expire', authMiddleware, requireFeature('story_shari
 app.get('/api/support/tickets', authMiddleware, async (req: any, res) => {
   try {
     const user = await users.findOne({ id: req.user.userId });
-    const staffRole = req.user?.demoStaff === true && process.env.NODE_ENV !== 'production'
-      ? req.user.staffRole
-      : staffRoleForUser(user);
-    const canManageTickets = staffRole && hasAdminPermission(staffRole, 'support:reply');
-    const query = canManageTickets ? {} : { userId: req.user.userId };
+    const staffRole = user?.role === 'admin'
+      ? user.staffRole ?? 'superadmin'
+      : user?.role === 'moderator' ? 'moderator' : undefined;
+    const validRoles: AdminStaffRole[] = ['superadmin', 'operations', 'moderator', 'support'];
+    const mayReadAllTickets = !!staffRole && validRoles.includes(staffRole) &&
+      STAFF_PERMISSIONS[staffRole].has('support:reply');
+    const query = mayReadAllTickets ? {} : { userId: req.user.userId };
     const tickets = await supportTickets.find(query).sort({ createdAt: -1 }).toArray();
     res.json({ success: true, tickets });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
@@ -1680,22 +1294,19 @@ app.get('/api/support/tickets', authMiddleware, async (req: any, res) => {
 
 app.post('/api/support/tickets', authMiddleware, async (req: any, res) => {
   try {
-    const { subject, description, category } = req.body;
+    const { subject, description, priority, category } = req.body;
     if (!subject || !description) return res.status(400).json({ message: 'subject and description are required' });
     const now = new Date();
-    const priority = ['low', 'medium', 'high', 'urgent'].includes(req.body.priority) ? req.body.priority : 'medium';
-    const slaHours: Record<string, number> = { urgent: 4, high: 8, medium: 24, low: 72 };
     const ticket: SupportTicket = {
       ticketId: uid(),
       userId: req.user.userId,
       subject,
       description,
-      priority,
+      priority: priority || 'medium',
       category: category || 'general',
       status: 'open',
       createdAt: now,
       updatedAt: now,
-      slaDueAt: new Date(now.getTime() + slaHours[priority] * 60 * 60 * 1000),
     };
     await supportTickets.insertOne(ticket);
     res.json({ success: true, ticket });
@@ -1705,98 +1316,87 @@ app.post('/api/support/tickets', authMiddleware, async (req: any, res) => {
 app.patch('/api/support/tickets/:id', adminMiddleware, requirePermission('support:reply'), async (req: any, res) => {
   try {
     const ticket = await supportTickets.findOne({ ticketId: req.params.id });
-    if (!ticket) return res.status(404).json({ message: 'Support ticket not found' });
+    if (!ticket) return res.status(404).json({ success: false, message: 'Support ticket not found' });
+
+    const allowedStatuses = ['open', 'in_progress', 'resolved', 'closed'];
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (req.body.status !== undefined) {
-      if (!['open', 'in_progress', 'resolved', 'closed'].includes(req.body.status)) {
-        return res.status(400).json({ message: 'Invalid ticket status' });
+      if (!allowedStatuses.includes(req.body.status)) {
+        return res.status(400).json({ success: false, message: 'Invalid support ticket status' });
       }
       updates.status = req.body.status;
     }
-    if (req.body.priority !== undefined) {
-      if (!['low', 'medium', 'high', 'urgent'].includes(req.body.priority)) {
-        return res.status(400).json({ message: 'Invalid ticket priority' });
-      }
-      updates.priority = req.body.priority;
-      const slaHours: Record<string, number> = { urgent: 4, high: 8, medium: 24, low: 72 };
-      updates.slaDueAt = new Date(Date.now() + slaHours[req.body.priority] * 60 * 60 * 1000);
-    }
     if (req.body.assignedTo !== undefined) {
-      if (req.body.assignedTo !== null) {
-        const assignee = await users.findOne({ id: req.body.assignedTo });
-        if (!assignee || !staffRoleForUser(assignee)) {
-          return res.status(400).json({ message: 'Assignee must be an active staff account' });
-        }
+      if (typeof req.body.assignedTo !== 'string') {
+        return res.status(400).json({ success: false, message: 'Assigned staff ID must be a string' });
       }
-      updates.assignedTo = req.body.assignedTo || null;
+      updates.assignedTo = req.body.assignedTo;
     }
+    if (req.body.resolution !== undefined) {
+      if (typeof req.body.resolution !== 'string') {
+        return res.status(400).json({ success: false, message: 'Resolution must be text' });
+      }
+      updates.resolution = req.body.resolution.slice(0, 4000);
+    }
+    if (req.body.userWarned !== undefined) {
+      if (typeof req.body.userWarned !== 'boolean') {
+        return res.status(400).json({ success: false, message: 'userWarned must be a boolean' });
+      }
+      updates.userWarned = req.body.userWarned;
+    }
+    if (Object.keys(updates).length === 1) {
+      return res.status(400).json({ success: false, message: 'No support ticket updates provided' });
+    }
+
     await supportTickets.updateOne({ ticketId: req.params.id }, { $set: updates });
     await adminLogs.insertOne({
       id: uid(),
-      action: 'support_ticket_updated',
+      action: 'update_support_ticket',
       performedBy: req.user.userId,
       timestamp: new Date(),
       details: { ticketId: req.params.id, updates },
     });
-    res.json({ success: true, ticket: await supportTickets.findOne({ ticketId: req.params.id }) });
+    res.json({ success: true, ticket: { ...ticket, ...updates } });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
-app.post('/api/support/tickets/:id/replies', adminMiddleware, requirePermission('support:reply'), async (req: any, res) => {
+app.post('/api/support/tickets/:id/responses', adminMiddleware, requirePermission('support:reply'), async (req: any, res) => {
   try {
     const message = typeof req.body.message === 'string' ? req.body.message.trim() : '';
-    if (!message || message.length > 5000) {
-      return res.status(400).json({ message: 'Reply must be between 1 and 5000 characters' });
+    if (!message || message.length > 4000) {
+      return res.status(400).json({ success: false, message: 'A response of 1 to 4000 characters is required' });
     }
     const ticket = await supportTickets.findOne({ ticketId: req.params.id });
-    if (!ticket) return res.status(404).json({ message: 'Support ticket not found' });
-    const response: SupportTicketResponse = {
+    if (!ticket) return res.status(404).json({ success: false, message: 'Support ticket not found' });
+
+    const response = {
       responseId: uid(),
-      userId: req.user.userId,
+      responderId: req.user.userId,
       message,
       createdAt: new Date(),
+      isAdminResponse: true,
     };
-    await supportTickets.updateOne({ ticketId: req.params.id }, {
-      $push: { responses: response },
-      $set: { updatedAt: new Date() },
-    });
+    await supportTickets.updateOne(
+      { ticketId: req.params.id },
+      { $set: { responses: [...(ticket.responses ?? []), response], updatedAt: new Date() } },
+    );
     await adminLogs.insertOne({
       id: uid(),
-      action: 'support_ticket_replied',
+      action: 'reply_support_ticket',
       performedBy: req.user.userId,
       timestamp: new Date(),
       details: { ticketId: req.params.id, responseId: response.responseId },
     });
     res.status(201).json({ success: true, response });
-  } catch (err: any) { res.status(500).json({ message: err.message }); }
-});
-
-app.post('/api/support/tickets/:id/escalate', adminMiddleware, requirePermission('support:escalate'), async (req: any, res) => {
-  try {
-    const ticket = await supportTickets.findOne({ ticketId: req.params.id });
-    if (!ticket) return res.status(404).json({ message: 'Support ticket not found' });
-    await supportTickets.updateOne({ ticketId: req.params.id }, {
-      $set: {
-        priority: 'urgent',
-        escalatedAt: new Date(),
-        slaDueAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
-        updatedAt: new Date(),
-      },
-    });
-    await adminLogs.insertOne({
-      id: uid(),
-      action: 'support_ticket_escalated',
-      performedBy: req.user.userId,
-      timestamp: new Date(),
-      details: { ticketId: req.params.id },
-    });
-    res.json({ success: true });
-  } catch (err: any) { res.status(500).json({ message: err.message }); }
+  } catch (error) {
+    console.error('Support ticket reply failed:', error);
+    res.status(500).json({ success: false, message: 'Could not send support response' });
+  }
 });
 
 // ── Businesses & Advertisements ────────────────────────────────
 
-app.get('/api/businesses', requireFeature('business_features'), async (req, res) => {
+app.get('/api/businesses', async (req, res) => {
   try {
     const { type, category, search, sponsored } = req.query as Record<string, string>;
     let query: any = {};
@@ -1823,7 +1423,7 @@ app.get('/api/businesses', requireFeature('business_features'), async (req, res)
   }
 });
 
-app.get('/api/advertisements', requireFeature('business_features'), async (_req, res) => {
+app.get('/api/advertisements', async (_req, res) => {
   try {
     const ads = await businesses.find({ isSponsored: true }).toArray();
     res.json({ success: true, advertisements: ads, data: ads });
@@ -1832,7 +1432,7 @@ app.get('/api/advertisements', requireFeature('business_features'), async (_req,
   }
 });
 
-app.get('/api/businesses/:id', requireFeature('business_features'), async (req, res) => {
+app.get('/api/businesses/:id', async (req, res) => {
   try {
     const business = await businesses.findOne({ id: req.params.id });
     if (!business) return res.status(404).json({ success: false, message: 'Business not found' });
@@ -1849,9 +1449,6 @@ app.post('/api/businesses', authMiddleware, requireFeature('business_features'),
       return res.status(400).json({ success: false, message: 'Name, category, and description are required' });
     }
     const userDoc = await users.findOne({ id: req.user.userId });
-    const staffRole = staffRoleForUser(userDoc);
-    const canManageAds = staffRole && hasAdminPermission(staffRole, 'ads:manage');
-    const sponsored = Boolean(canManageAds && isSponsored);
     const newBiz: Business = {
       id: `biz_${Date.now()}`,
       name: name.trim(),
@@ -1867,9 +1464,9 @@ app.post('/api/businesses', authMiddleware, requireFeature('business_features'),
       website: website?.trim() || '',
       hours: hours?.trim() || 'Mon-Fri: 9AM-6PM',
       verified: true,
-      isSponsored: sponsored,
-      adHeadline: sponsored ? (adHeadline?.trim() || 'Featured Community Advertisement') : undefined,
-      adTag: sponsored ? (adTag?.trim() || 'Sponsored Partner') : undefined,
+      isSponsored: Boolean(isSponsored),
+      adHeadline: adHeadline?.trim() || (isSponsored ? 'Featured Community Advertisement' : undefined),
+      adTag: adTag?.trim() || (isSponsored ? 'Sponsored Partner' : undefined),
       ownerId: req.user.userId,
       ownerName: userDoc?.name || 'Community Business Owner',
       createdAt: new Date().toISOString(),
@@ -1881,19 +1478,15 @@ app.post('/api/businesses', authMiddleware, requireFeature('business_features'),
   }
 });
 
-app.patch('/api/businesses/:id', authMiddleware, requireFeature('business_features'), async (req: any, res) => {
+app.patch('/api/businesses/:id', authMiddleware, async (req: any, res) => {
   try {
     const biz = await businesses.findOne({ id: req.params.id });
     if (!biz) return res.status(404).json({ success: false, message: 'Business not found' });
     const userDoc = await users.findOne({ id: req.user.userId });
-    const staffRole = staffRoleForUser(userDoc);
-    const canManageAds = staffRole && hasAdminPermission(staffRole, 'ads:manage');
-    const isOwner = biz.ownerId === req.user.userId;
-    if (!isOwner && !canManageAds) {
+    if (biz.ownerId && biz.ownerId !== req.user.userId && userDoc?.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to update this business' });
     }
-    const allowed = ['name', 'category', 'description', 'phone', 'email', 'website', 'location', 'image', 'hours'];
-    if (canManageAds) allowed.push('isSponsored', 'adHeadline', 'adTag');
+    const allowed = ['name', 'category', 'description', 'phone', 'email', 'website', 'location', 'image', 'hours', 'isSponsored', 'adHeadline', 'adTag'];
     const update: any = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) update[key] = req.body[key];
@@ -1906,15 +1499,20 @@ app.patch('/api/businesses/:id', authMiddleware, requireFeature('business_featur
   }
 });
 
-app.patch('/api/businesses/:id/sponsor', authMiddleware, requireFeature('business_features'), async (req: any, res) => {
+app.patch('/api/businesses/:id/sponsor', authMiddleware, async (req: any, res) => {
   try {
-    const userDoc = await users.findOne({ id: req.user.userId });
-    const staffRole = staffRoleForUser(userDoc);
-    if (!staffRole || !hasAdminPermission(staffRole, 'ads:manage')) {
-      return res.status(403).json({ success: false, message: 'Business advertising access required' });
-    }
     const biz = await businesses.findOne({ id: req.params.id });
     if (!biz) return res.status(404).json({ success: false, message: 'Business not found' });
+    const user = await users.findOne({ id: req.user.userId });
+    const staffRole = user?.role === 'admin'
+      ? user.staffRole ?? 'superadmin'
+      : user?.role === 'moderator' ? 'moderator' : undefined;
+    const validRoles: AdminStaffRole[] = ['superadmin', 'operations', 'moderator', 'support'];
+    const mayManageAds = !!staffRole && validRoles.includes(staffRole) &&
+      STAFF_PERMISSIONS[staffRole].has('ads:manage');
+    if (biz.ownerId !== req.user.userId && !mayManageAds) {
+      return res.status(403).json({ success: false, message: 'Only the business owner or authorized operations staff may change sponsorship' });
+    }
     const newSponsored = !biz.isSponsored;
     await businesses.updateOne({ id: req.params.id }, {
       $set: {
@@ -1929,14 +1527,12 @@ app.patch('/api/businesses/:id/sponsor', authMiddleware, requireFeature('busines
   }
 });
 
-app.delete('/api/businesses/:id', authMiddleware, requireFeature('business_features'), async (req: any, res) => {
+app.delete('/api/businesses/:id', authMiddleware, async (req: any, res) => {
   try {
     const biz = await businesses.findOne({ id: req.params.id });
     if (!biz) return res.status(404).json({ success: false, message: 'Business not found' });
     const userDoc = await users.findOne({ id: req.user.userId });
-    const staffRole = staffRoleForUser(userDoc);
-    const canManageAds = staffRole && hasAdminPermission(staffRole, 'ads:manage');
-    if (biz.ownerId !== req.user.userId && !canManageAds) {
+    if (biz.ownerId && biz.ownerId !== req.user.userId && userDoc?.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this business' });
     }
     await businesses.deleteOne({ id: req.params.id });
@@ -1947,6 +1543,273 @@ app.delete('/api/businesses/:id', authMiddleware, requireFeature('business_featu
 });
 
 // ── Admin ─────────────────────────────────────────────────────
+
+app.get('/api/admin/crm/overview', adminMiddleware, requirePermission('overview:read'), async (_req, res) => {
+  try {
+    const [totalUsers, activeListings, pendingModeration, pendingVerifications, openTickets, sponsoredBusinesses, totalAuditLogs] = await Promise.all([
+      users.countDocuments(),
+      listings.countDocuments({ status: 'active' }),
+      listings.countDocuments({ status: 'pending_review' }),
+      verificationRequests.countDocuments({ status: 'pending' }),
+      supportTickets.countDocuments({ status: 'open' }),
+      businesses.countDocuments({ isSponsored: true }),
+      adminLogs.countDocuments(),
+    ]);
+    res.json({
+      success: true,
+      kpis: { totalUsers, activeListings, pendingModeration, pendingVerifications, openTickets, sponsoredBusinesses, totalAuditLogs, uptime: 'Available', engine: 'Supabase Postgres' },
+    });
+  } catch (error) {
+    console.error('CRM overview lookup failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load CRM overview' });
+  }
+});
+
+app.get('/api/admin/search', adminMiddleware, requirePermission('users:read'), async (req: any, res) => {
+  try {
+    const query = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 80).toLocaleLowerCase() : '';
+    if (query.length < 2) return res.json({ success: true, results: [] });
+    const [allUsers, allListings, allBusinesses, allTickets] = await Promise.all([
+      users.find().toArray(), listings.find().toArray(), businesses.find().toArray(), supportTickets.find().toArray(),
+    ]);
+    const includes = (value: unknown) => typeof value === 'string' && value.toLocaleLowerCase().includes(query);
+    const maskEmail = (email?: string) => email?.replace(/^(.).+(@.*)$/, '$1••••$2');
+    const results = [
+      ...allUsers.filter(user => includes(user.name) || includes(user.email) || includes(user.id)).slice(0, 8)
+        .map(user => ({ type: 'user', id: user.id, label: user.name, detail: maskEmail(user.email), href: `/admin?tab=users&user=${encodeURIComponent(user.id)}` })),
+      ...allListings.filter(listing => includes(listing.id) || includes(listing.section) || includes(listing.data?.title) || includes(listing.data?.name)).slice(0, 8)
+        .map(listing => ({ type: 'listing', id: listing.id, label: listing.data?.title || listing.data?.name || 'Untitled listing', detail: listing.section, href: '/admin?tab=moderation' })),
+      ...allBusinesses.filter(business => includes(business.name) || includes(business.category) || includes(business.id)).slice(0, 8)
+        .map(business => ({ type: 'business', id: business.id, label: business.name, detail: business.category, href: '/admin?tab=merchants' })),
+      ...allTickets.filter(ticket => includes(ticket.ticketId) || includes(ticket.subject) || includes(ticket.category)).slice(0, 8)
+        .map(ticket => ({ type: 'ticket', id: ticket.ticketId, label: ticket.subject, detail: ticket.status, href: '/admin?tab=support' })),
+    ].slice(0, 32);
+    res.json({ success: true, results });
+  } catch (error) {
+    console.error('CRM search failed:', error);
+    res.status(500).json({ success: false, message: 'Could not search CRM records' });
+  }
+});
+
+app.get('/api/admin/crm/merchants', adminMiddleware, requirePermission('ads:manage'), async (_req, res) => {
+  try {
+    const merchants = await businesses.find().toArray();
+    res.json({
+      success: true,
+      merchants: merchants.map(business => ({
+        ...business,
+        impressions: null,
+        clicks: null,
+        ctr: null,
+        leadsGenerated: null,
+        tier: business.isSponsored ? 'Premium Partner' : 'Standard Merchant',
+      })),
+    });
+  } catch (error) {
+    console.error('CRM merchant lookup failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load business partners' });
+  }
+});
+
+app.get('/api/admin/moderation/queue', adminMiddleware, requirePermission('listings:review'), async (req: any, res) => {
+  try {
+    const requestedStatus = typeof req.query.status === 'string' ? req.query.status : 'all';
+    const allowedStatuses: Record<string, string[]> = {
+      pending: ['pending_review'],
+      flagged: ['flagged'],
+      reviewed: ['active', 'rejected'],
+      all: ['pending_review', 'flagged'],
+    };
+    const statuses = allowedStatuses[requestedStatus];
+    if (!statuses) return res.status(400).json({ success: false, message: 'Invalid moderation status filter' });
+    const queueItems = await listings.find({ status: { $in: statuses } }).sort({ createdAt: -1 }).toArray();
+    const ownerIds = [...new Set(queueItems.map(listing => listing.userId))];
+    const owners = await users.find({ id: { $in: ownerIds } }, {
+      projection: { id: 1, name: 1, profileImageUrl: 1 },
+    }).toArray();
+    const ownerMap = new Map(owners.map(owner => [owner.id, owner]));
+    const restrictions = await userRestrictions.find({ status: 'active' }).toArray();
+    const restrictionCounts = new Map<string, number>();
+    for (const restriction of restrictions) {
+      const expiration = restriction.endDate ?? restriction.expiresAt;
+      if (expiration && new Date(expiration).getTime() <= Date.now()) continue;
+      restrictionCounts.set(restriction.userId, (restrictionCounts.get(restriction.userId) ?? 0) + 1);
+    }
+    const items = queueItems.map(listing => ({
+      ...listing,
+      seller: ownerMap.get(listing.userId)?.name ?? 'Community member',
+      sellerAvatar: ownerMap.get(listing.userId)?.profileImageUrl,
+      activeRestrictionCount: restrictionCounts.get(listing.userId) ?? 0,
+      riskScore: listing.riskScore ?? null,
+      riskFlags: listing.riskFlags ?? [],
+      riskSummary: listing.riskSummary ?? 'No automated risk assessment recorded',
+    }));
+    res.json({ success: true, items, total: items.length });
+  } catch (error) {
+    console.error('Moderation queue lookup failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load moderation queue' });
+  }
+});
+
+app.post('/api/admin/moderation/decide', adminMiddleware, requirePermission('listings:review'), async (req: any, res) => {
+  try {
+    const { listingId, decision, reason } = req.body;
+    if (typeof listingId !== 'string' || !['approve', 'reject', 'flag', 'escalate'].includes(decision)) {
+      return res.status(400).json({ success: false, message: 'Provide a listing and valid moderation decision' });
+    }
+    const listing = await listings.findOne({ id: listingId });
+    if (!listing) return res.status(404).json({ success: false, message: 'Listing not found' });
+    if (!['pending_review', 'flagged'].includes(listing.status)) {
+      return res.status(409).json({ success: false, message: 'Listing is no longer awaiting moderation' });
+    }
+    const status = decision === 'approve' ? 'active' : decision === 'reject' ? 'rejected' : 'flagged';
+    await listings.updateOne({ id: listingId }, { $set: {
+      status,
+      moderatedBy: req.user.userId,
+      moderatedAt: new Date().toISOString(),
+      moderationReason: typeof reason === 'string' ? reason.slice(0, 500) : 'Moderation decision recorded',
+    } });
+    await adminLogs.insertOne({
+      id: uid(), action: `listing_${decision}`, performedBy: req.user.userId, timestamp: new Date(),
+      details: { listingId, decision, reason: typeof reason === 'string' ? reason.slice(0, 500) : '' },
+    });
+    res.json({ success: true, status, message: `Listing marked as ${status}` });
+  } catch (error) {
+    console.error('Moderation decision failed:', error);
+    res.status(500).json({ success: false, message: 'Could not record moderation decision' });
+  }
+});
+
+app.post('/api/admin/moderation/bulk-decide', adminMiddleware, requirePermission('listings:review'), async (req: any, res) => {
+  try {
+    const { listingIds, decision, reason } = req.body;
+    if (!Array.isArray(listingIds) || listingIds.length === 0 || listingIds.length > 100 ||
+        listingIds.some((id: unknown) => typeof id !== 'string') || !['approve', 'reject'].includes(decision)) {
+      return res.status(400).json({ success: false, message: 'Provide 1 to 100 listing IDs and an approve/reject decision' });
+    }
+    const modifiedIds: string[] = [];
+    const failedIds: string[] = [];
+    const status = decision === 'approve' ? 'active' : 'rejected';
+    for (const id of [...new Set(listingIds as string[])]) {
+      const listing = await listings.findOne({ id });
+      if (!listing || !['pending_review', 'flagged'].includes(listing.status)) {
+        failedIds.push(id);
+        continue;
+      }
+      await listings.updateOne({ id }, { $set: {
+        status,
+        moderatedBy: req.user.userId,
+        moderatedAt: new Date().toISOString(),
+        moderationReason: typeof reason === 'string' ? reason.slice(0, 500) : 'Bulk moderation decision',
+      } });
+      modifiedIds.push(id);
+    }
+    await adminLogs.insertOne({
+      id: uid(), action: `bulk_listing_${decision}`, performedBy: req.user.userId, timestamp: new Date(),
+      details: { modifiedIds, failedIds },
+    });
+    res.json({ success: true, modifiedIds, failedIds, message: `Processed ${modifiedIds.length} listings; ${failedIds.length} were skipped` });
+  } catch (error) {
+    console.error('Bulk moderation decision failed:', error);
+    res.status(500).json({ success: false, message: 'Could not process moderation decisions' });
+  }
+});
+
+app.get('/api/admin/verifications', adminMiddleware, requirePermission('verification:review'), async (_req, res) => {
+  try {
+    const requests = await verificationRequests.find().sort({ submittedAt: -1 }).toArray();
+    res.json({ success: true, requests });
+  } catch (error) {
+    console.error('Verification queue lookup failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load verification requests' });
+  }
+});
+
+app.post('/api/admin/verifications/decide', adminMiddleware, requirePermission('verification:review'), async (req: any, res) => {
+  try {
+    const { requestId, decision, notes } = req.body;
+    if (typeof requestId !== 'string' || !['approved', 'rejected'].includes(decision)) {
+      return res.status(400).json({ success: false, message: 'Provide a verification request and valid decision' });
+    }
+    const request = await verificationRequests.findOne({ id: requestId });
+    if (!request) return res.status(404).json({ success: false, message: 'Verification request not found' });
+    if (request.status !== 'pending') return res.status(409).json({ success: false, message: 'Request has already been reviewed' });
+    await verificationRequests.updateOne({ id: requestId }, { $set: {
+      status: decision,
+      reviewedBy: req.user.userId,
+      reviewedAt: new Date().toISOString(),
+      reviewNotes: typeof notes === 'string' ? notes.slice(0, 1000) : '',
+    } });
+    if (decision === 'approved') {
+      await users.updateOne({ id: request.userId }, { $set: { verified: true, verifiedBadge: request.badgeTitle } });
+      for (const listing of await listings.find({ userId: request.userId }).toArray()) {
+        await listings.updateOne({ id: listing.id }, { $set: { 'data.verified': true } });
+      }
+    }
+    await adminLogs.insertOne({
+      id: uid(), action: `verification_${decision}`, performedBy: req.user.userId, timestamp: new Date(),
+      details: { requestId, userId: request.userId, vertical: request.vertical, decision },
+    });
+    res.json({ success: true, message: `Verification request ${decision}` });
+  } catch (error) {
+    console.error('Verification decision failed:', error);
+    res.status(500).json({ success: false, message: 'Could not record verification decision' });
+  }
+});
+
+app.get('/api/admin/users/:id/timeline', adminMiddleware, requirePermission('users:read'), async (req: any, res) => {
+  try {
+    const target = await users.findOne({ id: req.params.id });
+    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+    const [userListings, restrictions, tickets, verifications, logs] = await Promise.all([
+      listings.find({ userId: req.params.id }).toArray(),
+      userRestrictions.find({ userId: req.params.id }).toArray(),
+      supportTickets.find({ userId: req.params.id }).toArray(),
+      verificationRequests.find({ userId: req.params.id }).toArray(),
+      adminLogs.find().sort({ timestamp: -1 }).limit(2000).toArray(),
+    ]);
+    const timeline = [
+      ...userListings.map(listing => ({ id: `listing-${listing.id}`, type: 'listing', timestamp: listing.createdAt, summary: `Listing created: ${listing.data?.title || listing.data?.name || listing.section}`, status: listing.status })),
+      ...restrictions.map(restriction => ({ id: `restriction-${restriction.id}`, type: 'restriction', timestamp: restriction.createdAt, summary: `${restriction.type} restriction: ${restriction.reason}`, status: restriction.status })),
+      ...tickets.map(ticket => ({ id: `ticket-${ticket.ticketId}`, type: 'support', timestamp: ticket.createdAt, summary: `Support ticket: ${ticket.subject}`, status: ticket.status })),
+      ...verifications.map(request => ({ id: `verification-${request.id}`, type: 'verification', timestamp: request.submittedAt, summary: `Verification submitted: ${request.badgeTitle}`, status: request.status })),
+      ...logs.filter(log => log.details?.userId === req.params.id || log.details?.targetUserId === req.params.id)
+        .map(log => ({ id: `audit-${log.id}`, type: 'staff action', timestamp: log.timestamp, summary: log.action, status: 'recorded' })),
+    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 200);
+    res.json({
+      success: true,
+      account: { id: target.id, name: target.name, email: target.email?.replace(/^(.).+(@.*)$/, '$1••••$2'), role: target.staffRole ?? target.role, createdAt: target.createdAt },
+      timeline,
+    });
+  } catch (error) {
+    console.error('User CRM timeline lookup failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load user activity' });
+  }
+});
+
+app.get('/api/admin/activity', adminMiddleware, requirePermission('system:audit_logs'), async (req: any, res) => {
+  try {
+    const requestedLimit = Number.parseInt(req.query.limit as string, 10);
+    const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 500) : 200;
+    const requestedUserId = typeof req.query.userId === 'string' ? req.query.userId : undefined;
+    const logs = await adminLogs.find().sort({ timestamp: -1 }).limit(limit).toArray();
+    const activities = logs
+      .filter(log => !requestedUserId ||
+        log.details?.targetUserId === requestedUserId ||
+        log.details?.userId === requestedUserId ||
+        log.performedBy === requestedUserId)
+      .map(log => ({
+        userId: log.details?.targetUserId ?? log.details?.userId ?? log.performedBy,
+        action: log.action,
+        timestamp: log.timestamp,
+        details: log.details ?? {},
+      }));
+    res.json({ success: true, activities });
+  } catch (error) {
+    console.error('Admin activity lookup failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load admin activity' });
+  }
+});
 
 app.get('/api/admin/stats', adminMiddleware, requirePermission('overview:read'), async (_req, res) => {
   try {
@@ -1985,7 +1848,7 @@ app.get('/api/admin/messages', adminMiddleware, requirePermission('messaging:aud
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
-app.get('/api/admin/groups', adminMiddleware, requirePermission('messaging:audit'), async (_req, res) => {
+app.get('/api/admin/groups', adminMiddleware, requirePermission('overview:read'), async (_req, res) => {
   try {
     const allGroups = await groups.find().sort({ createdAt: -1 }).toArray();
     const creatorIds = [...new Set(allGroups.map(group => group.createdBy))];
@@ -2007,7 +1870,7 @@ app.get('/api/admin/groups', adminMiddleware, requirePermission('messaging:audit
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
-app.get('/api/admin/db-stats', adminMiddleware, requirePermission('system:audit_logs'), async (_req, res) => {
+app.get('/api/admin/db-stats', adminMiddleware, requirePermission('overview:read'), async (_req, res) => {
   try {
     const [usersCount, messagesCount, groupsCount, listingsCount, storiesCount, ticketsCount] = await Promise.all([
       users.countDocuments(),
@@ -2024,149 +1887,59 @@ app.get('/api/admin/db-stats', adminMiddleware, requirePermission('system:audit_
 app.get('/api/admin/users', adminMiddleware, requirePermission('users:read'), async (req: any, res) => {
   try {
     const allUsers = await users.find().sort({ createdAt: -1 }).toArray();
-    const revealPii = req.query.unmask === 'true' && hasAdminPermission(req.staffRole, 'users:pii');
-    const data = allUsers.map(user => {
+    const mayViewPii = STAFF_PERMISSIONS[req.staffRole as AdminStaffRole].has('users:pii');
+    res.json({ success: true, data: allUsers.map(user => {
       const safe = safeUser(user);
-      if (revealPii) return safe;
-      return {
-        ...safe,
-        email: safe.email ? safe.email.replace(/^(.).+(@.*)$/, '$1••••$2') : safe.email,
-        phoneNumber: safe.phoneNumber ? `${safe.phoneNumber.slice(0, 3)}••••••` : safe.phoneNumber,
-        contactPhone: safe.contactPhone ? `${safe.contactPhone.slice(0, 3)}••••••` : safe.contactPhone,
-      };
-    });
-    res.json({ success: true, data });
-  } catch (err: any) { res.status(500).json({ message: err.message }); }
-});
-
-app.get('/api/admin/search', adminMiddleware, requirePermission('users:read'), async (req: any, res) => {
-  try {
-    const query = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 80) : '';
-    if (query.length < 2) return res.json({ success: true, results: [] });
-    const needle = query.toLocaleLowerCase();
-    const [allUsers, allListings, allBusinesses, allTickets] = await Promise.all([
-      users.find().toArray(),
-      listings.find().toArray(),
-      businesses.find().toArray(),
-      supportTickets.find().toArray(),
-    ]);
-    const includes = (value: unknown) => typeof value === 'string' && value.toLocaleLowerCase().includes(needle);
-    const maskEmail = (email?: string) => email?.replace(/^(.).+(@.*)$/, '$1••••$2');
-    const results = [
-      ...allUsers.filter(user => includes(user.name) || includes(user.email) || includes(user.id)).slice(0, 8)
-        .map(user => ({ type: 'user', id: user.id, label: user.name, detail: maskEmail(user.email), href: `/admin?tab=users&user=${encodeURIComponent(user.id)}` })),
-      ...allListings.filter(listing => includes(listing.id) || includes(listing.section) ||
-        includes(listing.data?.title) || includes(listing.data?.name)).slice(0, 8)
-        .map(listing => ({ type: 'listing', id: listing.id, label: listing.data?.title || listing.data?.name || 'Untitled listing', detail: listing.section, href: `/admin?tab=moderation` })),
-      ...allBusinesses.filter(business => includes(business.name) || includes(business.category) || includes(business.id)).slice(0, 8)
-        .map(business => ({ type: 'business', id: business.id, label: business.name, detail: business.category, href: `/admin?tab=merchants` })),
-      ...allTickets.filter(ticket => includes(ticket.ticketId) || includes(ticket.subject) || includes(ticket.category)).slice(0, 8)
-        .map(ticket => ({ type: 'ticket', id: ticket.ticketId, label: ticket.subject, detail: ticket.status, href: `/admin?tab=support` })),
-    ].slice(0, 32);
-    res.json({ success: true, results });
-  } catch (err: any) { res.status(500).json({ message: err.message }); }
-});
-
-app.get('/api/admin/users/:id/timeline', adminMiddleware, requirePermission('users:read'), async (req: any, res) => {
-  try {
-    const target = await users.findOne({ id: req.params.id });
-    if (!target) return res.status(404).json({ message: 'User not found' });
-    const [userListings, restrictions, tickets, verifications, logs] = await Promise.all([
-      listings.find({ userId: req.params.id }).toArray(),
-      userRestrictions.find({ userId: req.params.id }).toArray(),
-      supportTickets.find({ userId: req.params.id }).toArray(),
-      verificationRequests.find({ userId: req.params.id }).toArray(),
-      adminLogs.find().sort({ timestamp: -1 }).limit(2000).toArray(),
-    ]);
-    const events = [
-      ...userListings.map(listing => ({
-        id: `listing-${listing.id}`,
-        type: 'listing',
-        timestamp: new Date(listing.createdAt),
-        summary: `Listing created: ${listing.data?.title || listing.data?.name || listing.section}`,
-        status: listing.status,
-      })),
-      ...restrictions.map(restriction => ({
-        id: `restriction-${restriction.id}`,
-        type: 'restriction',
-        timestamp: new Date(restriction.createdAt),
-        summary: `${restriction.type} restriction: ${restriction.reason}`,
-        status: restriction.status,
-      })),
-      ...tickets.map(ticket => ({
-        id: `ticket-${ticket.ticketId}`,
-        type: 'support',
-        timestamp: new Date(ticket.createdAt),
-        summary: `Support ticket: ${ticket.subject}`,
-        status: ticket.status,
-      })),
-      ...verifications.map(request => ({
-        id: `verification-${request.id}`,
-        type: 'verification',
-        timestamp: new Date(request.submittedAt),
-        summary: `Verification submitted: ${request.badgeTitle}`,
-        status: request.status,
-      })),
-      ...logs.filter(log => {
-        const details = log.details || {};
-        return details.userId === req.params.id || details.targetUserId === req.params.id ||
-          details.applicantId === req.params.id;
-      }).map(log => ({
-        id: `audit-${log.id}`,
-        type: 'staff action',
-        timestamp: new Date(log.timestamp),
-        summary: log.action,
-        status: 'recorded',
-      })),
-    ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 200);
-    const safeAccount = safeUser(target);
-    res.json({
-      success: true,
-      account: {
-        id: safeAccount.id,
-        name: safeAccount.name,
-        email: safeAccount.email?.replace(/^(.).+(@.*)$/, '$1••••$2'),
-        role: safeAccount.staffRole || safeAccount.role,
-        createdAt: safeAccount.createdAt,
-      },
-      timeline: events,
-    });
+      if (mayViewPii) return safe;
+      const { email: _email, phoneNumber: _phoneNumber, ...masked } = safe;
+      return { ...masked, email: user.email ? `${user.email.slice(0, 1)}***@${user.email.split('@')[1] ?? ''}` : undefined, phoneNumber: user.phoneNumber ? '••••••' : undefined };
+    }) });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
 app.patch('/api/admin/users/:id/role', adminMiddleware, requirePermission('users:write'), async (req: any, res) => {
   try {
-    const { role } = req.body;
-    if (role !== 'user' && !isStaffRole(role)) return res.status(400).json({ message: 'Invalid staff role' });
-    if (req.params.id === req.user.userId) {
-      return res.status(400).json({ message: 'You cannot change your own staff access' });
-    }
     const target = await users.findOne({ id: req.params.id });
     if (!target) return res.status(404).json({ message: 'User not found' });
-    if (target.email?.toLowerCase() === 'admin@buzzer.com' && role !== 'superadmin') {
-      return res.status(400).json({ message: 'The primary platform owner must retain Super Admin access' });
-    }
+    if (target.id === req.user.userId) return res.status(400).json({ message: 'You cannot change your own access level' });
+
+    const { role, staffRole } = req.body;
+    const validStaffRoles: AdminStaffRole[] = ['superadmin', 'operations', 'moderator', 'support'];
     if (role === 'user') {
-      await users.updateOne({ id: req.params.id }, { $set: { role: 'user' }, $unset: { staffRole: 1 } });
+      if (target.staffRole === 'superadmin' || (target.role === 'admin' && !target.staffRole)) {
+        return res.status(400).json({ message: 'Superadmin access cannot be removed through this action' });
+      }
+      await users.updateOne({ id: target.id }, { $set: { role: 'user' }, $unset: { staffRole: '' } });
     } else {
-      await users.updateOne({ id: req.params.id }, { $set: { role: 'admin', staffRole: role } });
+      const nextStaffRole = staffRole ?? (validStaffRoles.includes(role) ? role : undefined);
+      if (!nextStaffRole || !validStaffRoles.includes(nextStaffRole)) return res.status(400).json({ message: 'Invalid staff role' });
+      if (target.staffRole === 'superadmin' && req.staffRole !== 'superadmin') {
+        return res.status(403).json({ message: 'Only a superadmin can change superadmin access' });
+      }
+      await users.updateOne({ id: target.id }, { $set: { role: 'admin', staffRole: nextStaffRole } });
     }
-    await adminLogs.insertOne({ id: uid(), action: 'update_user_role', performedBy: req.user.userId, timestamp: new Date(), details: { targetUserId: req.params.id, role } });
+    await adminLogs.insertOne({ id: uid(), action: 'update_user_role', performedBy: req.user.userId, timestamp: new Date(), details: { targetUserId: req.params.id, role, staffRole: staffRole ?? null } });
     res.json({ success: true });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
 app.delete('/api/admin/users/:id', adminMiddleware, requirePermission('users:write'), async (req: any, res) => {
   try {
-    if (req.params.id === req.user.userId) {
-      return res.status(400).json({ message: 'You cannot delete your own account' });
-    }
     const target = await users.findOne({ id: req.params.id });
     if (!target) return res.status(404).json({ message: 'User not found' });
-    if (target.email?.toLowerCase() === 'admin@buzzer.com') {
-      return res.status(400).json({ message: 'The primary platform owner account cannot be deleted' });
+    if (target.id === req.user.userId) return res.status(400).json({ message: 'You cannot delete your own account' });
+    if (target.staffRole === 'superadmin' || (target.role === 'admin' && !target.staffRole)) {
+      return res.status(400).json({ message: 'Superadmin accounts cannot be deleted through this action' });
     }
-    await users.deleteOne({ id: req.params.id });
+    if (databaseProvider === 'supabase') {
+      if (!supabaseAdmin) return res.status(503).json({ message: 'Supabase admin client is unavailable' });
+      const { error } = await supabaseAdmin.auth.admin.deleteUser(target.id);
+      if (error) {
+        console.error('Supabase auth user deletion failed:', error);
+        return res.status(502).json({ message: 'Could not delete the user authentication account' });
+      }
+    }
+    await users.deleteOne({ id: target.id });
     await adminLogs.insertOne({ id: uid(), action: 'delete_user', performedBy: req.user.userId, timestamp: new Date(), details: { targetUserId: req.params.id } });
     res.json({ success: true });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
@@ -2174,38 +1947,29 @@ app.delete('/api/admin/users/:id', adminMiddleware, requirePermission('users:wri
 
 app.post('/api/admin/users/:id/restrict', adminMiddleware, requirePermission('users:ban'), async (req: any, res) => {
   try {
+    const { type, reason, endDate } = req.body;
+    if (!['ban', 'suspend', 'restrict'].includes(type) || typeof reason !== 'string' || reason.trim().length < 10) {
+      return res.status(400).json({ message: 'Provide a valid restriction type and a reason of at least 10 characters' });
+    }
     const target = await users.findOne({ id: req.params.id });
     if (!target) return res.status(404).json({ message: 'User not found' });
-    if (req.params.id === req.user.userId) {
-      return res.status(400).json({ message: 'You cannot restrict your own account' });
-    }
-    if (target.email?.toLowerCase() === 'admin@buzzer.com') {
-      return res.status(400).json({ message: 'The primary platform owner account cannot be restricted' });
-    }
-    const { type, reason, endDate } = req.body;
-    if (!['ban', 'suspend', 'restrict'].includes(type)) {
-      return res.status(400).json({ message: 'Invalid restriction type' });
-    }
-    if (typeof reason !== 'string' || reason.trim().length < 10 || reason.length > 2000) {
-      return res.status(400).json({ message: 'Reason must be between 10 and 2000 characters' });
-    }
-    const parsedEndDate = endDate ? new Date(endDate) : undefined;
-    if (endDate && (!parsedEndDate || Number.isNaN(parsedEndDate.getTime()) || parsedEndDate <= new Date())) {
-      return res.status(400).json({ message: 'End date must be a valid future date' });
-    }
-    if (type !== 'ban' && !parsedEndDate) {
-      return res.status(400).json({ message: 'Temporary restrictions require an end date' });
+    let expiration: Date | undefined;
+    if (type !== 'ban') {
+      expiration = new Date(endDate);
+      if (!endDate || Number.isNaN(expiration.getTime()) || expiration <= new Date()) {
+        return res.status(400).json({ message: 'A future end date is required for temporary restrictions' });
+      }
     }
     const restriction: UserRestriction = {
       id: uid(),
-      userId: req.params.id,
+      userId: target.id,
       type,
-      reason: reason.trim(),
+      reason: reason.trim().slice(0, 1000),
       status: 'active',
       createdBy: req.user.userId,
-      startDate: new Date(),
-      ...(parsedEndDate ? { endDate: parsedEndDate } : {}),
       createdAt: new Date(),
+      startDate: new Date(),
+      ...(expiration ? { endDate: expiration, expiresAt: expiration } : {}),
     };
     await userRestrictions.insertOne(restriction);
     await adminLogs.insertOne({ id: uid(), action: 'restrict_user', performedBy: req.user.userId, timestamp: new Date(), details: { targetUserId: req.params.id, restriction } });
@@ -2213,31 +1977,29 @@ app.post('/api/admin/users/:id/restrict', adminMiddleware, requirePermission('us
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
-app.get('/api/admin/restrictions', adminMiddleware, requirePermission('users:ban'), async (_req, res) => {
+app.get('/api/admin/users/:id/restrictions', adminMiddleware, requirePermission('users:ban'), async (req: any, res) => {
   try {
-    const records = await userRestrictions.find().sort({ createdAt: -1 }).toArray();
-    const now = Date.now();
-    const active = records.filter(restriction =>
-      restriction.status === 'active' &&
-      (!restriction.endDate || new Date(restriction.endDate).getTime() > now),
-    );
-    const expired = records.filter(restriction =>
-      restriction.status === 'active' &&
-      restriction.endDate &&
-      new Date(restriction.endDate).getTime() <= now,
-    );
-    await Promise.all(expired.map(restriction =>
-      userRestrictions.updateOne({ id: restriction.id }, { $set: { status: 'lifted' } }),
-    ));
-    const userIds = [...new Set(active.map(restriction => restriction.userId))];
-    const affectedUsers = await users.find({ id: { $in: userIds } }, {
-      projection: { id: 1, name: 1 },
-    }).toArray();
-    const names = new Map(affectedUsers.map(user => [user.id, user.name]));
-    res.json({
-      success: true,
-      restrictions: active.map(restriction => ({ ...restriction, userName: names.get(restriction.userId) || 'Deleted user' })),
+    const restrictions = await userRestrictions.find({ userId: req.params.id }).toArray();
+    const presentRestrictions = restrictions.map(restriction => {
+      const endDate = restriction.endDate ?? restriction.expiresAt;
+      const isExpired = restriction.status === 'active' && endDate && new Date(endDate).getTime() <= Date.now();
+      return { ...restriction, endDate, status: isExpired ? 'expired' : restriction.status };
     });
+    res.json({ success: true, restrictions: presentRestrictions });
+  } catch (err: any) { res.status(500).json({ message: err.message }); }
+});
+
+app.get('/api/admin/restrictions', adminMiddleware, requirePermission('users:ban'), async (_req: any, res) => {
+  try {
+    const restrictions = await userRestrictions.find().sort({ createdAt: -1 }).toArray();
+    const userIds = [...new Set(restrictions.map(restriction => restriction.userId))];
+    const restrictedUsers = await users.find({ id: { $in: userIds } }, { projection: { id: 1, name: 1 } }).toArray();
+    const names = new Map(restrictedUsers.map(user => [user.id, user.name]));
+    res.json({ success: true, restrictions: restrictions.map(restriction => {
+      const endDate = restriction.endDate ?? restriction.expiresAt;
+      const isExpired = restriction.status === 'active' && endDate && new Date(endDate).getTime() <= Date.now();
+      return { ...restriction, endDate, status: isExpired ? 'expired' : restriction.status, userName: names.get(restriction.userId) ?? 'Deleted user' };
+    }) });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
@@ -2245,25 +2007,9 @@ app.patch('/api/admin/restrictions/:id/lift', adminMiddleware, requirePermission
   try {
     const restriction = await userRestrictions.findOne({ id: req.params.id });
     if (!restriction) return res.status(404).json({ message: 'Restriction not found' });
-    if (restriction.status !== 'active') return res.status(409).json({ message: 'Restriction is no longer active' });
-    await userRestrictions.updateOne({ id: req.params.id }, {
-      $set: { status: 'lifted', liftedBy: req.user.userId, liftedAt: new Date() },
-    });
-    await adminLogs.insertOne({
-      id: uid(),
-      action: 'lift_user_restriction',
-      performedBy: req.user.userId,
-      timestamp: new Date(),
-      details: { restrictionId: req.params.id, targetUserId: restriction.userId },
-    });
+    await userRestrictions.updateOne({ id: req.params.id }, { $set: { status: 'lifted', liftedAt: new Date(), liftedBy: req.user.userId } });
+    await adminLogs.insertOne({ id: uid(), action: 'lift_restriction', performedBy: req.user.userId, timestamp: new Date(), details: { restrictionId: req.params.id, userId: restriction.userId } });
     res.json({ success: true });
-  } catch (err: any) { res.status(500).json({ message: err.message }); }
-});
-
-app.get('/api/admin/users/:id/restrictions', adminMiddleware, requirePermission('users:read'), async (req: any, res) => {
-  try {
-    const restrictions = await userRestrictions.find({ userId: req.params.id, status: 'active' }).toArray();
-    res.json({ success: true, restrictions });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
@@ -2277,51 +2023,10 @@ app.get('/api/admin/logs', adminMiddleware, requirePermission('system:audit_logs
 
 app.post('/api/admin/logs', adminMiddleware, requirePermission('system:audit_logs'), async (req: any, res) => {
   try {
-    const action = typeof req.body.action === 'string' ? req.body.action.trim() : '';
-    const details = req.body.details && typeof req.body.details === 'object' && !Array.isArray(req.body.details)
-      ? req.body.details
-      : {};
-    if (!action || action.length > 120 || JSON.stringify(details).length > 10000) {
-      return res.status(400).json({ message: 'Valid action and bounded details are required' });
-    }
-    const log: AdminLog = {
-      id: uid(),
-      action,
-      performedBy: req.user.userId,
-      timestamp: new Date(),
-      details,
-    };
+    const { action, details } = req.body;
+    const log: AdminLog = { id: uid(), action, performedBy: req.user.userId, timestamp: new Date(), details: details || {} };
     await adminLogs.insertOne(log);
-    res.status(201).json({ success: true, log });
-  } catch (err: any) { res.status(500).json({ message: err.message }); }
-});
-
-app.get('/api/admin/activity', adminMiddleware, requirePermission('system:audit_logs'), async (req: any, res) => {
-  try {
-    const requestedLimit = Number.parseInt(req.query.limit as string, 10);
-    const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 500) : 100;
-    const userId = typeof req.query.userId === 'string' ? req.query.userId : undefined;
-    const allLogs = await adminLogs.find().sort({ timestamp: -1 }).limit(2000).toArray();
-    const records = allLogs.filter(log => {
-      if (!userId) return true;
-      const details = log.details || {};
-      return log.performedBy === userId ||
-        details.userId === userId ||
-        details.targetUserId === userId ||
-        details.applicantId === userId;
-    }).slice(0, limit);
-    const actorIds = [...new Set(records.map(log => log.performedBy))];
-    const actors = await users.find({ id: { $in: actorIds } }, {
-      projection: { id: 1, name: 1 },
-    }).toArray();
-    const actorNames = new Map(actors.map(actor => [actor.id, actor.name]));
-    res.json({
-      success: true,
-      activities: records.map(log => ({
-        ...log,
-        actorName: actorNames.get(log.performedBy) || 'Deleted staff account',
-      })),
-    });
+    res.json({ success: true, log });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
@@ -2335,340 +2040,24 @@ app.get('/api/admin/features', adminMiddleware, requirePermission('system:flags'
 app.post('/api/admin/features/:name', adminMiddleware, requirePermission('system:flags'), async (req: any, res) => {
   try {
     const { name } = req.params;
-    const { enabled, scope, targetUsers, moderationEnabled, moderationRules } = req.body;
-    if (enabled !== undefined && typeof enabled !== 'boolean') {
-      return res.status(400).json({ message: 'enabled must be a boolean' });
+    const { enabled, scope, targetUsers } = req.body;
+    if (!name || typeof enabled !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'Feature name and boolean enabled value are required' });
     }
     if (scope !== undefined && !['global', 'user'].includes(scope)) {
-      return res.status(400).json({ message: 'Invalid feature scope' });
+      return res.status(400).json({ success: false, message: 'Feature scope must be global or user' });
     }
     if (targetUsers !== undefined && (!Array.isArray(targetUsers) || targetUsers.some((id: unknown) => typeof id !== 'string'))) {
-      return res.status(400).json({ message: 'targetUsers must be an array of user IDs' });
+      return res.status(400).json({ success: false, message: 'targetUsers must be an array of user IDs' });
     }
-    if (moderationEnabled !== undefined && typeof moderationEnabled !== 'boolean') {
-      return res.status(400).json({ message: 'moderationEnabled must be a boolean' });
-    }
-    if (moderationRules !== undefined) {
-      if (typeof moderationRules !== 'object' || moderationRules === null) {
-        return res.status(400).json({ message: 'Invalid moderation rules' });
-      }
-      const max = moderationRules.maxDailySubmissions;
-      if (max !== undefined && (!Number.isInteger(max) || max < 0 || max > 100000)) {
-        return res.status(400).json({ message: 'Invalid moderation rules' });
-      }
-    }
-    const set: Record<string, unknown> = {
-      name,
-      lastModified: new Date(),
-      modifiedBy: req.user.userId,
-    };
-    if (enabled !== undefined) set.enabled = enabled;
-    if (scope !== undefined) set.scope = scope;
-    if (targetUsers !== undefined) set.targetUsers = targetUsers;
-    if (moderationEnabled !== undefined) set.moderationEnabled = moderationEnabled;
-    if (moderationRules !== undefined) set.moderationRules = moderationRules;
     await featureFlags.updateOne(
       { name },
-      { $set: set, $setOnInsert: { enabled: false, scope: 'global', targetUsers: [] } },
+      { $set: { name, enabled, scope: scope || 'global', targetUsers: targetUsers || [], lastModified: new Date(), modifiedBy: req.user.userId } },
       { upsert: true }
     );
     await adminLogs.insertOne({ id: uid(), action: 'toggle_feature', performedBy: req.user.userId, timestamp: new Date(), details: { name, enabled } });
     res.json({ success: true });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
-});
-
-// ── Moderation Triage Queue (OLX-style) ─────────────────────────
-
-app.get('/api/admin/moderation/queue', adminMiddleware, requirePermission('listings:review'), async (req: any, res) => {
-  try {
-    const filterStatus = req.query.status as string; // 'all', 'pending', 'flagged'
-    let query: any = {};
-    if (filterStatus === 'pending') {
-      query = { status: 'pending_review' };
-    } else if (filterStatus === 'flagged') {
-      query = { status: 'flagged' };
-    } else if (filterStatus === 'reviewed') {
-      query = { status: { $in: ['active', 'rejected'] } };
-    } else {
-      query = { status: { $in: ['pending_review', 'flagged', 'active'] } };
-    }
-
-    const queueItems = await listings.find(query).sort({ createdAt: -1 }).toArray();
-    const ownerIds = [...new Set(queueItems.map(l => l.userId))];
-    const owners = await users.find({ id: { $in: ownerIds } }, {
-      projection: { id: 1, name: 1, profileImageUrl: 1 }
-    }).toArray();
-    const ownerMap = new Map(owners.map(o => [o.id, o]));
-    const activeRestrictions = (await userRestrictions.find({ status: 'active' }).toArray()).filter(restriction =>
-      !restriction.endDate || new Date(restriction.endDate).getTime() > Date.now(),
-    );
-    const restrictionCounts = new Map<string, number>();
-    for (const restriction of activeRestrictions) {
-      restrictionCounts.set(restriction.userId, (restrictionCounts.get(restriction.userId) || 0) + 1);
-    }
-
-    const enriched = queueItems.map(item => {
-      const owner = ownerMap.get(item.userId);
-      return {
-        ...item,
-        seller: owner?.name || 'Local Member',
-        sellerAvatar: owner?.profileImageUrl,
-        activeRestrictionCount: restrictionCounts.get(item.userId) || 0,
-        riskScore: item.riskScore ?? null,
-        riskFlags: item.riskFlags ?? [],
-        riskSummary: item.riskSummary ?? 'No automated risk assessment recorded',
-      };
-    });
-
-    res.json({ success: true, items: enriched, total: enriched.length });
-  } catch (err: any) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-app.post('/api/admin/moderation/decide', adminMiddleware, requirePermission('listings:review'), async (req: any, res) => {
-  try {
-    const { listingId, decision, reason } = req.body;
-    if (typeof listingId !== 'string' || !['approve', 'reject', 'flag', 'escalate'].includes(decision)) {
-      return res.status(400).json({ message: 'Valid listingId and decision (approve/reject/flag/escalate) required' });
-    }
-
-    const listing = await listings.findOne({ id: listingId });
-    if (!listing) return res.status(404).json({ message: 'Listing not found' });
-    if (!['pending_review', 'flagged'].includes(listing.status)) {
-      return res.status(409).json({ message: 'Listing is no longer awaiting moderation' });
-    }
-    const newStatus = decision === 'approve' ? 'active' : decision === 'reject' ? 'rejected' : 'flagged';
-    await listings.updateOne({ id: listingId }, {
-      $set: {
-        status: newStatus,
-        moderatedBy: req.user.userId,
-        moderatedAt: new Date().toISOString(),
-        moderationReason: reason || (decision === 'approve' ? 'Meets marketplace trust standards' : 'Rejected by moderation policy'),
-      }
-    });
-
-    await adminLogs.insertOne({
-      id: uid(),
-      action: `listing_${decision}`,
-      performedBy: req.user.userId,
-      timestamp: new Date(),
-      details: { listingId, decision, reason: reason || 'Moderation decision recorded' }
-    });
-
-    res.json({ success: true, status: newStatus, message: `Listing marked as ${newStatus}` });
-  } catch (err: any) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-app.post('/api/admin/moderation/bulk-decide', adminMiddleware, requirePermission('listings:review'), async (req: any, res) => {
-  try {
-    const { listingIds, decision, reason } = req.body;
-    if (!Array.isArray(listingIds) || listingIds.length === 0 || listingIds.length > 100 ||
-        listingIds.some(id => typeof id !== 'string') ||
-        !['approve', 'reject'].includes(decision)) {
-      return res.status(400).json({ message: 'Provide 1 to 100 listing IDs and a valid approve/reject decision' });
-    }
-    const uniqueIds = [...new Set(listingIds)];
-    const newStatus = decision === 'approve' ? 'active' : 'rejected';
-    const modifiedIds: string[] = [];
-    const failedIds: string[] = [];
-    for (const id of uniqueIds) {
-      const listing = await listings.findOne({ id });
-      if (!listing || !['pending_review', 'flagged'].includes(listing.status)) {
-        failedIds.push(id);
-        continue;
-      }
-      const result = await listings.updateOne({ id, status: listing.status }, {
-        $set: {
-          status: newStatus,
-          moderatedBy: req.user.userId,
-          moderatedAt: new Date().toISOString(),
-          moderationReason: reason || `Bulk ${decision}`,
-        }
-      });
-      if (result.modifiedCount > 0) modifiedIds.push(id);
-      else failedIds.push(id);
-    }
-
-    if (modifiedIds.length) {
-      await adminLogs.insertOne({
-        id: uid(),
-        action: `listing_bulk_${decision}`,
-        performedBy: req.user.userId,
-        timestamp: new Date(),
-        details: { listingIds: modifiedIds, decision }
-      });
-    }
-
-    res.json({
-      success: true,
-      modifiedCount: modifiedIds.length,
-      modifiedIds,
-      failedIds,
-      message: `Processed ${modifiedIds.length} listings; ${failedIds.length} were skipped because they were missing or no longer awaiting moderation`,
-    });
-  } catch (err: any) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// ── Trust & Verification Desk (Rieltor.ua-style) ───────────────
-
-app.get('/api/admin/verifications', adminMiddleware, requirePermission('verification:review'), async (_req, res) => {
-  try {
-    const requests = await verificationRequests.find().sort({ submittedAt: -1 }).toArray();
-    res.json({ success: true, requests });
-  } catch (err: any) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-app.post('/api/admin/verifications/decide', adminMiddleware, requirePermission('verification:review'), async (req: any, res) => {
-  try {
-    const { requestId, decision, notes } = req.body;
-    if (!requestId || !['approved', 'rejected'].includes(decision)) {
-      return res.status(400).json({ message: 'Valid requestId and decision required' });
-    }
-
-    const reqDoc = await verificationRequests.findOne({ id: requestId });
-    if (!reqDoc) return res.status(404).json({ message: 'Verification request not found' });
-
-    await verificationRequests.updateOne({ id: requestId }, {
-      $set: {
-        status: decision,
-        reviewedBy: req.user.userId,
-        reviewedAt: new Date().toISOString(),
-        reviewNotes: notes || (decision === 'approved' ? 'Official accreditation confirmed' : 'Insufficient credential proof'),
-      }
-    });
-
-    if (decision === 'approved') {
-      // Award verified badge on user profile and their listings
-      await users.updateOne({ id: reqDoc.userId }, { $set: { verified: true, verifiedBadge: reqDoc.badgeTitle } });
-      await listings.updateOne({ userId: reqDoc.userId }, { $set: { 'data.verified': true } });
-    }
-
-    await adminLogs.insertOne({
-      id: uid(),
-      action: `verification_${decision}`,
-      performedBy: req.user.userId,
-      timestamp: new Date(),
-      details: { requestId, userId: reqDoc.userId, vertical: reqDoc.vertical, decision }
-    });
-
-    res.json({ success: true, message: `Verification request ${decision}` });
-  } catch (err: any) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// ── Executive Cockpit KPIs & CRM Overview ──────────────────────
-
-app.get('/api/admin/crm/overview', adminMiddleware, requirePermission('overview:read'), async (_req, res) => {
-  try {
-    const [
-      totalUsersCount,
-      activeListingsCount,
-      pendingQueueCount,
-      verificationsCount,
-      openTicketsCount,
-      activeBusinessesCount,
-      logsCount
-    ] = await Promise.all([
-      users.countDocuments(),
-      listings.countDocuments({ status: 'active' }),
-      listings.countDocuments({ status: 'pending_review' }),
-      verificationRequests.countDocuments({ status: 'pending' }),
-      supportTickets.countDocuments({ status: 'open' }),
-      businesses.countDocuments({ isSponsored: true }),
-      adminLogs.countDocuments(),
-    ]);
-
-    res.json({
-      success: true,
-      kpis: {
-        totalUsers: totalUsersCount,
-        activeListings: activeListingsCount,
-        pendingModeration: pendingQueueCount,
-        pendingVerifications: verificationsCount,
-        openTickets: openTicketsCount,
-        sponsoredBusinesses: activeBusinessesCount,
-        totalAuditLogs: logsCount,
-        uptime: '99.98%',
-        engine: 'InMemory + Local JSON persistence',
-      }
-    });
-  } catch (err: any) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// ── B2B Merchant Ad Extranet API ──────────────────────────────
-
-app.get('/api/admin/crm/merchants', adminMiddleware, requirePermission('ads:manage'), async (_req, res) => {
-  try {
-    const allBiz = await businesses.find().toArray();
-    const enriched = allBiz.map(b => ({
-      ...b,
-      impressions: null,
-      clicks: null,
-      ctr: null,
-      leadsGenerated: null,
-      tier: b.isSponsored ? 'Premium Partner' : 'Standard Merchant',
-    }));
-    res.json({ success: true, merchants: enriched });
-  } catch (err: any) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// ── Staff Role Impersonation (For Live Demo of all 4 RBAC Tiers) 
-
-app.post('/api/admin/auth/staff-token', async (req, res) => {
-  try {
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(404).json({ message: 'Development staff sessions are unavailable' });
-    }
-
-    const { role } = req.body;
-    const staffProfiles: Record<StaffRole, { name: string; email: string; title: string }> = {
-      superadmin: { name: 'Alex Vance', email: 'admin@buzzer.com', title: 'Platform Director & Superadmin' },
-      operations: { name: 'Elena Rostova', email: 'elena.ops@buzzer.com', title: 'Commercial Operations & Partner CRM' },
-      moderator: { name: 'David Chen', email: 'david.mod@buzzer.com', title: 'Trust & Safety Lead Moderator' },
-      support: { name: 'Sarah Miller', email: 'sarah.support@buzzer.com', title: 'Customer Experience & Help Desk' },
-    };
-    if (!isStaffRole(role)) return res.status(400).json({ message: 'Invalid staff role' });
-    const profile = staffProfiles[role];
-    let adminUser = await users.findOne({ email: staffProfiles.superadmin.email });
-    if (!adminUser) {
-      adminUser = {
-        ...SEED_USERS.find(user => user.id === 'u_admin')!,
-        role: 'admin',
-      };
-      await users.insertOne(adminUser);
-    } else if (adminUser.role !== 'admin') {
-      await users.updateOne({ id: adminUser.id }, { $set: { role: 'admin' } });
-      adminUser = { ...adminUser, role: 'admin' };
-    }
-
-    const token = generateToken(adminUser.id, profile.email, { staffRole: role, demoStaff: true });
-    res.json({
-      success: true,
-      token,
-      user: {
-        ...safeUser(adminUser),
-        name: profile.name,
-        email: profile.email,
-        staffRole: role,
-        demoStaff: true,
-        staffTitle: profile.title,
-      },
-    });
-  } catch (err: any) {
-    res.status(500).json({ success: false, message: err.message });
-  }
 });
 
 // ── User profile update ───────────────────────────────────────
@@ -2696,57 +2085,23 @@ app.patch('/api/users/me', authMiddleware, async (req: any, res) => {
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
-// ── Change password ───────────────────────────────────────────
-
-app.post('/api/users/me/change-password', authMiddleware, async (req: any, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    if (!newPassword) return res.status(400).json({ message: 'New password is required' });
-    if (newPassword.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
-
-    const user = await users.findOne({ id: req.user.userId });
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    if (user.passwordHash) {
-      if (!currentPassword) return res.status(400).json({ message: 'Current password is required' });
-      const match = await bcrypt.compare(currentPassword, user.passwordHash);
-      if (!match) return res.status(401).json({ message: 'Current password is incorrect' });
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-    await users.updateOne({ id: req.user.userId }, { $set: { passwordHash } });
-    res.json({ success: true, message: 'Password updated successfully' });
-  } catch (err: any) { res.status(500).json({ message: err.message }); }
-});
-
 app.post('/api/admin/users/add-admin', adminMiddleware, requirePermission('users:write'), async (req: any, res) => {
   try {
-    const { email, staffRole } = req.body;
+    const { email, staffRole = 'operations' } = req.body;
     if (!email) return res.status(400).json({ message: 'Email is required' });
-    if (!isStaffRole(staffRole)) return res.status(400).json({ message: 'Invalid staff role' });
     const target = await users.findOne({ email: email.toLowerCase() });
     if (!target) return res.status(404).json({ message: 'User not found' });
-    if (target.id === req.user.userId) {
-      return res.status(400).json({ message: 'You cannot change your own staff access' });
-    }
-    if (target.email?.toLowerCase() === 'admin@buzzer.com' && staffRole !== 'superadmin') {
-      return res.status(400).json({ message: 'The primary platform owner must retain Super Admin access' });
-    }
-    await users.updateOne({ email: email.toLowerCase() }, { $set: { role: 'admin', staffRole } });
-    await adminLogs.insertOne({
-      id: uid(),
-      action: 'assign_staff_role',
-      performedBy: req.user.userId,
-      timestamp: new Date(),
-      details: { targetUserId: target.id, staffRole },
-    });
-    res.json({ success: true, message: `${email} was assigned ${staffRole} access` });
+    if (!['superadmin', 'operations', 'moderator', 'support'].includes(staffRole)) return res.status(400).json({ message: 'Invalid staff role' });
+    if (staffRole === 'superadmin' && req.staffRole !== 'superadmin') return res.status(403).json({ message: 'Only a superadmin can grant superadmin access' });
+    await users.updateOne({ id: target.id }, { $set: { role: 'admin', staffRole } });
+    await adminLogs.insertOne({ id: uid(), action: 'grant_staff_access', performedBy: req.user.userId, timestamp: new Date(), details: { targetUserId: target.id, staffRole } });
+    res.json({ success: true, message: `${email} is now ${staffRole}` });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
 // ── Analytics ─────────────────────────────────────────────────
 
-app.get('/api/admin/analytics', adminMiddleware, requirePermission('system:audit_logs'), async (req: any, res) => {
+app.get('/api/admin/analytics', adminMiddleware, requirePermission('overview:read'), async (req: any, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 30;
     const records = await analytics.find().sort({ date: -1 }).limit(limit).toArray();
@@ -2783,7 +2138,11 @@ app.post('/api/admin/analytics/action', async (req, res) => {
 // ── Health & Database Status Endpoints ─────────────────────────
 
 app.get('/health', async (_req, res) => {
-  res.json({ status: 'ok', database: 'connected' });
+  res.json({
+    status: 'ok',
+    database: databaseProvider === 'supabase' ? 'supabase' : 'local-development',
+    auth: supabaseAdmin ? 'supabase' : 'unconfigured',
+  });
 });
 
 app.get('/api/database/status', async (_req, res) => {
@@ -2794,9 +2153,9 @@ app.get('/api/database/status', async (_req, res) => {
     res.json({
       success: true,
       database: {
-        status: 'online',
-        storage: 'Persistent File-Backed Store (MongoDB-compatible)',
-        filePath: path.relative(__dirname, DATABASE_FILE_PATH),
+        status: databaseProvider === 'supabase' ? 'online' : 'local-development',
+        storage: databaseProvider === 'supabase' ? 'Supabase Postgres' : 'Local JSON development store',
+        ...(databaseProvider === 'local' ? { filePath: 'data/buzzer_database.json' } : {}),
         totalUsers: userCount,
         totalListings: listingCount,
         sections: {
@@ -2825,7 +2184,7 @@ app.get('/api/database/status', async (_req, res) => {
 
 // ── Start Server & Mount Vite ─────────────────────────────────
 
-const PORT = Number(process.env.PORT || 3000);
+const PORT = Number(process.env.PORT) || 3000;
 
 async function start() {
   await initializeDatabase();
@@ -2839,7 +2198,7 @@ async function start() {
     });
   } else {
     const vite = await createViteServer({
-      server: { middlewareMode: true, host: '0.0.0.0', ws: { server } },
+      server: { middlewareMode: true, host: '0.0.0.0' },
       appType: 'spa',
       root: path.resolve(__dirname, 'registropolis-main'),
     });

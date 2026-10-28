@@ -8,11 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { useSaved } from '@/context/SavedContext';
 import { listingDetailPath } from '@/lib/utils';
 import ListingAuthor from '@/components/shared/ListingAuthor';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 const TYPES = ['All', 'Buy', 'Rent', 'Commercial'];
 const BEDS = ['Any', '1+', '2+', '3+', '4+'];
 
 export default function RealEstateSection() {
+  const { t } = useLocalization();
   const [mode, setMode] = useState('All');
   const [activeBeds, setActiveBeds] = useState('Any');
   const [search, setSearch] = useState('');
@@ -56,7 +58,7 @@ export default function RealEstateSection() {
       <div className="section-header">
         <div>
           <div className="gold-accent mb-3" />
-          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>Real Estate</h1>
+          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>{t('Real Estate')}</h1>
           <p className="text-sm mt-1" style={{ color:'#6E7A8A' }}>Properties listed by your community</p>
         </div>
         <button
@@ -189,7 +191,6 @@ export default function RealEstateSection() {
                           listingImage: p.imageUrl ?? p.image ?? '',
                           listingCategory: 'Real Estate',
                           sellerName: p.owner?.name ?? p.seller,
-                          sellerUserId: p.userId ?? p.owner?.id ?? p.owner?.userId ?? '',
                         });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
@@ -210,7 +211,6 @@ export default function RealEstateSection() {
                             listingImage: p.imageUrl ?? p.image,
                             listingCategory: 'Real Estate',
                             sellerName: p.agent ?? p.seller,
-                            sellerUserId: p.userId ?? p.owner?.id ?? p.owner?.userId ?? '',
                           });
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"

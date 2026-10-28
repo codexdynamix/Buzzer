@@ -1,7 +1,10 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Accordion, 
   AccordionContent, 
@@ -18,8 +21,63 @@ import {
   AlertCircle, 
   Send 
 } from 'lucide-react';
+import { supportService, type SupportTicket } from '@/services/supportService';
+import { useAuth } from '@/context/AuthContext';
 
 const HelpSettings: React.FC = () => {
+  const { user } = useAuth();
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [subject, setSubject] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<'general' | 'technical' | 'report'>('general');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+
+  const loadTickets = async () => {
+    if (!user) return;
+    try {
+      setTickets(await supportService.getTickets());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not load your support requests');
+    }
+  };
+
+  useEffect(() => {
+    void loadTickets();
+  }, [user?.id]);
+
+  const submitTicket = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!user) {
+      toast.error('Sign in before contacting support');
+      return;
+    }
+    if (!subject.trim() || !description.trim()) {
+      toast.error('Enter a subject and describe the issue');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await supportService.createTicket({
+        userId: user.id,
+        subject: subject.trim(),
+        description: description.trim(),
+        priority: 'medium',
+        category,
+      });
+      setSubject('');
+      setDescription('');
+      setIsContactOpen(false);
+      await loadTickets();
+      toast.success('Support request submitted');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not submit your support request');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -31,6 +89,7 @@ const HelpSettings: React.FC = () => {
           <Button 
             variant="outline" 
             className="w-full flex items-center justify-start gap-2"
+            onClick={() => { setCategory('general'); setIsContactOpen(true); }}
           >
             <MessageSquare className="h-4 w-4" />
             <span>Contact Support</span>
@@ -39,6 +98,7 @@ const HelpSettings: React.FC = () => {
           <Button 
             variant="outline" 
             className="w-full flex items-center justify-start gap-2"
+            onClick={() => setIsGuideOpen(true)}
           >
             <Book className="h-4 w-4" />
             <span>User Guide</span>
@@ -47,12 +107,38 @@ const HelpSettings: React.FC = () => {
           <Button 
             variant="outline" 
             className="w-full flex items-center justify-start gap-2"
+            onClick={() => { setCategory('report'); setIsContactOpen(true); }}
           >
             <AlertCircle className="h-4 w-4" />
             <span>Report an Issue</span>
           </Button>
         </div>
-        
+
+        <div className="space-y-3 border-t pt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium">My support requests</h3>
+            <Button variant="outline" size="sm" onClick={() => void loadTickets()}>Refresh</Button>
+          </div>
+          {tickets.length === 0 ? (
+            <p className="text-sm text-muted-foreground">You have not submitted any support requests.</p>
+          ) : tickets.map(ticket => (
+            <div key={ticket.ticketId} className="rounded-lg border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-medium">{ticket.subject}</p>
+                <span className="text-xs capitalize text-muted-foreground">{ticket.status.replace('_', ' ')}</span>
+              </div>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{ticket.description}</p>
+              {ticket.responses?.map(response => (
+                <div key={response.responseId} className="mt-3 rounded-md bg-muted p-3">
+                  <p className="text-xs font-medium">Support response</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{response.message}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{new Date(response.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
         <div className="pt-4 border-t">
           <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
             <FileQuestion className="h-5 w-5" /> Frequently Asked Questions
@@ -136,7 +222,7 @@ const HelpSettings: React.FC = () => {
           <p className="text-sm text-muted-foreground mb-4">
             Help us improve by sharing your experience and suggestions
           </p>
-          <Button className="w-full" onClick={() => toast.success("Feedback form opened")}>
+          <Button className="w-full" onClick={() => { setCategory('general'); setIsContactOpen(true); }}>
             <Send className="h-4 w-4 mr-2" />
             Send Feedback
           </Button>
@@ -146,6 +232,51 @@ const HelpSettings: React.FC = () => {
           App Version: 1.0.0
         </div>
       </CardFooter>
+      <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Contact Support</DialogTitle>
+            <DialogDescription>Tell us what happened. Replies appear under My support requests.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={submitTicket} className="space-y-4">
+            <Input
+              value={subject}
+              onChange={event => setSubject(event.target.value)}
+              placeholder="Subject"
+              maxLength={160}
+              required
+            />
+            <Textarea
+              value={description}
+              onChange={event => setDescription(event.target.value)}
+              placeholder="Describe your question or issue"
+              maxLength={4000}
+              required
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit request'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isGuideOpen} onOpenChange={setIsGuideOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Buzzer User Guide</DialogTitle>
+            <DialogDescription>Quick steps for common tasks.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p><strong>Browse:</strong> Choose a category from the main navigation and use search or filters to find listings.</p>
+            <p><strong>Post:</strong> Open your profile or the relevant category, choose Create Listing, and submit it. New posts may wait for review.</p>
+            <p><strong>Get help:</strong> Use Contact Support or Report an Issue here. Replies appear under My support requests.</p>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsGuideOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

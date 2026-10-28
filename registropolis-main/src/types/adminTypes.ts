@@ -1,65 +1,54 @@
 
-import { Document } from 'mongodb';
-
-export interface AdminStats extends Document {
+export interface AdminStats {
   totalUsers: number;
   totalMessages: number;
   totalGroups: number;
   lastUpdated: Date;
 }
 
-export interface AdminLog extends Document {
+export interface AdminLog {
   action: string;
   performedBy: string;
   timestamp: Date;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 }
 
-export interface AdminAction extends Document {
+export interface AdminAction {
   type: 'user_management' | 'content_moderation' | 'system_config';
   status: 'pending' | 'completed' | 'failed';
   createdAt: Date;
   completedAt?: Date;
   performedBy: string;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 }
 
-export interface FeatureFlag extends Document {
+export interface FeatureFlag {
   name: string;
   enabled: boolean;
   description: string;
   scope: 'global' | 'user';
   targetUsers?: string[]; // User IDs if scope is 'user'
-  moderationEnabled?: boolean;
-  moderationRules?: {
-    requiresApproval?: boolean;
-    autoModeration?: boolean;
-    maxDailySubmissions?: number;
-  };
   lastModified: Date;
   modifiedBy: string;
 }
 
-export interface UserActivity extends Document {
+export interface UserActivity {
   userId: string;
-  performedBy?: string;
-  actorName?: string;
   action: string;
   timestamp: Date;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   ip?: string;
   userAgent?: string;
 }
 
-export interface UserRestriction extends Document {
+export interface UserRestriction {
   id: string;
   userId: string;
   userName?: string;
   type: 'ban' | 'suspend' | 'restrict';
   reason: string;
-  startDate: Date;
-  endDate?: Date;
+  startDate: Date | string;
+  endDate?: Date | string;
   createdBy: string;
   status: 'active' | 'expired' | 'lifted';
-  createdAt?: Date;
 }

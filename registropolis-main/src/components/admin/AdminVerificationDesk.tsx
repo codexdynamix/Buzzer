@@ -15,6 +15,7 @@ import {
   Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { adminCRMAPI } from '@/services/apiService';
 
 export interface VerificationRequest {
   id: string;
@@ -42,16 +43,12 @@ export const AdminVerificationDesk: React.FC = () => {
   const fetchVerifications = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/verifications', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
-        },
-      });
-      const data = await res.json();
+      const data = await adminCRMAPI.getVerifications();
       if (data.success) {
-        setRequests(data.requests || []);
-        if (data.requests?.length > 0 && !selectedReq) {
-          setSelectedReq(data.requests[0]);
+        const verificationRequests = (data.requests as VerificationRequest[] | undefined) || [];
+        setRequests(verificationRequests);
+        if (verificationRequests.length > 0 && !selectedReq) {
+          setSelectedReq(verificationRequests[0]);
         }
       }
     } catch (err) {
@@ -68,15 +65,7 @@ export const AdminVerificationDesk: React.FC = () => {
 
   const handleDecision = async (requestId: string, decision: 'approved' | 'rejected') => {
     try {
-      const res = await fetch('/api/admin/verifications/decide', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
-        },
-        body: JSON.stringify({ requestId, decision, notes: reviewNotes }),
-      });
-      const data = await res.json();
+      const data = await adminCRMAPI.decideVerification({ requestId, decision, notes: reviewNotes });
       if (data.success) {
         toast.success(
           decision === 'approved' 
@@ -106,7 +95,7 @@ export const AdminVerificationDesk: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl p-5 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-[#C9A96E]/20 text-[#C9A96E] flex items-center justify-center font-bold">
             <BadgeCheck size={26} />
@@ -148,7 +137,7 @@ export const AdminVerificationDesk: React.FC = () => {
                     className={`p-4 rounded-xl border transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-[#1A3353] border-[#C9A96E] shadow-lg'
-                        : 'bg-[#162C48]/30 border-slate-800 hover:border-slate-700'
+                        : 'bg-[#162C48] border-slate-800 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -184,7 +173,7 @@ export const AdminVerificationDesk: React.FC = () => {
           {/* Document Inspection & Decision Drawer (7 cols) */}
           <div className="lg:col-span-7">
             {selectedReq ? (
-              <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl overflow-hidden backdrop-blur-md shadow-xl p-6 space-y-6">
+              <div className="bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl overflow-hidden shadow-xl p-6 space-y-6">
                 {/* Header */}
                 <div className="flex items-start justify-between border-b border-slate-700/60 pb-4">
                   <div>
@@ -281,7 +270,7 @@ export const AdminVerificationDesk: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="h-full py-32 text-center text-slate-400 bg-[#162C48]/20 border border-slate-800 rounded-2xl flex flex-col items-center justify-center">
+              <div className="h-full py-32 text-center text-slate-400 bg-[#162C48] border border-slate-800 rounded-2xl flex flex-col items-center justify-center">
                 <FileText size={36} className="text-slate-600 mb-2" />
                 Select an accreditation application to inspect credentials.
               </div>

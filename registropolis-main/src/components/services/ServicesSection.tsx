@@ -7,12 +7,14 @@ import { useNavigate } from 'react-router-dom';
 import { listingDetailPath } from '@/lib/utils';
 import ListingAuthor from '@/components/shared/ListingAuthor';
 import { useChatContext } from '@/context/ChatContext';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 const CATEGORIES = ['All', 'Home Repair', 'Cleaning', 'Design', 'Tutoring', 'Health', 'Tech Support'];
 
 
 
 export default function ServicesSection() {
+  const { t } = useLocalization();
   const [activeCat, setActiveCat] = useState('All');
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -42,7 +44,7 @@ export default function ServicesSection() {
       <div className="section-header">
         <div>
           <div className="gold-accent mb-3" />
-          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>Professional Services</h1>
+          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>{t('Services')}</h1>
           <p className="text-sm mt-1" style={{ color:'#6E7A8A' }}>Services offered by your community</p>
         </div>
         <button
@@ -158,7 +160,6 @@ export default function ServicesSection() {
                         listingImage: svc.imageUrl ?? svc.image ?? '',
                         listingCategory: 'Services',
                         sellerName: svc.owner?.name ?? svc.name,
-                        sellerUserId: svc.userId ?? svc.owner?.id ?? svc.owner?.userId ?? '',
                       });
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
@@ -178,7 +179,6 @@ export default function ServicesSection() {
                         listingImage: svc.imageUrl ?? svc.image ?? '',
                         listingCategory: 'Services',
                         sellerName: svc.owner?.name ?? svc.name,
-                        sellerUserId: svc.userId ?? svc.owner?.id ?? svc.owner?.userId ?? '',
                       });
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"

@@ -17,6 +17,7 @@ import {
   CheckCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { adminCRMAPI } from '@/services/apiService';
 
 export interface ModerationItem {
   id: string;
@@ -30,7 +31,16 @@ export interface ModerationItem {
   riskScore: number | null;
   riskFlags: string[];
   riskSummary: string;
-  data: Record<string, any>;
+  data: {
+    image?: string;
+    title?: string;
+    name?: string;
+    price?: string | number;
+    salary?: string | number;
+    location?: string;
+    description?: string;
+    [key: string]: string | number | boolean | undefined;
+  };
 }
 
 export const AdminModerationQueue: React.FC = () => {
@@ -45,15 +55,9 @@ export const AdminModerationQueue: React.FC = () => {
   const fetchQueue = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/moderation/queue', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
-        },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to load moderation queue');
+      const data = await adminCRMAPI.getModerationQueue();
       if (data.success) {
-        setItems(data.items || []);
+        setItems((data.items as ModerationItem[] | undefined) || []);
         setCurrentIndex(0);
       }
     } catch (err) {
@@ -78,16 +82,7 @@ export const AdminModerationQueue: React.FC = () => {
 
   const handleDecision = async (listingId: string, decision: 'approve' | 'reject' | 'flag', reason?: string) => {
     try {
-      const res = await fetch('/api/admin/moderation/decide', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
-        },
-        body: JSON.stringify({ listingId, decision, reason: reason || cannedReason }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to submit moderation decision');
+      const data = await adminCRMAPI.decideModeration({ listingId, decision, reason: reason || cannedReason });
       if (data.success) {
         toast.success(
           decision === 'approve' 
@@ -110,16 +105,7 @@ export const AdminModerationQueue: React.FC = () => {
   const handleBulkApprove = async () => {
     if (selectedIds.size === 0) return;
     try {
-      const res = await fetch('/api/admin/moderation/bulk-decide', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
-        },
-        body: JSON.stringify({ listingIds: Array.from(selectedIds), decision: 'approve' }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Bulk approval failed');
+      const data = await adminCRMAPI.bulkDecideModeration({ listingIds: Array.from(selectedIds), decision: 'approve' });
       if (data.success) {
         toast.success(data.message || `Batch processed ${data.modifiedCount} listings`);
         const modified = new Set<string>(data.modifiedIds || []);
@@ -158,7 +144,7 @@ export const AdminModerationQueue: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Controls & Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl p-4 backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl p-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#C9A96E]/20 text-[#C9A96E] flex items-center justify-center font-bold">
             ⚡
@@ -214,7 +200,7 @@ export const AdminModerationQueue: React.FC = () => {
       {isLoading ? (
         <div className="py-20 text-center text-slate-400">Loading moderation stream...</div>
       ) : filteredItems.length === 0 ? (
-        <div className="bg-[#162C48]/30 border border-emerald-500/30 rounded-2xl p-12 text-center text-white space-y-3">
+        <div className="bg-[#162C48] border border-emerald-500/30 rounded-2xl p-12 text-center text-white space-y-3">
           <div className="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center">
             <CheckCheck size={28} />
           </div>
@@ -233,7 +219,7 @@ export const AdminModerationQueue: React.FC = () => {
         /* Speed Deck Review Mode */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Main Inspection Card (7 cols) */}
-          <div className="lg:col-span-8 bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl overflow-hidden backdrop-blur-md shadow-xl">
+          <div className="lg:col-span-8 bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl overflow-hidden shadow-xl">
             {/* Item Header */}
             <div className="p-5 border-b border-slate-700/60 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -258,7 +244,7 @@ export const AdminModerationQueue: React.FC = () => {
                 ? 'bg-red-950/40 border-red-800/60 text-red-200' 
                 : currentItem.riskScore !== null && currentItem.riskScore > 50
                   ? 'bg-amber-950/40 border-amber-800/60 text-amber-200'
-                  : 'bg-slate-900/40 border-slate-700/60 text-slate-200'
+                  : 'bg-slate-900 border-slate-700/60 text-slate-200'
             }`}>
               <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
@@ -309,7 +295,7 @@ export const AdminModerationQueue: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-slate-300 leading-relaxed bg-[#0F1923]/60 p-4 rounded-xl border border-slate-800">
+                  <p className="text-sm text-slate-300 leading-relaxed bg-[#0F1923] p-4 rounded-xl border border-slate-800">
                     {currentItem.data?.description || 'No description provided.'}
                   </p>
                 </div>
@@ -317,7 +303,7 @@ export const AdminModerationQueue: React.FC = () => {
             </div>
 
             {/* Quick Actions Footer with Hotkey Legend */}
-            <div className="p-4 bg-[#0F1923]/80 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="p-4 bg-[#0F1923] border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <span className="px-1.5 py-0.5 bg-slate-800 rounded font-mono font-bold text-slate-200">[A]</span> Approve
                 <span className="px-1.5 py-0.5 bg-slate-800 rounded font-mono font-bold text-slate-200 ml-2">[R]</span> Reject
@@ -351,7 +337,7 @@ export const AdminModerationQueue: React.FC = () => {
           {/* Seller & Context Panel (4 cols) */}
           <div className="lg:col-span-4 space-y-4">
             {/* Poster Reputation */}
-            <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl p-5 backdrop-blur-md">
+            <div className="bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl p-5">
               <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
                 <User size={15} className="text-[#C9A96E]" /> Poster Profile & Trust History
               </h4>
@@ -390,7 +376,7 @@ export const AdminModerationQueue: React.FC = () => {
             </div>
 
             {/* Canned Rejection Reason Presets */}
-            <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl p-5 backdrop-blur-md">
+            <div className="bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl p-5">
               <h4 className="text-sm font-bold text-white mb-2">Rejection Pre-set Template</h4>
               <select
                 value={cannedReason}
@@ -410,7 +396,7 @@ export const AdminModerationQueue: React.FC = () => {
         </div>
       ) : (
         /* Batch Table Mode */
-        <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl overflow-hidden backdrop-blur-md">
+        <div className="bg-[#162C48] border border-[#E8E2D8]/20 rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-slate-700 flex items-center justify-between">
             <div className="text-xs text-slate-300">
               Selected <span className="font-bold text-[#C9A96E]">{selectedIds.size}</span> listings
@@ -426,7 +412,7 @@ export const AdminModerationQueue: React.FC = () => {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-200">
-              <thead className="bg-[#0F1923]/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
+              <thead className="bg-[#0F1923] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700">
                 <tr>
                   <th className="p-3 w-8">
                     <input

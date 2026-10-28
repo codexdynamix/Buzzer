@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { GuestGateProvider } from "@/context/GuestGateContext";
 import { SidebarProvider } from "@/context/SidebarContext";
@@ -13,6 +13,9 @@ import { RecentlyViewedProvider } from "@/context/RecentlyViewedContext";
 import { ReviewsProvider } from "@/context/ReviewsContext";
 import { SellerCompareProvider } from "@/context/SellerCompareContext";
 import { PriceAlertProvider } from "@/context/PriceAlertContext";
+import { LocalizationProvider } from "@/i18n/LocalizationContext";
+import { NotificationProvider } from "@/context/NotificationContext";
+import AccountMenu from "@/components/layout/AccountMenu";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import ListingDetailRoute from "./pages/ListingDetailRoute";
@@ -23,7 +26,9 @@ import SellerComparePage from "./pages/SellerComparePage";
 import PriceAlertsPage from "./pages/PriceAlertsPage";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
+import AdminLoginPage from "./pages/AdminLoginPage";
 import AuthPage from "./pages/AuthPage";
+import AdminRouteGuard from "@/components/admin/AdminRouteGuard";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProfilePage from "./pages/ProfilePage";
 import SellerCompareBar from "@/components/compare/SellerCompareBar";
@@ -32,6 +37,7 @@ import { useEffect } from "react";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#F5F0E8] flex items-center justify-center">
@@ -39,7 +45,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  if (!isAuthenticated) return <Navigate to="/auth" replace />;
+  if (!isAuthenticated) {
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={`/auth?redirect=${encodeURIComponent(returnTo)}`} replace />;
+  }
   return <>{children}</>;
 };
 
@@ -56,7 +65,7 @@ const BrowseRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const GUEST_BROWSE_SECTIONS = new Set([
-  'marketplace', 'jobs', 'services', 'events', 'transport', 'real-estate', 'reels', 'business',
+  'home', 'marketplace', 'jobs', 'services', 'events', 'transport', 'real-estate', 'reels', 'business',
 ]);
 
 const SectionRoute = ({ children }: { children: React.ReactNode }) => {
@@ -86,8 +95,12 @@ const queryClient = new QueryClient({
 
 const ThemeInitializer = () => {
   useEffect(() => {
-    document.documentElement.classList.remove('dark');
-    document.documentElement.classList.add('light');
+    const theme = localStorage.getItem('buzzer-theme') === 'dark' ? 'dark' : 'light';
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    document.documentElement.classList.toggle('light', theme === 'light');
+    const language = localStorage.getItem('buzzer-language') ?? 'en';
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
   }, []);
   return null;
 };
@@ -95,6 +108,7 @@ const ThemeInitializer = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeInitializer />
+    <LocalizationProvider>
     <AuthProvider>
       <BrowserRouter>
         <GuestGateProvider>
@@ -110,8 +124,10 @@ const App = () => (
             <TooltipProvider>
               <Toaster />
               <Sonner />
-              <AnimatePresence mode="wait">
-                <Routes>
+              <NotificationProvider>
+                <AccountMenu />
+                <AnimatePresence mode="wait">
+                  <Routes>
                   <Route path="/" element={<Index />} />
 
                   {/* Dashboard sections — browse sections open to guests, others require auth */}
@@ -127,7 +143,8 @@ const App = () => (
                   <Route path="/dashboard/seller/:sellerName" element={<BrowseRoute><SellerProfilePage /></BrowseRoute>} />
                   <Route path="/dashboard/:section/:id"       element={<BrowseRoute><ListingDetailRoute /></BrowseRoute>} />
 
-                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/admin/login" element={<AdminLoginPage />} />
+                  <Route path="/admin" element={<AdminRouteGuard><Admin /></AdminRouteGuard>} />
 
                   {/* Auth */}
                   <Route path="/auth"               element={<AuthPage />} />
@@ -147,8 +164,9 @@ const App = () => (
                   <Route path="/settings"    element={<Navigate to="/dashboard/settings"    replace />} />
 
                   <Route path="*" element={<NotFound />} />
-                </Routes>
-              </AnimatePresence>
+                  </Routes>
+                </AnimatePresence>
+              </NotificationProvider>
               <SellerCompareBar />
             </TooltipProvider>
           </div>
@@ -163,6 +181,7 @@ const App = () => (
         </GuestGateProvider>
       </BrowserRouter>
     </AuthProvider>
+    </LocalizationProvider>
   </QueryClientProvider>
 );
 

@@ -2,9 +2,10 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { useAuth } from '@/context/AuthContext';
 import { listingsAPI } from '@/services/listingsService';
 import { toast } from 'sonner';
+import { useGuestGate } from './GuestGateContext';
 
 export type ListingSection = 'marketplace' | 'job' | 'service' | 'real-estate' | 'transport' | 'event';
-export type ListingStatus = 'active' | 'paused' | 'sold';
+export type ListingStatus = 'active' | 'paused' | 'sold' | 'pending_review' | 'flagged' | 'rejected';
 
 export interface UserListing {
   id: string;
@@ -55,6 +56,7 @@ function fromAPI(l: any): UserListing {
 
 export const UserListingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const { requireAuth } = useGuestGate();
   const [allListings, setAllListings] = useState<UserListing[]>([]);
 
   useEffect(() => {
@@ -77,6 +79,7 @@ export const UserListingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   );
 
   const addListing = useCallback(async (section: ListingSection, data: any) => {
+    if (!requireAuth()) return;
     if (!user?.id) throw new Error('Sign in to publish a listing');
     try {
       const { listing } = await listingsAPI.create(section, data);
@@ -85,18 +88,20 @@ export const UserListingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       toast.error(error instanceof Error ? error.message : 'Could not publish listing');
       throw error;
     }
-  }, [user?.id]);
+  }, [user?.id, requireAuth]);
 
   const removeListing = useCallback(async (id: string) => {
+    if (!requireAuth()) return;
     try {
       await listingsAPI.remove(id);
       setAllListings(prev => prev.filter(l => l.id !== id));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not remove listing');
     }
-  }, []);
+  }, [requireAuth]);
 
   const updateListing = useCallback(async (id: string, data: any) => {
+    if (!requireAuth()) return;
     try {
       const { listing } = await listingsAPI.update(id, data);
       setAllListings(prev => prev.map(item => item.id === id ? fromAPI(listing) : item));
@@ -104,16 +109,17 @@ export const UserListingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       toast.error(error instanceof Error ? error.message : 'Could not update listing');
       throw error;
     }
-  }, []);
+  }, [requireAuth]);
 
   const setListingStatus = useCallback(async (id: string, status: ListingStatus) => {
+    if (!requireAuth()) return;
     try {
       await listingsAPI.setStatus(id, status);
       setAllListings(prev => prev.map(item => item.id === id ? { ...item, status } : item));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not update listing status');
     }
-  }, []);
+  }, [requireAuth]);
 
   const getListingsForSection = useCallback(
     (section: ListingSection) =>

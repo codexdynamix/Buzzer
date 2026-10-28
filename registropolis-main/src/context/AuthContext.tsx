@@ -2,8 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { toast } from 'sonner';
 import { realAuthAPI } from '@/services/authService';
 import { authAPI } from '@/services/apiService';
-import { disconnectSocket } from '@/services/socketService';
-import { isStaffRole } from '@/config/adminAccess';
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 import type { StaffRole } from '@/config/adminAccess';
 
 type User = {
@@ -13,8 +12,7 @@ type User = {
   profileImageUrl?: string;
   email?: string;
   role?: string;
-  staffRole?: string;
-  demoStaff?: boolean;
+  staffRole?: StaffRole;
   staffTitle?: string;
   bio?: string;
   location?: string;
@@ -31,7 +29,6 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  isStaff: boolean;
   signIn: (user: User) => void;
   signOut: () => void;
   refreshUser: () => Promise<void>;
@@ -44,7 +41,6 @@ const defaultAuthContext: AuthContextType = {
   isLoading: true,
   isAuthenticated: false,
   isAdmin: false,
-  isStaff: false,
   signIn: () => {},
   signOut: () => {},
   refreshUser: async () => {},
@@ -61,28 +57,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          try {
-            const response = await realAuthAPI.getCurrentUser();
-            if (response?.user) {
-              setUser(response.user);
-            } else {
-              localStorage.removeItem('user');
-              localStorage.removeItem('auth_token');
-            }
-          } catch {
-            localStorage.removeItem('user');
-            localStorage.removeItem('auth_token');
-          }
-        }
-      } finally {
+    if (!isSupabaseConfigured()) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      setIsLoading(false);
+      return;
+    }
+
+    let active = true;
+    const client = getSupabaseClient();
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      if (!session) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        setUser(null);
         setIsLoading(false);
+        return;
       }
+
+      localStorage.setItem('auth_token', session.access_token);
+      const sessionUser = {
+        id: session.user.id,
+        email: session.user.email,
+        name: typeof session.user.user_metadata.name === 'string'
+          ? session.user.user_metadata.name
+          : session.user.email?.split('@')[0] ?? 'Buzzer user',
+        role: 'user',
+      };
+      setUser(sessionUser);
+      setIsLoading(true);
+
+      void realAuthAPI.getCurrentUser(session.access_token)
+        .then(response => {
+          if (!active || !response.user) return;
+          setUser(response.user);
+          localStorage.setItem('user', JSON.stringify(response.user));
+        })
+        .catch(error => {
+          console.error('Unable to load the Supabase user profile:', error);
+        })
+        .finally(() => {
+          if (active) setIsLoading(false);
+        });
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
     };
-    checkAuth();
   }, []);
 
   const signIn = (userData: User) => {
@@ -102,16 +125,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signOut = async () => {
     try {
-      if (user) await realAuthAPI.logout();
-    } catch {
-      // ignore
-    } finally {
-      disconnectSocket();
+      await realAuthAPI.logout();
       localStorage.removeItem('user');
       localStorage.removeItem('auth_token');
       localStorage.removeItem('mock_user');
       setUser(null);
       toast.success('Signed out successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to sign out');
     }
   };
 
@@ -129,21 +150,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addAdmin = async (email: string, staffRole: StaffRole) => {
     await authAPI.addAdmin(email, staffRole);
-    toast.success(`${email} was assigned ${staffRole} access`);
+    toast.success(`${email} is now an admin`);
   };
 
   const isAdmin = useMemo(
-    () => isStaffRole(user?.staffRole) || user?.role === 'moderator',
+    () => user?.role === 'admin',
     [user]
-  );
-  const isStaff = useMemo(
-    () => isAdmin,
-    [isAdmin]
   );
 
   const value = useMemo(
-    () => ({ user, isLoading, isAuthenticated: !!user, isAdmin, isStaff, signIn, signOut, refreshUser, addAdmin, updateUser }),
-    [user, isLoading, isAdmin, isStaff]
+    () => ({ user, isLoading, isAuthenticated: !!user, isAdmin, signIn, signOut, refreshUser, addAdmin, updateUser }),
+    [user, isLoading, isAdmin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

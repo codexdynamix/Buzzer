@@ -1,23 +1,55 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight, ArrowLeft, Loader2, Eye, EyeOff, Search,
   ShoppingBag, Home, Briefcase, Wrench, Car, Calendar, Users, Check,
-  Sparkles, MapPin, Mail, KeyRound
+  Sparkles, MapPin, Mail
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { realAuthAPI } from '@/services/authService';
 import { SEED_USERS, SeedUser } from '@/data/seedAccounts';
 import { toast } from 'sonner';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 type EmailMode = 'login' | 'signup';
 
-function finishSignIn(result: any, signIn: (u: any) => void, navigate: (p: string) => void) {
+type AuthUser = {
+  id: string;
+  phoneNumber?: string;
+  name: string;
+  profileImageUrl?: string;
+  email?: string;
+  role?: string;
+  staffRole?: 'superadmin' | 'operations' | 'moderator' | 'support';
+  staffTitle?: string;
+  bio?: string;
+  location?: string;
+  contactPhone?: string;
+  whatsapp?: boolean;
+  viber?: boolean;
+  telegram?: boolean;
+  signal?: boolean;
+  messenger?: boolean;
+};
+
+type AuthResult = { token: string | null; user: AuthUser; requiresEmailConfirmation?: boolean };
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function finishSignIn(
+  result: AuthResult,
+  signIn: (user: AuthUser) => void,
+  navigate: (path: string) => void,
+  returnTo: string,
+) {
+  if (!result.token) throw new Error('Supabase did not return an active session');
   localStorage.setItem('auth_token', result.token);
   localStorage.setItem('user', JSON.stringify(result.user));
   signIn(result.user);
-  navigate('/dashboard');
+  navigate(returnTo);
 }
 
 const SECTIONS = [
@@ -46,6 +78,11 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { signIn } = useAuth();
+  const { t } = useLocalization();
+  const requestedReturnTo = searchParams.get('redirect');
+  const returnTo = requestedReturnTo?.startsWith('/') && !requestedReturnTo.startsWith('//')
+    ? requestedReturnTo
+    : '/dashboard';
 
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>(
     searchParams.get('mode') === 'signup' ? 'signup' : 'signin'
@@ -58,12 +95,12 @@ export default function AuthPage() {
   const [emailName, setEmailName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [emailStep, setEmailStep] = useState<'form' | 'forgot'>('form');
+  const [resetEmailSent, setResetEmailSent] = useState(false);
 
   // Account directory state
   const [selectedSection, setSelectedSection] = useState<string>('marketplace');
   const [accountSearch, setAccountSearch] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  const [loadingUserEmail, setLoadingUserEmail] = useState<string | null>(null);
 
   const switchAuthMode = (mode: 'signin' | 'signup') => {
     setAuthMode(mode);
@@ -72,40 +109,37 @@ export default function AuthPage() {
   };
 
   const handleEmailSubmit = async () => {
-    if (!email.trim() || !password.trim()) return toast.error('Fill in all fields');
-    if (emailMode === 'signup' && !emailName.trim()) return toast.error('Enter your name');
+    if (!email.trim() || !password.trim()) return toast.error(t('Fill in all fields'));
+    if (emailMode === 'signup' && !emailName.trim()) return toast.error(t('Enter your name'));
+    if (emailMode === 'signup' && password.length < 8) return toast.error(t('At least 8 characters'));
     setLoading(true);
     try {
       const result = emailMode === 'signup'
         ? await realAuthAPI.emailSignup(email, password, emailName)
         : await realAuthAPI.emailLogin(email, password);
-      finishSignIn(result, signIn, navigate);
-    } catch (err: any) {
-      toast.error(err.message || 'Authentication failed');
+      if (result.requiresEmailConfirmation) {
+        toast.success(t('Account created. Check your email to confirm your address before signing in.'));
+        return;
+      }
+      const { user: profile } = await realAuthAPI.getCurrentUser(result.token ?? undefined);
+      finishSignIn({ ...result, user: profile }, signIn, navigate, returnTo);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, t('Authentication failed')));
     } finally { setLoading(false); }
   };
 
-  const handleQuickLogin = async (acc: SeedUser) => {
-    setLoadingUserEmail(acc.email);
+  const handlePasswordReset = async () => {
+    if (!email.trim()) return toast.error(t('Enter your email address first'));
     setLoading(true);
     try {
-      const result = await realAuthAPI.emailLogin(acc.email, 'buzzer123');
-      toast.success(`Welcome back, ${acc.name}! Logged into ${acc.section}.`);
-      finishSignIn(result, signIn, navigate);
-    } catch (err: any) {
-      toast.error(err.message || 'Sign in failed');
+      await realAuthAPI.sendPasswordReset(email);
+      setResetEmailSent(true);
+      toast.success(t('Password reset instructions sent. Check your email.'));
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, t('Could not send the reset email')));
     } finally {
       setLoading(false);
-      setLoadingUserEmail(null);
     }
-  };
-
-  const handleFillCredentials = (acc: SeedUser) => {
-    setEmail(acc.email);
-    setPassword('buzzer123');
-    setAuthMode('signin');
-    setEmailMode('login');
-    toast.info(`Filled credentials for ${acc.name}`);
   };
 
   const filteredAccounts = useMemo(() => {
@@ -125,18 +159,23 @@ export default function AuthPage() {
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F5F0E8', fontFamily: "'Inter', -apple-system, sans-serif" }}>
 
       {/* ── Top bar ── */}
-      <div className="flex items-center justify-between px-6 py-5 max-w-6xl mx-auto w-full">
+      <div className="flex items-center justify-between gap-4 px-6 py-5 max-w-6xl mx-auto w-full">
         <button onClick={() => navigate('/')} className="flex items-center gap-1.5 text-xl font-bold tracking-tight" style={{ color: '#1a1f36', letterSpacing: '-0.04em' }}>
           BUZZER<span style={{ color: '#C9A96E' }}>•</span>
         </button>
-        <button onClick={() => navigate('/')} className="text-sm font-medium transition-colors hover:text-slate-700" style={{ color: '#8a909d' }}>
-          ← Back to home
-        </button>
+        <div className="flex items-center gap-4">
+          <Link to="/admin/login" className="text-sm font-semibold text-[#1A3353] hover:underline">
+            Staff sign in
+          </Link>
+          <button onClick={() => navigate('/')} className="text-sm font-medium transition-colors hover:text-slate-700" style={{ color: '#8a909d' }}>
+            ← {t('Back to home')}
+          </button>
+        </div>
       </div>
 
       {/* ── Main Layout ── */}
       <div className="flex-1 flex flex-col items-center justify-start px-4 py-4 max-w-6xl mx-auto w-full">
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className={`w-full grid grid-cols-1 ${import.meta.env.DEV ? 'lg:grid-cols-12' : ''} gap-8 items-start`}>
 
           {/* ═════════════════════════════════════════════════════
               LEFT COLUMN: AUTH FORM (Sign In / Sign Up)
@@ -150,14 +189,28 @@ export default function AuthPage() {
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
                     <div className="px-6 pt-6 pb-5 border-b border-slate-100">
                       <button onClick={() => setEmailStep('form')} className="flex items-center gap-1.5 text-sm font-medium mb-4 transition-colors hover:text-[#1a1f36]" style={{ color: '#8a909d' }}>
-                        <ArrowLeft size={14} /> Back to sign in
+                        <ArrowLeft size={14} /> {t('Back to sign in')}
                       </button>
-                      <h1 className="text-lg font-bold text-[#1a1f36]">Password reset unavailable</h1>
-                      <p className="text-sm text-slate-500 mt-0.5">Password-reset email delivery is not configured. Use any pre-seeded user account on the right with password: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-700 font-semibold">buzzer123</code></p>
+                      <h1 className="text-lg font-bold text-[#1a1f36]">{t('Reset your password')}</h1>
+                      <p className="text-sm text-slate-500 mt-0.5">
+                        {resetEmailSent
+                          ? t('If an account exists for this address, Supabase will email a password reset link.')
+                          : t('Enter your account email and we will send a secure reset link.')}
+                      </p>
                     </div>
                     <div className="px-6 py-5">
-                      <button onClick={() => setEmailStep('form')} className={btnPrimary}>
-                        Back to Sign In
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={event => setEmail(event.target.value)}
+                        placeholder={t('you@example.com')}
+                        className={inputCls + ' mb-3'}
+                      />
+                      <button onClick={handlePasswordReset} disabled={loading || resetEmailSent} className={btnPrimary}>
+                        {loading ? <Loader2 size={16} className="animate-spin" /> : t('Send reset link')}
+                      </button>
+                      <button onClick={() => setEmailStep('form')} className="w-full mt-3 text-sm font-medium text-slate-500 hover:text-[#1a1f36]">
+                        {t('Back to Sign In')}
                       </button>
                     </div>
                   </div>
@@ -176,7 +229,7 @@ export default function AuthPage() {
                         className="flex-1 py-4 text-sm font-semibold transition-all relative"
                         style={{ color: authMode === 'signin' ? '#1a1f36' : '#94a3b8' }}
                       >
-                        Sign In
+                        {t('Sign In')}
                         {authMode === 'signin' && (
                           <span className="absolute bottom-0 left-6 right-6 h-0.5 rounded-full" style={{ backgroundColor: '#1a1f36' }} />
                         )}
@@ -186,7 +239,7 @@ export default function AuthPage() {
                         className="flex-1 py-4 text-sm font-semibold transition-all relative"
                         style={{ color: authMode === 'signup' ? '#1a1f36' : '#94a3b8' }}
                       >
-                        Create Account
+                        {t('Create Account')}
                         {authMode === 'signup' && (
                           <span className="absolute bottom-0 left-6 right-6 h-0.5 rounded-full" style={{ backgroundColor: '#1a1f36' }} />
                         )}
@@ -197,28 +250,28 @@ export default function AuthPage() {
                     <div className="px-6 pt-5 pb-6 space-y-4">
                       {authMode === 'signup' && (
                         <div>
-                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Full name</label>
+                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('Full name')}</label>
                           <input type="text" value={emailName} onChange={e => setEmailName(e.target.value)}
-                            placeholder="Alex Morgan" autoFocus className={inputCls} />
+                            placeholder={t('Alex Morgan')} autoFocus className={inputCls} />
                         </div>
                       )}
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Email address</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('Email address')}</label>
                         <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                           placeholder="elena.vintage@buzzer.com" className={inputCls} />
                       </div>
 
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Password</label>
+                          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('Password')}</label>
                           {authMode === 'signin' && (
                             <button
                               type="button"
                               onClick={() => setEmailStep('forgot')}
                               className="text-xs font-medium text-slate-400 hover:text-[#1a1f36] transition-colors"
                             >
-                              Forgot password?
+                              {t('Forgot password?')}
                             </button>
                           )}
                         </div>
@@ -226,7 +279,7 @@ export default function AuthPage() {
                           <input
                             type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleEmailSubmit()}
-                            placeholder={authMode === 'signup' ? 'At least 6 characters' : '••••••••'}
+                            placeholder={authMode === 'signup' ? t('At least 8 characters') : '••••••••'}
                             className={inputCls + ' pr-11'}
                           />
                           <button type="button" onClick={() => setShowPassword(s => !s)}
@@ -237,32 +290,28 @@ export default function AuthPage() {
                       </div>
 
                       <button onClick={handleEmailSubmit} disabled={loading} className={btnPrimary}>
-                        {loading && !loadingUserEmail
+                        {loading
                           ? <Loader2 size={16} className="animate-spin" />
                           : authMode === 'signin'
-                            ? <>Sign In <ArrowRight size={14} /></>
-                            : <>Create Account <ArrowRight size={14} /></>
+                            ? <>{t('Sign In')} <ArrowRight size={14} /></>
+                            : <>{t('Create Account')} <ArrowRight size={14} /></>
                         }
                       </button>
 
-                      <div className="pt-2 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5">
-                        <KeyRound size={12} className="text-slate-400" />
-                        All pre-seeded user accounts use password: <span className="font-mono font-semibold text-slate-600">buzzer123</span>
-                      </div>
                     </div>
                   </div>
 
                   <p className="mt-4 text-center text-sm text-slate-500">
                     {authMode === 'signin' ? (
-                      <>Don't have an account?{' '}
+                      <>{t("Don't have an account?")}{' '}
                         <button onClick={() => switchAuthMode('signup')} className="font-semibold text-[#1a1f36] hover:underline">
-                          Sign up free
+                          {t('Sign up free')}
                         </button>
                       </>
                     ) : (
-                      <>Already have an account?{' '}
+                      <>{t('Already have an account?')}{' '}
                         <button onClick={() => switchAuthMode('signin')} className="font-semibold text-[#1a1f36] hover:underline">
-                          Sign in
+                          {t('Sign in')}
                         </button>
                       </>
                     )}
@@ -276,7 +325,7 @@ export default function AuthPage() {
           {/* ═════════════════════════════════════════════════════
               RIGHT COLUMN: 30 SECTION REAL USER ACCOUNTS DIRECTORY
           ══════════════════════════════════════════════════════ */}
-          <div className="lg:col-span-7 w-full space-y-4">
+          {import.meta.env.DEV && <div className="lg:col-span-7 w-full space-y-4">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5">
 
               {/* Header */}
@@ -285,11 +334,11 @@ export default function AuthPage() {
                   <div className="flex items-center gap-2">
                     <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                     <h2 className="text-base font-bold text-[#1a1f36]">
-                      Section User Accounts Directory
+                      Demo Accounts
                     </h2>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Real, active user accounts across all 6 sections (5 dedicated users per section)
+                    {t('These demo profiles have Supabase Auth accounts. Use the shared demo password supplied by the project owner.')}
                   </p>
                 </div>
 
@@ -321,7 +370,7 @@ export default function AuthPage() {
                       }`}
                     >
                       <Icon size={13} style={{ color: isActive ? '#C9A96E' : undefined }} />
-                      <span>{sec.label}</span>
+                      <span>{t(sec.label)}</span>
                     </button>
                   );
                 })}
@@ -331,13 +380,11 @@ export default function AuthPage() {
               <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto pr-1 mt-2">
                 {filteredAccounts.length === 0 ? (
                   <div className="py-8 text-center text-sm text-slate-400">
-                    No user accounts match "{accountSearch}".
+                    {t('No user accounts match')} "{accountSearch}".
                   </div>
                 ) : (
                   filteredAccounts.map((acc) => {
                     const badge = SECTION_BADGE_STYLE[acc.section] || { bg: '#F1F5F9', text: '#475569', border: '#E2E8F0' };
-                    const isCurrentLoading = loading && loadingUserEmail === acc.email;
-
                     return (
                       <div key={acc.id} className="py-3 px-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 rounded-xl transition-colors">
                         
@@ -357,7 +404,7 @@ export default function AuthPage() {
                                 className="text-[10px] font-semibold px-2 py-0.5 rounded-full border uppercase tracking-wider"
                                 style={{ backgroundColor: badge.bg, color: badge.text, borderColor: badge.border }}
                               >
-                                {acc.section}
+                                {t(acc.section)}
                               </span>
                             </div>
                             
@@ -378,32 +425,10 @@ export default function AuthPage() {
                           </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                          <button
-                            type="button"
-                            onClick={() => handleFillCredentials(acc)}
-                            className="px-2.5 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors"
-                            title="Fill credentials in sign-in form"
-                          >
-                            Fill Form
-                          </button>
-
-                          <button
-                            type="button"
-                            disabled={loading}
-                            onClick={() => handleQuickLogin(acc)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#1a1f36] hover:bg-[#283152] rounded-lg transition-all shadow-sm disabled:opacity-50"
-                          >
-                            {isCurrentLoading ? (
-                              <Loader2 size={13} className="animate-spin" />
-                            ) : (
-                              <>
-                                <span>Sign In</span>
-                                <ArrowRight size={12} />
-                              </>
-                            )}
-                          </button>
+                        <div className="shrink-0 self-end sm:self-center">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            {t('Demo login')}
+                          </span>
                         </div>
 
                       </div>
@@ -413,7 +438,7 @@ export default function AuthPage() {
               </div>
 
             </div>
-          </div>
+          </div>}
 
         </div>
       </div>

@@ -1,39 +1,132 @@
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase';
+import type { StaffRole } from '@/config/adminAccess';
+
 const API_BASE = '/api';
 
-async function apiCall(path: string, method: string, body?: any) {
-  const token = localStorage.getItem('auth_token');
-  const res = await fetch(`${API_BASE}${path}`, {
+export type AuthUser = {
+  id: string;
+  phoneNumber?: string;
+  name: string;
+  profileImageUrl?: string;
+  email?: string;
+  role?: string;
+  staffRole?: StaffRole;
+  staffTitle?: string;
+  bio?: string;
+  location?: string;
+  contactPhone?: string;
+  whatsapp?: boolean;
+  viber?: boolean;
+  telegram?: boolean;
+  signal?: boolean;
+  messenger?: boolean;
+};
+
+function mapAuthUser(user: SupabaseUser): AuthUser {
+  const metadata = user.user_metadata ?? {};
+  return {
+    id: user.id,
+    email: user.email,
+    name: typeof metadata.name === 'string' && metadata.name.trim()
+      ? metadata.name
+      : user.email?.split('@')[0] ?? 'Buzzer user',
+    role: 'user',
+    profileImageUrl: typeof metadata.profileImageUrl === 'string' ? metadata.profileImageUrl : undefined,
+  };
+}
+
+async function apiCall<T>(path: string, method: string, body?: unknown, token?: string): Promise<T> {
+  const accessToken = token ?? localStorage.getItem('auth_token');
+  const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Request failed');
-  return data;
+  const contentType = response.headers.get('content-type') || '';
+  const data = contentType.includes('application/json') ? await response.json() : null;
+  if (!response.ok) throw new Error(data?.message || `Request failed (${response.status})`);
+  if (!data) throw new Error('The server returned an invalid response');
+  return data as T;
 }
 
 export const realAuthAPI = {
-  emailSignup: (email: string, password: string, name: string) =>
-    apiCall('/auth/email-signup', 'POST', { email, password, name }),
+  async emailSignup(email: string, password: string, name: string) {
+    const { data, error } = await getSupabaseClient().auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: { data: { name: name.trim() } },
+    });
+    if (error) throw error;
+    if (!data.user) throw new Error('Supabase did not return a user after signup');
+    return {
+      token: data.session?.access_token ?? null,
+      user: mapAuthUser(data.user),
+      requiresEmailConfirmation: !data.session,
+    };
+  },
 
-  emailLogin: (email: string, password: string) =>
-    apiCall('/auth/email-login', 'POST', { email, password }),
+  async emailLogin(email: string, password: string) {
+    const { data, error } = await getSupabaseClient().auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+    if (error) throw error;
+    if (!data.user || !data.session) throw new Error('Supabase did not return an authenticated session');
+    return {
+      token: data.session.access_token,
+      user: mapAuthUser(data.user),
+      requiresEmailConfirmation: false,
+    };
+  },
 
-  getCurrentUser: () =>
-    apiCall('/auth/me', 'GET'),
+  async getCurrentUser(accessToken?: string) {
+    const token = accessToken ?? (await getSupabaseClient().auth.getSession()).data.session?.access_token;
+    if (!token) throw new Error('No active Supabase session');
+    return apiCall<{ success: boolean; user: AuthUser }>('/auth/me', 'GET', undefined, token);
+  },
 
-  logout: () =>
-    apiCall('/auth/logout', 'POST'),
+  async logout() {
+    const { error } = await getSupabaseClient().auth.signOut();
+    if (error) throw error;
+  },
 
-  resetPassword: (token: string, newPassword: string) =>
-    apiCall('/auth/reset-password', 'POST', { token, newPassword }),
+  async sendPasswordReset(email: string) {
+    const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+    if (error) throw error;
+  },
 
-  updateProfile: (updates: Record<string, any>) =>
-    apiCall('/users/me', 'PATCH', updates),
+  async resetPassword(_token: string, newPassword: string) {
+    const client = getSupabaseClient();
+    const { error } = await client.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    const { error: signOutError } = await client.auth.signOut();
+    if (signOutError) throw signOutError;
+  },
 
-  changePassword: (currentPassword: string, newPassword: string) =>
-    apiCall('/users/me/change-password', 'POST', { currentPassword, newPassword }),
+  updateProfile: (updates: Record<string, unknown>) =>
+    apiCall<{ success: boolean; user: AuthUser }>('/users/me', 'PATCH', updates),
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    const client = getSupabaseClient();
+    const { data: { user }, error: userError } = await client.auth.getUser();
+    if (userError) throw userError;
+    if (!user?.email) throw new Error('The current Supabase user has no email address');
+
+    const { error: signInError } = await client.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+    if (signInError) throw signInError;
+
+    const { error } = await client.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  },
 };
+
+export { mapAuthUser };

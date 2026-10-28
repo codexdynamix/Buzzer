@@ -4,7 +4,7 @@ export interface SupportTicket {
   userId: string;
   subject: string;
   description: string;
-  status: 'open' | 'in-progress' | 'resolved' | 'closed';
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   category: 'general' | 'technical' | 'billing' | 'report' | 'complaint';
   createdAt: Date;
@@ -12,6 +12,7 @@ export interface SupportTicket {
   assignedTo?: string;
   resolution?: string;
   userWarned?: boolean;
+  responses?: TicketResponse[];
 }
 
 export interface TicketResponse {

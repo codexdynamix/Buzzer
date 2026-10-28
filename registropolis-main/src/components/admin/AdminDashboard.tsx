@@ -3,13 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { adminAPI } from '@/services/apiService';
 import { useToast } from '@/components/ui/use-toast';
-import { Shield, Users, MessageCircle, UserPlus } from 'lucide-react';
+import { Users, MessageCircle, UserPlus, Megaphone } from 'lucide-react';
 
 interface DashboardStats {
-  usersCount: number;
-  messagesCount: number;
-  groupsCount: number;
-  lastActive: string;
+  totalUsers: number;
+  totalMessages: number;
+  totalGroups: number;
+  totalListings: number;
+  lastUpdated: string;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -54,7 +55,7 @@ const AdminDashboard: React.FC = () => {
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats?.usersCount || 0}</div>
+          <div className="text-2xl font-bold">{stats?.totalUsers ?? 0}</div>
           <p className="text-xs text-muted-foreground">Registered users</p>
         </CardContent>
       </Card>
@@ -65,7 +66,7 @@ const AdminDashboard: React.FC = () => {
           <MessageCircle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats?.messagesCount || 0}</div>
+          <div className="text-2xl font-bold">{stats?.totalMessages ?? 0}</div>
           <p className="text-xs text-muted-foreground">All messages sent</p>
         </CardContent>
       </Card>
@@ -76,19 +77,19 @@ const AdminDashboard: React.FC = () => {
           <UserPlus className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats?.groupsCount || 0}</div>
+          <div className="text-2xl font-bold">{stats?.totalGroups ?? 0}</div>
           <p className="text-xs text-muted-foreground">Active groups</p>
         </CardContent>
       </Card>
       
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Admin Access</CardTitle>
-          <Shield className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Active Listings</CardTitle>
+          <Megaphone className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">Active</div>
-          <p className="text-xs text-muted-foreground">Full control enabled</p>
+          <div className="text-2xl font-bold">{stats?.totalListings ?? 0}</div>
+          <p className="text-xs text-muted-foreground">Currently published</p>
         </CardContent>
       </Card>
       
@@ -101,7 +102,7 @@ const AdminDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Last updated: {stats?.lastActive ? new Date(stats.lastActive).toLocaleString() : 'Never'}
+            Last updated: {stats?.lastUpdated ? new Date(stats.lastUpdated).toLocaleString() : 'Never'}
           </p>
         </CardContent>
       </Card>

@@ -1,0 +1,40 @@
+# Buzzer
+
+Buzzer uses Supabase Auth for email accounts and Supabase Postgres for app data. The Express API remains in place and verifies Supabase access tokens before handling authenticated requests. Only the server uses the Supabase service-role key.
+
+## Connect a Supabase project
+
+1. Create a Supabase project with the VS Code Supabase extension or the Supabase dashboard.
+2. Run [`supabase/migrations/20261028000000_initial_schema.sql`](./supabase/migrations/20261028000000_initial_schema.sql) in the project's SQL editor. It creates the private `app_records` table, enables row-level security, and creates a profile record for each new Auth user.
+3. Copy `.env.example` to `.env` and set:
+   - `SUPABASE_URL`: the project URL.
+   - `SUPABASE_SERVICE_ROLE_KEY`: the server-only service-role key.
+   - `VITE_SUPABASE_URL`: the same project URL.
+   - `VITE_SUPABASE_ANON_KEY`: the project's anon/public key.
+4. In Supabase Auth settings, set the site URL to `http://localhost:3000` and allow `http://localhost:3000/auth/reset-password` as a redirect URL. Configure email confirmation and SMTP according to your deployment needs.
+5. Install dependencies and start Buzzer:
+
+   ```sh
+   npm install
+   npm run dev
+   ```
+
+Without Supabase environment variables, the server uses its local development data store. Supabase authentication and cloud persistence are unavailable in that mode.
+
+The first account is assigned the normal `user` role. To grant admin access after creating that account, run this SQL with its email address:
+
+```sql
+UPDATE public.app_records
+SET document = jsonb_set(document, '{role}', '"admin"'::jsonb, true),
+    updated_at = now()
+WHERE collection = 'users'
+  AND lower(document ->> 'email') = lower('admin@example.com');
+```
+
+## Development demo accounts
+
+The 30 profiles shown in the development sign-in directory are provisioned as confirmed Supabase Auth users, with matching profile rows in `app_records`. They are demo personas and share a temporary password communicated outside this repository. Do not use these accounts or their shared password for real customers or production; use verified email addresses and unique passwords for customer accounts, and remove or reset the demo accounts before launch.
+
+## Data model
+
+To keep the existing API behavior intact during migration, app records are stored as JSON documents in `app_records`, keyed by collection name and record ID. The table is not exposed to browser roles; the Express server accesses it with the service-role key. Supabase Auth owns credentials and sessions, while the app API continues to enforce profile, listing, messaging, and admin permissions.

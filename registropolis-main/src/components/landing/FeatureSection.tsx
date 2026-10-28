@@ -27,7 +27,7 @@ const FeatureSection: React.FC<FeatureSectionProps> = ({ title, features }) => {
           {features.map((feature, index) => (
             <div 
               key={`${feature.name}-${index}`}
-              className="flex items-start gap-3 p-4 rounded-xl bg-background/50 hover:bg-background/80 transition-colors"
+              className="flex items-start gap-3 p-4 rounded-xl bg-background hover:bg-muted transition-colors"
             >
               {feature.icon}
               <div>

@@ -57,14 +57,14 @@ const DatabaseStatus: React.FC = () => {
           <Database className="h-5 w-5" />
           Database Status
         </CardTitle>
-        <CardDescription>MongoDB Atlas Connection</CardDescription>
+        <CardDescription>Supabase Postgres Connection</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-2 mb-4">
           {isLoading ? (
             <><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /><span>Checking connection...</span></>
           ) : isConnected ? (
-            <><CheckCircle className="h-5 w-5 text-green-500" /><span className="font-medium text-green-500">Connected to MongoDB Atlas</span></>
+            <><CheckCircle className="h-5 w-5 text-green-500" /><span className="font-medium text-green-500">Connected to Supabase</span></>
           ) : (
             <><XCircle className="h-5 w-5 text-destructive" /><span className="font-medium text-destructive">Database unavailable</span></>
           )}

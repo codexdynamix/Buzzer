@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, Check, CheckCheck, MessageCircle, ShoppingBag, Briefcase, Calendar, Trash2 } from 'lucide-react';
+import { Bell, X, Check, CheckCheck, MessageCircle, ShoppingBag, Briefcase, Calendar, Trash2, type LucideIcon } from 'lucide-react';
 import { useNotifications, AppNotification, NotificationType } from '@/context/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
-const TYPE_CONFIG: Record<NotificationType, { icon: React.FC<any>; color: string; bg: string }> = {
+const TYPE_CONFIG: Record<NotificationType, { icon: LucideIcon; color: string; bg: string }> = {
   message:     { icon: MessageCircle, color: '#1A3353', bg: '#EEF4FF' },
   marketplace: { icon: ShoppingBag,   color: '#C2410C', bg: '#FFF7ED' },
   job:         { icon: Briefcase,     color: '#15803D', bg: '#F0FDF4' },
@@ -13,8 +14,8 @@ const TYPE_CONFIG: Record<NotificationType, { icon: React.FC<any>; color: string
 
 const panelVariants = {
   hidden:  { opacity: 0, scale: 0.95, y: -8 },
-  visible: { opacity: 1, scale: 1,    y: 0, transition: { type: 'spring' as const, stiffness: 400, damping: 30 } },
-  exit:    { opacity: 0, scale: 0.96, y: -6, transition: { duration: 0.14, ease: 'easeIn' as const } },
+  visible: { opacity: 1, scale: 1,    y: 0, transition: { type: 'spring', stiffness: 400, damping: 30 } },
+  exit:    { opacity: 0, scale: 0.96, y: -6, transition: { duration: 0.14, ease: 'easeIn' } },
 };
 
 const itemVariants = {
@@ -82,8 +83,9 @@ const NotificationItem: React.FC<{ n: AppNotification; index: number; onRead: ()
   );
 };
 
-const NotificationBell: React.FC = () => {
+const NotificationBell: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
   const { notifications, unreadCount, markRead, markAllRead, dismiss, clearAll } = useNotifications();
+  const { t } = useLocalization();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -102,25 +104,18 @@ const NotificationBell: React.FC = () => {
   }, []);
 
   return (
-    <div ref={ref} className="fixed top-4 right-4 z-50">
+    <div ref={ref} className={inline ? 'relative z-50' : 'fixed top-4 right-4 z-50'}>
       {/* Bell button */}
       <motion.button
         onClick={() => setOpen(o => !o)}
         whileTap={{ scale: 0.92 }}
-        aria-label="Notifications"
-        className="relative flex items-center justify-center"
+        aria-label={t('Notifications')}
+        className="relative flex items-center justify-center rounded-full transition-colors"
         style={{
           width: 40,
           height: 40,
-          borderRadius: 12,
-          background: open
-            ? 'linear-gradient(135deg, #1A3353 0%, #0F1923 100%)'
-            : 'linear-gradient(135deg, #0F1923 0%, #1A3353 100%)',
-          border: open
-            ? '1px solid rgba(201,169,110,0.5)'
-            : '1px solid rgba(201,169,110,0.2)',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-          color: open ? '#C9A96E' : 'rgba(250,250,247,0.65)',
+          background: open ? 'rgba(15,25,35,0.08)' : 'transparent',
+          color: 'hsl(var(--foreground))',
         }}
       >
         <motion.div
@@ -182,14 +177,14 @@ const NotificationBell: React.FC = () => {
             >
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: '#C9A96E' }}>
-                  Notifications
+                  {t('Notifications')}
                 </span>
                 {unreadCount > 0 && (
                   <span
                     className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
                     style={{ background: 'rgba(201,169,110,0.15)', color: '#C9A96E' }}
                   >
-                    {unreadCount} new
+                    {unreadCount} {t('new')}
                   </span>
                 )}
               </div>
@@ -201,10 +196,10 @@ const NotificationBell: React.FC = () => {
                     style={{ color: 'rgba(250,250,247,0.4)' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#FAFAF7'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(250,250,247,0.4)'; (e.currentTarget as HTMLElement).style.background = ''; }}
-                    title="Mark all read"
+                    title={t('Mark all read')}
                   >
                     <CheckCheck size={11} />
-                    <span>All read</span>
+                    <span>{t('All read')}</span>
                   </button>
                 )}
                 {notifications.length > 0 && (
@@ -214,7 +209,7 @@ const NotificationBell: React.FC = () => {
                     style={{ color: 'rgba(250,250,247,0.4)' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#f87171'; (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.1)'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(250,250,247,0.4)'; (e.currentTarget as HTMLElement).style.background = ''; }}
-                    title="Clear all"
+                    title={t('Clear all')}
                   >
                     <Trash2 size={11} />
                   </button>
@@ -238,7 +233,7 @@ const NotificationBell: React.FC = () => {
                     >
                       <Bell size={20} style={{ color: 'rgba(201,169,110,0.5)' }} strokeWidth={1.5} />
                     </div>
-                    <p className="text-[12px]" style={{ color: 'rgba(250,250,247,0.3)' }}>No notifications yet</p>
+                    <p className="text-[12px]" style={{ color: 'rgba(250,250,247,0.3)' }}>{t('No notifications yet')}</p>
                   </motion.div>
                 ) : (
                   notifications.map((n, i) => (
@@ -261,7 +256,7 @@ const NotificationBell: React.FC = () => {
                 style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
               >
                 <span className="text-[10px]" style={{ color: 'rgba(250,250,247,0.25)' }}>
-                  {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+                  {notifications.length} {t(notifications.length === 1 ? 'notification' : 'notifications')}
                 </span>
               </div>
             )}

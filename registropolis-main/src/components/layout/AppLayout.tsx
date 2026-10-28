@@ -4,8 +4,6 @@ import { AnimatePresence } from 'framer-motion';
 import AnimatedTransition from '../common/AnimatedTransition';
 import FloatingNavHub from './FloatingNavHub';
 import BuzzerBadge from './BuzzerBadge';
-import NotificationBell from './NotificationBell';
-import { NotificationProvider } from '@/context/NotificationContext';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -58,16 +56,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({
       </main>
 
       {withSidebar && <FloatingNavHub />}
-      <NotificationBell />
       <BuzzerBadge />
     </div>
   );
 };
 
-const AppLayoutWithProvider: React.FC<AppLayoutProps> = (props) => (
-  <NotificationProvider>
-    <AppLayout {...props} />
-  </NotificationProvider>
-);
-
-export default AppLayoutWithProvider;
+export default AppLayout;

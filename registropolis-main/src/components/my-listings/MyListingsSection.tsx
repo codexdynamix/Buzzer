@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useUserListings, ListingSection, ListingStatus, UserListing } from '@/context/UserListingsContext';
 import CreateListingModal, { ListingType } from '@/components/shared/CreateListingModal';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 /* ── Section meta ─────────────────────────────────────────────── */
 const SECTION_META: Record<ListingSection, {
@@ -184,6 +185,7 @@ function applyTransform(section: ListingSection, existing: any, fd: any): any {
 
 /* ── Main Component ───────────────────────────────────────────── */
 export default function MyListingsSection() {
+  const { t } = useLocalization();
   const navigate = useNavigate();
   const { listings, totalCount, removeListing, updateListing, setListingStatus } = useUserListings();
   const [activeFilter, setActiveFilter] = useState<ListingSection | 'all'>('all');
@@ -204,7 +206,7 @@ export default function MyListingsSection() {
         <div className="section-header">
           <div>
             <div className="gold-accent mb-3" />
-            <h1 className="text-2xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>My Listings</h1>
+            <h1 className="text-2xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>{t('My Listings')}</h1>
             <p className="text-sm mt-1" style={{ color: '#6E7A8A' }}>Everything you've posted, in one place</p>
           </div>
         </div>
@@ -249,7 +251,7 @@ export default function MyListingsSection() {
       <div className="section-header">
         <div>
           <div className="gold-accent mb-3" />
-          <h1 className="text-2xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>My Listings</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>{t('My Listings')}</h1>
           <p className="text-sm mt-1" style={{ color: '#6E7A8A' }}>Everything you've posted, in one place</p>
         </div>
         <div
@@ -382,22 +384,24 @@ export default function MyListingsSection() {
                       >
                         <Pencil size={12} />
                       </button>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          setListingStatus(listing.id, listing.status === 'paused' ? 'active' : 'paused');
-                        }}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
-                        style={{
-                          backgroundColor: listing.status === 'paused' ? '#F0FDF4' : '#FFFBEB',
-                          color: listing.status === 'paused' ? '#15803D' : '#B45309',
-                          border: `1px solid ${listing.status === 'paused' ? '#BBF7D0' : '#FDE68A'}`,
-                        }}
-                        title={listing.status === 'paused' ? 'Resume listing' : 'Pause listing'}
-                        aria-label={listing.status === 'paused' ? 'Resume listing' : 'Pause listing'}
-                      >
-                        {listing.status === 'paused' ? <PlayCircle size={12} /> : <PauseCircle size={12} />}
-                      </button>
+                      {(listing.status === 'active' || listing.status === 'paused') && (
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            setListingStatus(listing.id, listing.status === 'paused' ? 'active' : 'paused');
+                          }}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                          style={{
+                            backgroundColor: listing.status === 'paused' ? '#F0FDF4' : '#FFFBEB',
+                            color: listing.status === 'paused' ? '#15803D' : '#B45309',
+                            border: `1px solid ${listing.status === 'paused' ? '#BBF7D0' : '#FDE68A'}`,
+                          }}
+                          title={listing.status === 'paused' ? 'Resume listing' : 'Pause listing'}
+                          aria-label={listing.status === 'paused' ? 'Resume listing' : 'Pause listing'}
+                        >
+                          {listing.status === 'paused' ? <PlayCircle size={12} /> : <PauseCircle size={12} />}
+                        </button>
+                      )}
                       <button
                         onClick={e => { e.stopPropagation(); removeListing(listing.id); }}
                         className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
@@ -431,6 +435,21 @@ export default function MyListingsSection() {
                         {listing.status === 'sold' && (
                           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0' }}>
                             Sold
+                          </span>
+                        )}
+                        {listing.status === 'pending_review' && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>
+                            Pending review
+                          </span>
+                        )}
+                        {listing.status === 'flagged' && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA' }}>
+                            Flagged for review
+                          </span>
+                        )}
+                        {listing.status === 'rejected' && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA' }}>
+                            Rejected
                           </span>
                         )}
                       </div>

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRecentlyViewed } from '@/context/RecentlyViewedContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { useUserListings } from '@/context/UserListingsContext';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 const SECTION_META: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   marketplace:   { label: 'Marketplace', icon: ShoppingBag, color: '#C9A96E', bg: '#FDF8F0' },
@@ -176,6 +177,7 @@ const ALL = 'all';
 
 export default function RecentlyViewedPage() {
   const navigate = useNavigate();
+  const { t } = useLocalization();
   const { getAllListings } = useUserListings();
   const { recentItems, recentCount, clearRecent } = useRecentlyViewed();
   const [activeSection, setActiveSection] = useState(ALL);
@@ -203,7 +205,7 @@ export default function RecentlyViewedPage() {
               <Clock size={18} style={{ color: '#1D4ED8' }} />
             </div>
             <div>
-              <h1 className="text-xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>Recently Viewed</h1>
+              <h1 className="text-xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>{t('Recently viewed')}</h1>
               <p className="text-sm" style={{ color: '#6E7A8A' }}>
                 {recentCount === 0 ? 'No listings viewed yet' : `${recentCount} listing${recentCount !== 1 ? 's' : ''} viewed`}
               </p>
@@ -266,7 +268,7 @@ export default function RecentlyViewedPage() {
             <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-4" style={{ backgroundColor: '#F5F2EC', border: '1px solid #E8E2D8' }}>
               <Clock size={28} style={{ color: '#E8E2D8' }} />
             </div>
-            <p className="text-base font-bold mb-1" style={{ color: '#0F1923' }}>Nothing viewed yet</p>
+            <p className="text-base font-bold mb-1" style={{ color: '#0F1923' }}>{t('Nothing viewed yet')}</p>
             <p className="text-sm mb-6 max-w-xs" style={{ color: '#6E7A8A' }}>
               Listings you tap into will appear here so you can easily pick up where you left off.
             </p>

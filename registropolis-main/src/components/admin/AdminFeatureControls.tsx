@@ -3,8 +3,6 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { updateFeatureControls, getFeatureControls, AdminFeatureControl } from '@/lib/adminFeatureControls';
 import { toast } from 'sonner';
 
@@ -20,38 +18,41 @@ export const FeatureControls: React.FC<FeatureControlsProps> = ({
   description
 }) => {
   const [controls, setControls] = React.useState<AdminFeatureControl | null>(null);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [loadError, setLoadError] = React.useState('');
 
   React.useEffect(() => {
+    let active = true;
     const loadControls = async () => {
       try {
-        setLoadError(null);
         const fetchedControls = await getFeatureControls(featureId);
-        setControls(fetchedControls);
+        if (active) setControls(fetchedControls);
       } catch (error) {
-        setLoadError(error instanceof Error ? error.message : 'Failed to load controls');
+        if (!active) return;
+        const message = error instanceof Error ? error.message : 'Could not load feature settings';
+        setLoadError(message);
+        console.error(`Failed to load controls for ${featureName}:`, error);
       }
     };
     void loadControls();
-  }, [featureId]);
+    return () => { active = false; };
+  }, [featureId, featureName]);
 
   const handleControlUpdate = async (updates: Partial<AdminFeatureControl>) => {
+    if (!controls) return;
+    const previousControls = controls;
+    setControls({ ...controls, ...updates });
     try {
       await updateFeatureControls(featureId, updates);
       toast.success(`Updated controls for ${featureName}`);
-      
-      // Refresh controls
-      const updatedControls = await getFeatureControls(featureId);
-      setControls(updatedControls);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : `Failed to update ${featureName} controls`);
+      setControls(previousControls);
+      const message = error instanceof Error ? error.message : `Failed to update ${featureName} controls`;
+      toast.error(message);
+      console.error(`Failed to update controls for ${featureName}:`, error);
     }
   };
 
-  if (loadError) {
-    return <Card><CardContent className="p-5 text-sm text-destructive">{loadError}</CardContent></Card>;
-  }
-
+  if (loadError) return <div role="alert" className="text-sm text-destructive">{loadError}</div>;
   if (!controls) {
     return <div>Loading...</div>;
   }
@@ -69,36 +70,7 @@ export const FeatureControls: React.FC<FeatureControlsProps> = ({
             onCheckedChange={(checked) => handleControlUpdate({ enabled: checked })}
           />
         </div>
-
-        <div className="flex items-center justify-between">
-          <Label>Moderation Required</Label>
-          <Switch
-            checked={controls.moderationEnabled}
-            onCheckedChange={(checked) => handleControlUpdate({
-              moderationEnabled: checked,
-              ...(checked && controls.moderationRules?.maxDailySubmissions === undefined
-                ? { moderationRules: { requiresApproval: true, maxDailySubmissions: 50 } }
-                : {}),
-            })}
-          />
-        </div>
-
-        {controls.moderationEnabled && (
-          <div className="space-y-2">
-            <Label>Max Daily Submissions</Label>
-            <Input
-              type="number"
-              min={1}
-              value={controls.moderationRules?.maxDailySubmissions ?? 50}
-              onChange={(e) => handleControlUpdate({
-                moderationRules: {
-                  ...controls.moderationRules,
-                  maxDailySubmissions: Math.max(1, Number.parseInt(e.target.value, 10) || 1)
-                }
-              })}
-            />
-          </div>
-        )}
+        <p className="text-sm text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
   );

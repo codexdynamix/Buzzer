@@ -5,9 +5,11 @@ import { ArrowLeft, Bell, BellOff, TrendingDown, Trash2, ExternalLink, CheckChec
 import { usePriceAlerts } from '@/context/PriceAlertContext';
 import { formatDistanceToNow } from 'date-fns';
 import AppLayout from '@/components/layout/AppLayout';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 export default function PriceAlertsPage() {
   const navigate = useNavigate();
+  const { t } = useLocalization();
   const { watchedListings, totalAlerts, removeWatch, clearAlert, clearAllAlerts } = usePriceAlerts();
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export default function PriceAlertsPage() {
             <ArrowLeft size={16} />
           </button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold" style={{ color: '#0F1923' }}>Price Alerts</h1>
+            <h1 className="text-2xl font-bold" style={{ color: '#0F1923' }}>{t('Price Alerts')}</h1>
             <p className="text-sm mt-0.5" style={{ color: '#6E7A8A' }}>
               {watchedListings.length === 0
                 ? 'No listings being watched'
@@ -66,7 +68,7 @@ export default function PriceAlertsPage() {
               <Bell size={28} style={{ color: '#C9A96E' }} strokeWidth={1.4} />
             </div>
             <div>
-              <p className="font-semibold text-base" style={{ color: '#0F1923' }}>No price watches yet</p>
+              <p className="font-semibold text-base" style={{ color: '#0F1923' }}>{t('No price watches yet')}</p>
               <p className="text-sm mt-1 max-w-xs" style={{ color: '#6E7A8A' }}>
                 Click the 🔔 icon on any marketplace listing to start watching its price.
               </p>
@@ -78,7 +80,7 @@ export default function PriceAlertsPage() {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#142842'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1A3353'; }}
             >
-              Browse Marketplace
+              {t('Browse')} {t('Marketplace')}
             </button>
           </motion.div>
         )}

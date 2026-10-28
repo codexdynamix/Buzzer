@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, ArrowUpRight, ArrowDownRight as ArrowDownRightIcon, MessageSquare, ShoppingBag, Briefcase, Wrench, Home, Bus, Calendar, Menu, X, Star, Shield, Zap, Globe, Play, Megaphone, Sparkles, Coffee, Heart, Compass, MapPin } from 'lucide-react';
 import './Index.css';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 const HomeSection = React.lazy(() => import('@/components/home/HomeSection'));
 
@@ -34,11 +35,12 @@ const IMAGES = [
 const fade = (delay = 0) => ({
   initial: { opacity: 0, y: 24 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
+  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] },
 });
 
 export default function Index() {
   const navigate = useNavigate();
+  const { t } = useLocalization();
   const reduceMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = React.useState(false);
 
@@ -61,9 +63,9 @@ export default function Index() {
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-7 text-sm font-medium" style={{ color: '#6E7A8A' }}>
-            <button onClick={() => navigate('/dashboard/home')} className="hover:text-[#0F1923] transition-colors">Browse</button>
-            <button onClick={() => navigate('/dashboard/business?tab=ads')} className="hover:text-[#0F1923] transition-colors">Advertisements</button>
-            <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-[#0F1923] transition-colors">About</button>
+            <button onClick={() => navigate('/dashboard/home')} className="hover:text-[#0F1923] transition-colors">{t('Browse')}</button>
+            <button onClick={() => navigate('/dashboard/business?tab=ads')} className="hover:text-[#0F1923] transition-colors">{t('Advertisements')}</button>
+            <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-[#0F1923] transition-colors">{t('About')}</button>
           </div>
 
           {/* Desktop auth buttons */}
@@ -73,7 +75,7 @@ export default function Index() {
               className="px-5 py-2.5 text-sm font-semibold rounded-lg border transition-all hover:border-[#1A3353] hover:text-[#1A3353]"
               style={{ borderColor: '#D1C9BC', color: '#4A5568', backgroundColor: 'transparent' }}
             >
-              Sign In
+              {t('Sign In')}
             </button>
             <button
               onClick={() => navigate('/auth?mode=signup')}
@@ -82,12 +84,12 @@ export default function Index() {
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor = '#142842'}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor = '#1A3353'}
             >
-              Sign Up Free
+              {t('Sign Up Free')}
             </button>
           </div>
 
           {/* Mobile hamburger */}
-          <button className="landing-menu-button md:hidden" aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen(o => !o)} style={{ color: '#0F1923' }}>
+          <button className="landing-menu-button md:hidden" aria-label={t(menuOpen ? 'Close menu' : 'Open menu')} aria-expanded={menuOpen} onClick={() => setMenuOpen(o => !o)} style={{ color: '#0F1923' }}>
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
@@ -95,23 +97,23 @@ export default function Index() {
         {/* Mobile menu */}
         {menuOpen && (
           <div className="md:hidden px-6 pb-5 pt-2 flex flex-col gap-3 border-t" style={{ backgroundColor: '#FAFAF7', borderColor: '#E8E2D8' }}>
-            <button onClick={() => { navigate('/dashboard/home'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>Browse</button>
-            <button onClick={() => { navigate('/dashboard/business?tab=ads'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>Advertisements</button>
-            <button onClick={() => { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>About</button>
+            <button onClick={() => { navigate('/dashboard/home'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Browse')}</button>
+            <button onClick={() => { navigate('/dashboard/business?tab=ads'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Advertisements')}</button>
+            <button onClick={() => { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('About')}</button>
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => { navigate('/auth?mode=signin&method=email'); setMenuOpen(false); }}
                 className="flex-1 py-3 text-sm font-semibold rounded-lg border"
                 style={{ borderColor: '#D1C9BC', color: '#4A5568' }}
               >
-                Sign In
+                {t('Sign In')}
               </button>
               <button
                 onClick={() => { navigate('/auth?mode=signup'); setMenuOpen(false); }}
                 className="flex-1 py-3 text-sm font-semibold rounded-lg"
                 style={{ backgroundColor: '#1A3353', color: '#ffffff' }}
               >
-                Sign Up
+                {t('Sign Up')}
               </button>
             </div>
           </div>
@@ -127,7 +129,7 @@ export default function Index() {
               className="landing-eyebrow inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest px-4 py-2 rounded-full"
             >
               <Sparkles size={14} strokeWidth={2} />
-              Your city, closer
+              {t('Your city, closer')}
             </span>
           </motion.div>
 
@@ -135,14 +137,14 @@ export default function Index() {
             {...fade(0.1)}
             className="landing-hero-title font-bold leading-[1.06] mb-6"
           >
-            Good things<br />happen <span>around here.</span>
+            {t('Good things')}<br />{t('happen')} <span>{t('around here.')}</span>
           </motion.h1>
 
           <motion.p
             {...fade(0.2)}
             className="landing-hero-description text-lg leading-relaxed max-w-2xl mb-9"
           >
-            Find your people, your next place, and the little things that make a city feel like yours — all in one place.
+            {t('Find your people, your next place, and the little things that make a city feel like yours — all in one place.')}
           </motion.p>
 
           <motion.div {...fade(0.3)} className="landing-hero-actions flex flex-col sm:flex-row items-start gap-3">
@@ -150,16 +152,16 @@ export default function Index() {
               onClick={() => navigate('/dashboard/home')}
               className="landing-button landing-button-primary flex items-center gap-3 px-7 py-4 text-base font-semibold rounded-xl transition-all"
             >
-              Explore your city <ArrowRight size={17} />
+              {t('Explore your city')} <ArrowRight size={17} />
             </button>
             <button
               onClick={() => navigate('/auth?mode=signup')}
               className="landing-button landing-button-secondary flex items-center gap-3 px-7 py-4 text-base font-semibold rounded-xl transition-all"
             >
-              Join for free <ArrowUpRight size={17} />
+              {t('Join for free')} <ArrowUpRight size={17} />
             </button>
           </motion.div>
-          <div className="landing-hero-note"><span className="landing-live-dot" /> A little more local. A lot more connected.</div>
+          <div className="landing-hero-note"><span className="landing-live-dot" /> {t('A little more local. A lot more connected.')}</div>
           </div>
 
           <motion.div {...fade(0.18)} className="landing-visual" aria-label="Scenes from a connected neighborhood">

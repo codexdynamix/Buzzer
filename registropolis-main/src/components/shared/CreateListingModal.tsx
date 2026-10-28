@@ -498,9 +498,14 @@ const CreateListingModal: React.FC<CreateListingModalProps> = ({ type, open, onC
     try {
       await onSubmit(formData);
       onClose();
-      toast.success(isEdit ? 'Listing updated!' : 'Your listing has been posted!', {
+      toast.success(
+        isEdit
+          ? 'Listing changes saved. If moderation is enabled, they will be reviewed before appearing.'
+          : 'Your listing was submitted. It may need approval before appearing publicly.',
+        {
         icon: isEdit ? '✏️' : '✅',
-      });
+        },
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save listing');
     } finally {

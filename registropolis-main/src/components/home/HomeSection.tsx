@@ -6,6 +6,7 @@ import { listingDetailPath } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useUserListings } from '@/context/UserListingsContext';
 import { businessesAPI } from '@/services/apiService';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 const SECTION_META: Record<string, { bg: string; text: string; label: string }> = {
   marketplace: { bg: '#FFF7ED', text: '#C2410C', label: 'Marketplace' },
@@ -38,6 +39,7 @@ function formatPrice(item: any): string {
 export default function HomeSection() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLocalization();
   const { getAllListings } = useUserListings();
   const [activeCategory, setActiveCategory] = useState('all');
   const [sponsoredAds, setSponsoredAds] = useState<any[]>([]);
@@ -77,8 +79,8 @@ export default function HomeSection() {
     <div className="section-padding space-y-8">
       <div>
         <div className="gold-accent mb-3" />
-        <h1 className="text-2xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>
-          {greeting}{user?.name ? `, ${user.name}` : ''} 👋
+        <h1 className="text-2xl font-bold text-foreground" style={{ letterSpacing: '-0.03em' }}>
+          {t(greeting)}{user?.name ? `, ${user.name}` : ''} 👋
         </h1>
         {user?.location && (
           <div className="flex items-center gap-1.5 mt-1">
@@ -88,10 +90,10 @@ export default function HomeSection() {
         )}
       </div>
 
-      <div className="rounded-2xl px-4 py-3" style={{ backgroundColor: '#fff', border: '1px solid #E8E2D8' }}>
+      <div className="rounded-2xl border border-border bg-card px-4 py-3">
         <div className="flex items-center gap-2 mb-3">
           <div className="h-1 w-4 rounded-full" style={{ backgroundColor: '#C9A96E' }} />
-          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#6E7A8A' }}>Stories</span>
+          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#6E7A8A' }}>{t('Stories')}</span>
         </div>
         <StoriesStrip />
       </div>
@@ -106,11 +108,11 @@ export default function HomeSection() {
         <div className="flex items-center gap-2 mb-1">
           <Flame size={18} style={{ color: '#C9A96E' }} />
           <h2 className="text-lg font-bold" style={{ color: '#FAFAF7', letterSpacing: '-0.02em' }}>
-            Latest listings
+            {t('Latest listings')}
           </h2>
         </div>
         <p className="text-sm mb-5" style={{ color: 'rgba(250,250,247,0.5)' }}>
-          Recently posted by your community
+          {t('Recently posted by your community')}
         </p>
         {featured.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -129,7 +131,7 @@ export default function HomeSection() {
                     className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                     style={{ backgroundColor: 'rgba(201,169,110,0.15)', color: '#C9A96E' }}
                   >
-                    {SECTION_META[item.section]?.label ?? item.section}
+                    {t(SECTION_META[item.section]?.label ?? item.section)}
                   </span>
                 </div>
                 <p className="text-xs font-semibold leading-snug line-clamp-2 mb-1" style={{ color: '#FAFAF7' }}>
@@ -143,24 +145,24 @@ export default function HomeSection() {
           </div>
         ) : (
           <p className="text-sm py-4" style={{ color: 'rgba(250,250,247,0.65)' }}>
-            No listings have been posted yet.
+            {t('No listings have been posted yet.')}
           </p>
         )}
       </section>
 
       {/* ── Dynamic Sponsored Advertisements (from Database) ── */}
       {sponsoredAds.length > 0 && (
-        <div className="rounded-2xl p-5 border border-amber-200 bg-gradient-to-r from-amber-50/70 via-white to-amber-50/40">
+        <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50/70 via-white to-amber-50/40 p-5 dark:border-border dark:bg-none dark:bg-card">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Sparkles size={16} className="text-amber-600" />
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-900">Featured Community Advertisements</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-foreground">{t('Featured Community Advertisements')}</span>
             </div>
             <button
-              onClick={() => navigate('/dashboard/business')}
-              className="text-xs font-semibold text-amber-700 hover:text-amber-900 flex items-center gap-1 transition-colors"
+              onClick={() => navigate('/dashboard/business?tab=ads')}
+              className="flex items-center gap-1 text-xs font-semibold text-amber-700 transition-colors hover:text-amber-900 dark:text-foreground"
             >
-              All Advertisements <ChevronRight size={13} />
+              {t('All Advertisements')} <ChevronRight size={13} />
             </button>
           </div>
 
@@ -168,8 +170,8 @@ export default function HomeSection() {
             {sponsoredAds.slice(0, 3).map((ad) => (
               <div
                 key={ad.id}
-                onClick={() => navigate('/dashboard/business')}
-                className="cursor-pointer group flex gap-3 p-3 rounded-xl border border-amber-100 bg-white hover:border-amber-300 hover:shadow-sm transition-all"
+                onClick={() => navigate('/dashboard/business?tab=ads')}
+                className="group flex cursor-pointer gap-3 rounded-xl border border-amber-100 bg-white p-3 transition-all hover:border-amber-300 hover:shadow-sm dark:border-border dark:bg-card"
               >
                 <img
                   src={ad.image}
@@ -178,7 +180,7 @@ export default function HomeSection() {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-[#0F1923] truncate">{ad.name}</span>
+                    <span className="truncate text-xs font-bold text-[#0F1923] dark:text-foreground">{ad.name}</span>
                     <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-800 shrink-0">AD</span>
                   </div>
                   <p className="text-[11px] text-amber-700 font-medium line-clamp-1 mt-0.5">

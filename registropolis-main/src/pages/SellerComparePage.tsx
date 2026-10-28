@@ -9,6 +9,7 @@ import { useChatContext } from '@/context/ChatContext';
 import { listingDetailPath } from '@/lib/utils';
 import { useSaved } from '@/context/SavedContext';
 import { MarketplaceListing } from '@/data/marketplaceData';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 function StarRow({ rating, size = 13 }: { rating: number; size?: number }) {
   return (
@@ -171,6 +172,7 @@ function MiniListingCard({ listing, navigate, isSaved, toggleSaved }: {
 }
 
 export default function SellerComparePage() {
+  const { t } = useLocalization();
   const { pinned, unpin, clear } = useSellerCompare();
   const { openChatWithListing } = useChatContext();
   const { isSaved, toggleSaved } = useSaved();
@@ -184,7 +186,7 @@ export default function SellerComparePage() {
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#F0EBE1' }}>
           <ShoppingBag size={28} style={{ color: '#C9A96E' }} />
         </div>
-        <h2 className="text-lg font-bold" style={{ color: '#0F1923' }}>Not enough sellers pinned</h2>
+        <h2 className="text-lg font-bold" style={{ color: '#0F1923' }}>{t('Not enough sellers pinned')}</h2>
         <p className="text-sm text-center max-w-xs" style={{ color: '#6E7A8A' }}>
           Pin two sellers from the marketplace or their profile pages, then come back here to compare them side-by-side.
         </p>
@@ -208,7 +210,6 @@ export default function SellerComparePage() {
         listingImage: seller.listings[0].image,
         listingCategory: 'Marketplace',
         sellerName: seller.name,
-        sellerUserId: seller.listings[0].userId ?? '',
       });
     }
   };

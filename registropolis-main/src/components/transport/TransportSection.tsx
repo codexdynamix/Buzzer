@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSaved } from '@/context/SavedContext';
 import { listingDetailPath } from '@/lib/utils';
 import ListingAuthor from '@/components/shared/ListingAuthor';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 const CATEGORIES = ['All', 'Cars', 'Motorcycles', 'Trucks & Vans', 'SUVs', 'Electric'];
 
@@ -21,6 +22,7 @@ const COND: Record<string,{ bg:string; text:string; border:string }> = {
 };
 
 export default function TransportSection() {
+  const { t } = useLocalization();
   const [activeCat, setActiveCat] = useState('All');
   const [search, setSearch] = useState('');
   const { isSaved, toggleSaved } = useSaved();
@@ -54,7 +56,7 @@ export default function TransportSection() {
       <div className="section-header">
         <div>
           <div className="gold-accent mb-3" />
-          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>Transport</h1>
+          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>{t('Transport')}</h1>
           <p className="text-sm mt-1" style={{ color:'#6E7A8A' }}>Vehicles listed by your community</p>
         </div>
         <button
@@ -163,7 +165,6 @@ export default function TransportSection() {
                           listingImage: v.imageUrl ?? v.image ?? '',
                           listingCategory: 'Transport',
                           sellerName: v.owner?.name ?? v.seller,
-                          sellerUserId: v.userId ?? v.owner?.id ?? v.owner?.userId ?? '',
                         });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
@@ -184,7 +185,6 @@ export default function TransportSection() {
                             listingImage: v.imageUrl ?? v.image ?? '',
                             listingCategory: 'Transport',
                             sellerName: v.seller,
-                            sellerUserId: v.userId ?? v.owner?.id ?? v.owner?.userId ?? '',
                           });
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"

@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 type GlassmorphicCardProps = {
   children: React.ReactNode;
   className?: string;
-  intensity?: 'low' | 'medium' | 'high';
   border?: boolean;
   animated?: boolean;
 } & (
@@ -17,33 +16,17 @@ type GlassmorphicCardProps = {
 const GlassmorphicCard: React.FC<GlassmorphicCardProps> = ({
   children,
   className,
-  intensity = 'medium',
   border = true,
   animated = false,
   ...props
 }) => {
-  const blurIntensity = {
-    low: 'backdrop-blur-sm',
-    medium: 'backdrop-blur-md',
-    high: 'backdrop-blur-lg',
-  };
-
-  const bgOpacity = {
-    low: 'bg-white/30 dark:bg-black/20',
-    medium: 'bg-white/50 dark:bg-black/30',
-    high: 'bg-white/70 dark:bg-black/40',
-  };
-
-  const borderStyle = border 
-    ? 'border border-white/20 dark:border-white/10' 
-    : '';
+  const borderStyle = border ? 'border border-border' : '';
 
   if (animated) {
     return (
       <motion.div
         className={cn(
-          bgOpacity[intensity],
-          blurIntensity[intensity],
+          'bg-card text-card-foreground',
           borderStyle,
           'shadow-lg rounded-2xl',
           className
@@ -58,8 +41,7 @@ const GlassmorphicCard: React.FC<GlassmorphicCardProps> = ({
   return (
     <div
       className={cn(
-        bgOpacity[intensity],
-        blurIntensity[intensity],
+        'bg-card text-card-foreground',
         borderStyle,
         'shadow-lg rounded-2xl',
         className

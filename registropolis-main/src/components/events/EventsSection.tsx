@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSaved } from '@/context/SavedContext';
 import { listingDetailPath } from '@/lib/utils';
 import ListingAuthor from '@/components/shared/ListingAuthor';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 const CATEGORIES = ['All', 'Music', 'Sports', 'Arts & Culture', 'Business', 'Food & Drink', 'Tech'];
 
@@ -23,6 +24,7 @@ const CAT_STYLE: Record<string,{ bg:string; text:string }> = {
 };
 
 export default function EventsSection() {
+  const { t } = useLocalization();
   const { openChatWithListing, getUnreadForListing } = useChatContext();
   const [activeCat, setActiveCat] = useState('All');
   const [search, setSearch] = useState('');
@@ -59,7 +61,7 @@ export default function EventsSection() {
       <div className="section-header">
         <div>
           <div className="gold-accent mb-3" />
-          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>Events</h1>
+          <h1 className="text-2xl font-bold" style={{ color:'#0F1923', letterSpacing:'-0.03em' }}>{t('Events')}</h1>
           <p className="text-sm mt-1" style={{ color:'#6E7A8A' }}>Events posted by your community</p>
         </div>
         <button
@@ -133,7 +135,6 @@ export default function EventsSection() {
                 listingImage: featuredEvent.image ?? '',
                 listingCategory: 'Events',
                 sellerName: featuredEvent.owner?.name ?? featuredEvent.host ?? featuredEvent.seller,
-                sellerUserId: featuredEvent.userId ?? featuredEvent.owner?.id ?? featuredEvent.owner?.userId ?? '',
               })}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor='#ba965c'; (e.currentTarget as HTMLElement).style.transform='translateY(-1px)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor='#C9A96E'; (e.currentTarget as HTMLElement).style.transform=''; }}
@@ -200,7 +201,6 @@ export default function EventsSection() {
                             listingImage: e.image,
                             listingCategory: 'Events',
                             sellerName: e.host ?? e.seller,
-                            sellerUserId: e.userId ?? e.owner?.id ?? e.owner?.userId ?? '',
                           });
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
@@ -226,7 +226,6 @@ export default function EventsSection() {
                           listingImage: e.image ?? '',
                           listingCategory: 'Events',
                           sellerName: e.owner?.name ?? e.host ?? e.seller,
-                          sellerUserId: e.userId ?? e.owner?.id ?? e.owner?.userId ?? '',
                         });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"

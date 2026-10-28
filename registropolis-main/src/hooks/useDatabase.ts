@@ -11,7 +11,7 @@ export const useDatabase = () => {
         setIsLoading(true);
         const res = await fetch('/health');
         const data = await res.json();
-        setIsConnected(data.database === 'connected');
+        setIsConnected(data.database === 'supabase');
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to connect to database'));
         setIsConnected(false);

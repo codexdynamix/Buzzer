@@ -21,7 +21,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import AdminRouteGuard from '@/components/admin/AdminRouteGuard';
 import AdminUsers from '@/components/admin/AdminUsers';
 import AdminFeatures from '@/components/admin/AdminFeatures';
 import AdminUserActivity from '@/components/admin/AdminUserActivity';
@@ -31,6 +30,7 @@ import { AdminModerationQueue } from '@/components/admin/AdminModerationQueue';
 import { AdminVerificationDesk } from '@/components/admin/AdminVerificationDesk';
 import { AdminMerchantPortal } from '@/components/admin/AdminMerchantPortal';
 import { useAuth } from '@/context/AuthContext';
+import { adminCRMAPI } from '@/services/apiService';
 import {
   ADMIN_TAB_PERMISSIONS,
   hasAdminPermission,
@@ -87,13 +87,9 @@ const isAdminTab = (value: string | null): value is AdminTab =>
   value !== null && Object.prototype.hasOwnProperty.call(ADMIN_TAB_PERMISSIONS, value);
 
 const Admin = () => {
-  const { user, signOut, refreshUser } = useAuth();
+  const { user, signOut } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const staffRole: StaffRole = isStaffRole(user?.staffRole)
-    ? user.staffRole
-    : user?.role === 'moderator'
-      ? 'moderator'
-      : 'support';
+  const staffRole: StaffRole = isStaffRole(user?.staffRole) ? user.staffRole : 'superadmin';
   const staffProfile = STAFF_PROFILES[staffRole];
   const allowedNavigation = useMemo(
     () => NAVIGATION.filter(item => hasAdminPermission(staffRole, ADMIN_TAB_PERMISSIONS[item.id])),
@@ -128,13 +124,7 @@ const Admin = () => {
     const fetchOverview = async () => {
       try {
         setIsLoadingKpis(true);
-        const token = localStorage.getItem('auth_token');
-        const response = await fetch('/api/admin/crm/overview', {
-          headers: token ? { Authorization: 'Bearer'.concat(' ', token) } : {},
-          signal: controller.signal,
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Could not load operations overview');
+        const data = await adminCRMAPI.getOverview(controller.signal);
         if (data.success && data.kpis) setKpis(data.kpis);
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -160,13 +150,7 @@ const Admin = () => {
     const timeout = window.setTimeout(async () => {
       try {
         setSearchError('');
-        const token = localStorage.getItem('auth_token');
-        const response = await fetch(`/api/admin/search?q=${encodeURIComponent(query)}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          signal: controller.signal,
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Search failed');
+        const data = await adminCRMAPI.search(query, controller.signal);
         setSearchResults(data.results || []);
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -192,25 +176,6 @@ const Admin = () => {
     setSearchParams({ tab });
   };
 
-  const switchDemoRole = async (role: StaffRole) => {
-    try {
-      const response = await fetch('/api/admin/auth/staff-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.token) throw new Error(data.message || 'Could not switch demo role');
-      localStorage.setItem('auth_token', data.token);
-      await refreshUser();
-      const firstTab = NAVIGATION.find(item => hasAdminPermission(role, ADMIN_TAB_PERMISSIONS[item.id]));
-      if (firstTab) setSearchParams({ tab: firstTab.id });
-      toast.info(`Development role: ${STAFF_PROFILES[role].badge}`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not switch demo role');
-    }
-  };
-
   const canRevealPii = hasAdminPermission(staffRole, 'users:pii');
   const sections = (['OPERATIONS', 'ADMINISTRATION'] as const).map(group => ({
     group,
@@ -227,7 +192,6 @@ const Admin = () => {
   ];
 
   return (
-    <AdminRouteGuard>
       <div className="admin-shell min-h-screen bg-[#FAFAF7] text-[#0F1923]">
         <header className="sticky top-0 z-40 border-b border-[#E8E2D8] bg-[#FAFAF7]/95 px-4 py-3 backdrop-blur-xl lg:px-7">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -284,21 +248,6 @@ const Admin = () => {
                   {piiMasked ? <EyeOff size={14} /> : <Eye size={14} />}
                   {piiMasked ? 'PII masked' : 'PII visible'}
                 </button>
-              )}
-              {import.meta.env.DEV && user?.demoStaff && (
-                <label className="flex items-center gap-2 rounded-xl border border-[#E8E2D8] bg-white px-2.5 py-1.5 text-xs text-[#526070]">
-                  Demo role
-                  <select
-                    value={staffRole}
-                    onChange={event => void switchDemoRole(event.target.value as StaffRole)}
-                    className="rounded-lg border border-[#E8E2D8] bg-white px-2 py-1 font-semibold text-[#1A3353]"
-                    aria-label="Switch development demo role"
-                  >
-                    {Object.entries(STAFF_PROFILES).map(([role, profile]) => (
-                      <option key={role} value={role}>{profile.badge}</option>
-                    ))}
-                  </select>
-                </label>
               )}
               <div className="hidden text-right sm:block">
                 <div className="text-xs font-bold">{user?.name || 'Staff member'}</div>
@@ -432,7 +381,6 @@ const Admin = () => {
           </main>
         </div>
       </div>
-    </AdminRouteGuard>
   );
 };
 

@@ -4,6 +4,7 @@ import { listingDetailPath } from '@/lib/utils';
 import { Heart, ShoppingBag, Briefcase, Building2, Wrench, Calendar, Truck, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSaved } from '@/context/SavedContext';
+import { useLocalization } from '@/i18n/LocalizationContext';
 import AppLayout from '@/components/layout/AppLayout';
 
 const SECTION_META: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
@@ -43,6 +44,7 @@ const ALL = 'all';
 
 export default function SavedListingsPage() {
   const navigate = useNavigate();
+  const { t } = useLocalization();
   const { savedItems, removeSaved, savedCount } = useSaved();
   const [activeSection, setActiveSection] = useState(ALL);
 
@@ -62,7 +64,7 @@ export default function SavedListingsPage() {
             <Heart size={18} style={{ color: '#C9A96E' }} className={savedCount > 0 ? 'fill-[#C9A96E]' : ''} />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>Saved Listings</h1>
+            <h1 className="text-xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>{t('Saved')}</h1>
             <p className="text-sm" style={{ color: '#6E7A8A' }}>
               {savedCount === 0 ? 'No saved listings yet' : `${savedCount} listing${savedCount !== 1 ? 's' : ''} saved`}
             </p>
@@ -113,7 +115,7 @@ export default function SavedListingsPage() {
             <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-4" style={{ backgroundColor: '#F5F2EC', border: '1px solid #E8E2D8' }}>
               <Heart size={28} style={{ color: '#E8E2D8' }} />
             </div>
-            <p className="text-base font-bold mb-1" style={{ color: '#0F1923' }}>Nothing saved yet</p>
+            <p className="text-base font-bold mb-1" style={{ color: '#0F1923' }}>{t('Nothing saved yet')}</p>
             <p className="text-sm mb-6 max-w-xs" style={{ color: '#6E7A8A' }}>
               Tap the heart icon on any listing to save it here for easy access later.
             </p>

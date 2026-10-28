@@ -42,13 +42,8 @@ class AdminAnalyticsService {
   }
 
   async getAnalytics(_filter?: AnalyticsFilter): Promise<AnalyticsData[]> {
-    try {
-      const data = await apiFetch('/admin/analytics');
-      return data.analytics || [];
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
-      return [];
-    }
+    const data = await apiFetch('/admin/analytics');
+    return data.analytics || [];
   }
 
   async recordPageView(page: string): Promise<void> {

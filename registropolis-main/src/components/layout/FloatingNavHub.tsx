@@ -10,6 +10,7 @@ import { useNotifications } from '@/context/NotificationContext';
 import { useChatContext } from '@/context/ChatContext';
 import { useUserListings } from '@/context/UserListingsContext';
 import { useSaved } from '@/context/SavedContext';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 /* ─── Nav items ────────────────────────────────────────────────── */
 const NAV_ITEMS = [
@@ -40,11 +41,11 @@ const panelVariants = {
   hidden: { opacity: 0, scale: 0.92, y: 12 },
   visible: {
     opacity: 1, scale: 1, y: 0,
-    transition: { type: 'spring' as const, stiffness: 400, damping: 30, mass: 0.8 },
+    transition: { type: 'spring', stiffness: 400, damping: 30, mass: 0.8 },
   },
   exit: {
     opacity: 0, scale: 0.94, y: 8,
-    transition: { duration: 0.15, ease: 'easeIn' as const },
+    transition: { duration: 0.15, ease: 'easeIn' },
   },
 };
 
@@ -52,7 +53,7 @@ const itemVariants = {
   hidden: { opacity: 0, y: 10 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.035, type: 'spring' as const, stiffness: 500, damping: 30 },
+    transition: { delay: i * 0.035, type: 'spring', stiffness: 500, damping: 30 },
   }),
 };
 
@@ -61,6 +62,7 @@ const FloatingNavHub: React.FC = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { user, isAdmin, signOut } = useAuth();
+  const { t } = useLocalization();
 
   const { unreadMessages } = useNotifications();
   const { totalUnread } = useChatContext();
@@ -200,7 +202,7 @@ const FloatingNavHub: React.FC = () => {
                   className="text-[10px] font-bold uppercase tracking-[0.25em]"
                   style={{ color: '#C9A96E' }}
                 >
-                  Navigate
+                  {t('Navigate')}
                 </span>
                 {user && (
                   <p className="text-[12px] font-medium mt-0.5 truncate max-w-[140px]" style={{ color: 'rgba(250,250,247,0.6)' }}>
@@ -299,7 +301,7 @@ const FloatingNavHub: React.FC = () => {
                       className="text-[10px] font-semibold text-center leading-tight"
                       style={{ color: isActive ? '#FAFAF7' : 'rgba(250,250,247,0.4)', letterSpacing: '0.01em' }}
                     >
-                      {label}
+                      {t(label)}
                     </span>
                   </motion.button>
                 );
@@ -319,7 +321,7 @@ const FloatingNavHub: React.FC = () => {
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'rgba(250,250,247,0.45)'; }}
               >
                 <Settings size={13} />
-                <span className="text-[11px] font-medium">Settings</span>
+                <span className="text-[11px] font-medium">{t('Settings')}</span>
               </button>
               {user ? (
                 <button
@@ -330,7 +332,7 @@ const FloatingNavHub: React.FC = () => {
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'rgba(248,113,113,0.7)'; }}
                 >
                   <LogOut size={13} />
-                  <span className="text-[11px] font-medium">Sign out</span>
+                  <span className="text-[11px] font-medium">{t('Sign out')}</span>
                 </button>
               ) : (
                 <button
@@ -341,7 +343,7 @@ const FloatingNavHub: React.FC = () => {
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'rgba(201,169,110,0.7)'; }}
                 >
                   <User size={13} />
-                  <span className="text-[11px] font-medium">Sign in</span>
+                  <span className="text-[11px] font-medium">{t('Sign in')}</span>
                 </button>
               )}
             </div>
