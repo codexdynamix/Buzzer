@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useGuestGate } from './GuestGateContext';
+import { toast } from 'sonner';
 
 export interface ListingChatInfo {
   listingId: string;
@@ -10,6 +11,7 @@ export interface ListingChatInfo {
   listingImage?: string;
   listingCategory: string;
   sellerName: string;
+  sellerUserId: string;
   sellerAvatar?: string;
   triggerOffer?: boolean;
 }
@@ -77,6 +79,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       showGuestModal();
       return;
     }
+    if (!info.sellerUserId) {
+      toast.error('This listing does not have a verified owner account to message.');
+      return;
+    }
     setPendingChat(info);
     markListingRead(info.listingId, info.listingCategory);
     navigate('/dashboard/messages');
@@ -93,6 +99,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       listingPrice: '',
       listingCategory: 'messages',
       sellerName: userName,
+      sellerUserId: userId,
     });
     navigate('/dashboard/messages');
   }, [isAuthenticated, showGuestModal, navigate]);

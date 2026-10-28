@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessagesState, Message } from '@/types/messageTypes';
 import { v4 as uuidv4 } from 'uuid';
 import { getSocket } from '@/services/socketService';
+import { messagesAPI } from '@/services/apiService';
+import { toast } from 'sonner';
 
 function getCurrentUserId(): string | null {
   try {
@@ -21,9 +23,7 @@ function getAuthHeader(): Record<string, string> {
 
 async function fetchMessages(chatId: string): Promise<Message[]> {
   try {
-    const res = await fetch(`/api/messages/${chatId}`, { headers: getAuthHeader() });
-    if (!res.ok) return [];
-    const data = await res.json();
+    const data = await messagesAPI.getMessages(chatId);
     const myId = getCurrentUserId();
     return (data.messages || []).map((m: any) => ({
       id: m.id,
@@ -33,20 +33,26 @@ async function fetchMessages(chatId: string): Promise<Message[]> {
       status: m.status || 'sent',
       repliedToMessage: m.replyTo,
     }));
-  } catch {
-    return [];
+  } catch (error) {
+    toast.error('Unable to load messages. Please try again.');
+    throw error;
   }
 }
 
-async function persistMessage(chatId: string, content: string, replyTo?: any): Promise<void> {
+async function persistMessage(chatId: string, content: string, replyTo?: any): Promise<any> {
   try {
-    await fetch('/api/messages', {
+    const response = await fetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-      body: JSON.stringify({ chatId, content, replyTo }),
+      body: JSON.stringify({ recipientId: chatId, content, replyTo }),
     });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || `HTTP ${response.status}`);
+    return data.message;
   } catch (err) {
     console.error('Failed to persist message:', err);
+    toast.error('Unable to send message. Please try again.');
+    throw err;
   }
 }
 
@@ -60,13 +66,21 @@ export function useMessages() {
   useEffect(() => {
     const socket = getSocket();
 
-    const handleNewMessage = (message: Message) => {
+    const handleNewMessage = (message: any) => {
       const room = currentRoomRef.current;
-      if (!room) return;
+      if (!room || message.senderId !== room) return;
+      const receivedMessage: Message = {
+        id: message.id,
+        content: message.content,
+        timestamp: message.timestamp,
+        sender: 'contact',
+        status: message.status || 'delivered',
+        repliedToMessage: message.replyTo,
+      };
       setMessages(prev => {
         const existing = prev[room] || [];
-        if (existing.find(m => m.id === message.id)) return prev;
-        return { ...prev, [room]: [...existing, message] };
+        if (existing.some(item => item.id === receivedMessage.id)) return prev;
+        return { ...prev, [room]: [...existing, receivedMessage] };
       });
     };
 
@@ -124,39 +138,29 @@ export function useMessages() {
     setMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), msg] }));
   }, []);
 
-  // Send a message — optimistic add + socket emit + backend persist
+  // Send a message and broadcast it only after persistence succeeds.
   const handleSendMessage = useCallback(async (chatId: string, content: string) => {
     if (!content.trim()) return;
 
-    const message: Message = {
-      id: uuidv4(),
-      content: content.trim(),
-      timestamp: new Date().toISOString(),
-      sender: 'user',
-      status: 'sent',
-      repliedToMessage: replyingTo ? {
-        id: replyingTo.id,
-        content: replyingTo.content,
-        sender: replyingTo.sender,
-        senderName: replyingTo.senderName,
-      } : undefined,
-    };
-
-    // Add optimistically
-    setMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), message] }));
-    setReplyingTo(null);
-
-    // Emit to socket for real-time delivery
-    const socket = getSocket();
-    socket.emit('send-message', { roomId: chatId, message });
-    socket.emit('typing', { roomId: chatId, userId: 'me', isTyping: false });
-
-    // Persist to backend
-    await persistMessage(chatId, content.trim(), replyingTo ? {
+    const replyTo = replyingTo ? {
       id: replyingTo.id,
       content: replyingTo.content,
       sender: replyingTo.sender,
-    } : undefined);
+    } : undefined;
+    const savedMessage = await persistMessage(chatId, content.trim(), replyTo);
+    const message: Message = {
+      id: savedMessage.id,
+      content: content.trim(),
+      timestamp: savedMessage.timestamp,
+      sender: 'user',
+      status: savedMessage.status ?? 'sent',
+      repliedToMessage: savedMessage.replyTo,
+    };
+    setMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), message] }));
+    setReplyingTo(null);
+    const socket = getSocket();
+    socket.emit('send-message', { messageId: message.id });
+    socket.emit('typing', { peerId: chatId, isTyping: false });
   }, [replyingTo]);
 
   const handleEditMessage = useCallback((chatId: string, messageId: string, newContent: string) => {
@@ -196,11 +200,7 @@ export function useMessages() {
       handleSendMessage(chatId, content);
       return;
     }
-    setTimeout(() => {
-      setMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), { ...message, timestamp: new Date().toISOString() }] }));
-      getSocket().emit('send-message', { roomId: chatId, message });
-      persistMessage(chatId, content);
-    }, delay);
+    setTimeout(() => { void handleSendMessage(chatId, content); }, delay);
   }, [handleSendMessage]);
 
   return {

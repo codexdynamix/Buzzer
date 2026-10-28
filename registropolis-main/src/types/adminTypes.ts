@@ -30,12 +30,20 @@ export interface FeatureFlag extends Document {
   description: string;
   scope: 'global' | 'user';
   targetUsers?: string[]; // User IDs if scope is 'user'
+  moderationEnabled?: boolean;
+  moderationRules?: {
+    requiresApproval?: boolean;
+    autoModeration?: boolean;
+    maxDailySubmissions?: number;
+  };
   lastModified: Date;
   modifiedBy: string;
 }
 
 export interface UserActivity extends Document {
   userId: string;
+  performedBy?: string;
+  actorName?: string;
   action: string;
   timestamp: Date;
   details: Record<string, any>;
@@ -44,11 +52,14 @@ export interface UserActivity extends Document {
 }
 
 export interface UserRestriction extends Document {
+  id: string;
   userId: string;
+  userName?: string;
   type: 'ban' | 'suspend' | 'restrict';
   reason: string;
   startDate: Date;
   endDate?: Date;
   createdBy: string;
   status: 'active' | 'expired' | 'lifted';
+  createdAt?: Date;
 }

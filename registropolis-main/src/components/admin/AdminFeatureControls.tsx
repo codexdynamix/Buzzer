@@ -20,13 +20,19 @@ export const FeatureControls: React.FC<FeatureControlsProps> = ({
   description
 }) => {
   const [controls, setControls] = React.useState<AdminFeatureControl | null>(null);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const loadControls = async () => {
-      const fetchedControls = await getFeatureControls(featureId);
-      setControls(fetchedControls);
+      try {
+        setLoadError(null);
+        const fetchedControls = await getFeatureControls(featureId);
+        setControls(fetchedControls);
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'Failed to load controls');
+      }
     };
-    loadControls();
+    void loadControls();
   }, [featureId]);
 
   const handleControlUpdate = async (updates: Partial<AdminFeatureControl>) => {
@@ -38,9 +44,13 @@ export const FeatureControls: React.FC<FeatureControlsProps> = ({
       const updatedControls = await getFeatureControls(featureId);
       setControls(updatedControls);
     } catch (error) {
-      toast.error(`Failed to update ${featureName} controls`);
+      toast.error(error instanceof Error ? error.message : `Failed to update ${featureName} controls`);
     }
   };
+
+  if (loadError) {
+    return <Card><CardContent className="p-5 text-sm text-destructive">{loadError}</CardContent></Card>;
+  }
 
   if (!controls) {
     return <div>Loading...</div>;
@@ -64,7 +74,12 @@ export const FeatureControls: React.FC<FeatureControlsProps> = ({
           <Label>Moderation Required</Label>
           <Switch
             checked={controls.moderationEnabled}
-            onCheckedChange={(checked) => handleControlUpdate({ moderationEnabled: checked })}
+            onCheckedChange={(checked) => handleControlUpdate({
+              moderationEnabled: checked,
+              ...(checked && controls.moderationRules?.maxDailySubmissions === undefined
+                ? { moderationRules: { requiresApproval: true, maxDailySubmissions: 50 } }
+                : {}),
+            })}
           />
         </div>
 
@@ -73,11 +88,12 @@ export const FeatureControls: React.FC<FeatureControlsProps> = ({
             <Label>Max Daily Submissions</Label>
             <Input
               type="number"
-              value={controls.moderationRules?.maxDailySubmissions || 0}
+              min={1}
+              value={controls.moderationRules?.maxDailySubmissions ?? 50}
               onChange={(e) => handleControlUpdate({
                 moderationRules: {
                   ...controls.moderationRules,
-                  maxDailySubmissions: parseInt(e.target.value)
+                  maxDailySubmissions: Math.max(1, Number.parseInt(e.target.value, 10) || 1)
                 }
               })}
             />

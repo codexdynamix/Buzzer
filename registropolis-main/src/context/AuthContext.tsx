@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { toast } from 'sonner';
 import { realAuthAPI } from '@/services/authService';
 import { authAPI } from '@/services/apiService';
+import { disconnectSocket } from '@/services/socketService';
+import { isStaffRole } from '@/config/adminAccess';
+import type { StaffRole } from '@/config/adminAccess';
 
 type User = {
   id: string;
@@ -10,6 +13,9 @@ type User = {
   profileImageUrl?: string;
   email?: string;
   role?: string;
+  staffRole?: string;
+  demoStaff?: boolean;
+  staffTitle?: string;
   bio?: string;
   location?: string;
   contactPhone?: string;
@@ -25,10 +31,11 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isStaff: boolean;
   signIn: (user: User) => void;
   signOut: () => void;
   refreshUser: () => Promise<void>;
-  addAdmin: (email: string) => Promise<void>;
+  addAdmin: (email: string, staffRole: StaffRole) => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
 }
 
@@ -37,6 +44,7 @@ const defaultAuthContext: AuthContextType = {
   isLoading: true,
   isAuthenticated: false,
   isAdmin: false,
+  isStaff: false,
   signIn: () => {},
   signOut: () => {},
   refreshUser: async () => {},
@@ -98,6 +106,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch {
       // ignore
     } finally {
+      disconnectSocket();
       localStorage.removeItem('user');
       localStorage.removeItem('auth_token');
       localStorage.removeItem('mock_user');
@@ -118,23 +127,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const addAdmin = async (email: string) => {
-    try {
-      await authAPI.addAdmin(email);
-      toast.success(`${email} is now an admin`);
-    } catch (error) {
-      toast.error('Failed to add admin: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
+  const addAdmin = async (email: string, staffRole: StaffRole) => {
+    await authAPI.addAdmin(email, staffRole);
+    toast.success(`${email} was assigned ${staffRole} access`);
   };
 
   const isAdmin = useMemo(
-    () => user?.role === 'admin',
+    () => isStaffRole(user?.staffRole) || user?.role === 'moderator',
     [user]
+  );
+  const isStaff = useMemo(
+    () => isAdmin,
+    [isAdmin]
   );
 
   const value = useMemo(
-    () => ({ user, isLoading, isAuthenticated: !!user, isAdmin, signIn, signOut, refreshUser, addAdmin, updateUser }),
-    [user, isLoading, isAdmin]
+    () => ({ user, isLoading, isAuthenticated: !!user, isAdmin, isStaff, signIn, signOut, refreshUser, addAdmin, updateUser }),
+    [user, isLoading, isAdmin, isStaff]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -189,6 +189,7 @@ export default function RealEstateSection() {
                           listingImage: p.imageUrl ?? p.image ?? '',
                           listingCategory: 'Real Estate',
                           sellerName: p.owner?.name ?? p.seller,
+                          sellerUserId: p.userId ?? p.owner?.id ?? p.owner?.userId ?? '',
                         });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
@@ -209,6 +210,7 @@ export default function RealEstateSection() {
                             listingImage: p.imageUrl ?? p.image,
                             listingCategory: 'Real Estate',
                             sellerName: p.agent ?? p.seller,
+                            sellerUserId: p.userId ?? p.owner?.id ?? p.owner?.userId ?? '',
                           });
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"

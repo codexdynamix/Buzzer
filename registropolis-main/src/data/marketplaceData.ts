@@ -1,5 +1,6 @@
 export interface MarketplaceListing {
   id: string;
+  userId?: string;
   title: string;
   price: number;
   originalPrice?: number;

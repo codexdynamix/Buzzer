@@ -133,6 +133,7 @@ export default function EventsSection() {
                 listingImage: featuredEvent.image ?? '',
                 listingCategory: 'Events',
                 sellerName: featuredEvent.owner?.name ?? featuredEvent.host ?? featuredEvent.seller,
+                sellerUserId: featuredEvent.userId ?? featuredEvent.owner?.id ?? featuredEvent.owner?.userId ?? '',
               })}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor='#ba965c'; (e.currentTarget as HTMLElement).style.transform='translateY(-1px)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor='#C9A96E'; (e.currentTarget as HTMLElement).style.transform=''; }}
@@ -199,6 +200,7 @@ export default function EventsSection() {
                             listingImage: e.image,
                             listingCategory: 'Events',
                             sellerName: e.host ?? e.seller,
+                            sellerUserId: e.userId ?? e.owner?.id ?? e.owner?.userId ?? '',
                           });
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
@@ -224,6 +226,7 @@ export default function EventsSection() {
                           listingImage: e.image ?? '',
                           listingCategory: 'Events',
                           sellerName: e.owner?.name ?? e.host ?? e.seller,
+                          sellerUserId: e.userId ?? e.owner?.id ?? e.owner?.userId ?? '',
                         });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"

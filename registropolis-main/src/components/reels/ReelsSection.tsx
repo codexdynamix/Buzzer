@@ -36,6 +36,8 @@ interface MusicTrack {
 
 interface Reel {
   id: string;
+  userId?: string;
+  sellerId?: string;
   seller: string;
   sellerAvatar: string;
   verified?: boolean;
@@ -1015,6 +1017,7 @@ export default function ReelsSection() {
       listingPrice: String(reel.price),
       listingImage: reel.posterUrl,
       listingCategory: reel.category,
+      sellerUserId: reel.userId ?? reel.sellerId ?? '',
     });
     navigate('/dashboard/messages');
   };

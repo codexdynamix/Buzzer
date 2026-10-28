@@ -25,11 +25,9 @@ export interface ModerationItem {
   status: string;
   createdAt: string;
   seller: string;
-  sellerEmail: string;
-  sellerLocation?: string;
   sellerAvatar?: string;
-  sellerPhone?: string;
-  riskScore: number;
+  activeRestrictionCount: number;
+  riskScore: number | null;
   riskFlags: string[];
   riskSummary: string;
   data: Record<string, any>;
@@ -53,6 +51,7 @@ export const AdminModerationQueue: React.FC = () => {
         },
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to load moderation queue');
       if (data.success) {
         setItems(data.items || []);
         setCurrentIndex(0);
@@ -88,6 +87,7 @@ export const AdminModerationQueue: React.FC = () => {
         body: JSON.stringify({ listingId, decision, reason: reason || cannedReason }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to submit moderation decision');
       if (data.success) {
         toast.success(
           decision === 'approve' 
@@ -119,13 +119,15 @@ export const AdminModerationQueue: React.FC = () => {
         body: JSON.stringify({ listingIds: Array.from(selectedIds), decision: 'approve' }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Bulk approval failed');
       if (data.success) {
-        toast.success(`Batch approved ${selectedIds.size} listings`);
-        setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
-        setSelectedIds(new Set());
+        toast.success(data.message || `Batch processed ${data.modifiedCount} listings`);
+        const modified = new Set<string>(data.modifiedIds || []);
+        setItems(prev => prev.filter(item => !modified.has(item.id)));
+        setSelectedIds(new Set(data.failedIds || []));
       }
-    } catch {
-      toast.error('Bulk approval failed');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Bulk approval failed');
     }
   };
 
@@ -252,16 +254,18 @@ export const AdminModerationQueue: React.FC = () => {
 
             {/* Automated Risk Alert Banner */}
             <div className={`p-4 border-b flex items-start gap-3 ${
-              currentItem.riskScore > 75 
+              currentItem.riskScore !== null && currentItem.riskScore > 75
                 ? 'bg-red-950/40 border-red-800/60 text-red-200' 
-                : currentItem.riskScore > 50 
+                : currentItem.riskScore !== null && currentItem.riskScore > 50
                   ? 'bg-amber-950/40 border-amber-800/60 text-amber-200'
-                  : 'bg-emerald-950/40 border-emerald-800/60 text-emerald-200'
+                  : 'bg-slate-900/40 border-slate-700/60 text-slate-200'
             }`}>
               <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-bold text-sm">Automated Risk Score: {currentItem.riskScore}/100</span>
+                  <span className="font-bold text-sm">
+                    {currentItem.riskScore === null ? 'No automated risk assessment' : `Automated Risk Score: ${currentItem.riskScore}/100`}
+                  </span>
                   <div className="flex gap-1.5 flex-wrap">
                     {currentItem.riskFlags.map((flag, idx) => (
                       <span key={idx} className="px-2 py-0.5 text-[10px] font-mono font-bold bg-black/40 rounded-full">
@@ -363,19 +367,20 @@ export const AdminModerationQueue: React.FC = () => {
                 </div>
                 <div>
                   <div className="font-semibold text-white text-sm">{currentItem.seller}</div>
-                  <div className="text-xs text-slate-400">{currentItem.sellerEmail}</div>
-                  <div className="text-[11px] text-slate-400">{currentItem.sellerLocation || 'Local Member'}</div>
+                  <div className="text-[11px] text-slate-400">Contact details hidden for moderation</div>
                 </div>
               </div>
 
               <div className="space-y-2 text-xs border-t border-slate-700/60 pt-3">
                 <div className="flex justify-between text-slate-300">
                   <span>Account Trust Rating:</span>
-                  <span className="font-bold text-emerald-400">98.4% Clean</span>
+                  <span className="font-bold text-slate-200">
+                    {currentItem.riskScore === null ? 'Not assessed' : `${currentItem.riskScore} risk score`}
+                  </span>
                 </div>
                 <div className="flex justify-between text-slate-300">
-                  <span>Previous Infractions:</span>
-                  <span className="font-bold text-slate-200">0 Strikes</span>
+                  <span>Active restrictions:</span>
+                  <span className="font-bold text-slate-200">{currentItem.activeRestrictionCount}</span>
                 </div>
                 <div className="flex justify-between text-slate-300">
                   <span>Community Longevity:</span>
@@ -467,14 +472,14 @@ export const AdminModerationQueue: React.FC = () => {
                     </td>
                     <td className="p-3">
                       <div>{item.seller}</div>
-                      <div className="text-slate-400 text-[10px]">{item.sellerEmail}</div>
+                      <div className="text-slate-400 text-[10px]">Contact details hidden</div>
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-1.5">
                         <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
-                          item.riskScore > 75 ? 'bg-red-950 text-red-300' : 'bg-amber-950 text-amber-300'
+                          item.riskScore !== null && item.riskScore > 75 ? 'bg-red-950 text-red-300' : 'bg-amber-950 text-amber-300'
                         }`}>
-                          Score: {item.riskScore}
+                          {item.riskScore === null ? 'Not scored' : `Score: ${item.riskScore}`}
                         </span>
                         <span className="text-[11px] text-slate-300 truncate max-w-xs">{item.riskSummary}</span>
                       </div>

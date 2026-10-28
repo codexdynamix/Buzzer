@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import type { StaffRole } from '@/config/adminAccess';
 
 type ApiSuccessResponse<T> = {
   success: boolean;
@@ -7,6 +8,7 @@ type ApiSuccessResponse<T> = {
   user?: any;
   token?: string;
   messages?: any[];
+  conversations?: any[];
   groups?: any[];
   stories?: any[];
   application?: any;
@@ -15,6 +17,9 @@ type ApiSuccessResponse<T> = {
   businesses?: any[];
   advertisements?: any[];
   business?: any;
+  results?: Array<{ type: string; id: string; label: string; detail?: string; href: string }>;
+  account?: any;
+  timeline?: any[];
 };
 
 const getAuthHeader = (): Record<string, string> => {
@@ -52,20 +57,42 @@ export const authAPI = {
   getCurrentUser: () => apiRequest('/auth/me'),
   refreshToken: () => apiRequest('/auth/refresh-token', 'POST'),
   logout: () => apiRequest('/auth/logout', 'POST'),
-  addAdmin: (email: string) => apiRequest('/admin/users/add-admin', 'POST', { email }),
+  addAdmin: (email: string, staffRole: StaffRole) =>
+    apiRequest('/admin/users/add-admin', 'POST', { email, staffRole }),
 };
 
 export const adminAPI = {
-  getUsers: () => apiRequest('/admin/users'),
+  getUsers: (unmaskPii = false) => apiRequest(`/admin/users${unmaskPii ? '?unmask=true' : ''}`),
+  getUserTimeline: (userId: string) => apiRequest(`/admin/users/${encodeURIComponent(userId)}/timeline`),
+  search: (query: string) => apiRequest(`/admin/search?q=${encodeURIComponent(query)}`),
   getDashboardStats: () => apiRequest('/admin/stats'),
   getMessages: () => apiRequest('/admin/messages'),
   getGroups: () => apiRequest('/admin/groups'),
-  addAdminRole: (email: string) => apiRequest('/admin/users/add-admin', 'POST', { email }),
+  addAdminRole: (email: string, staffRole: StaffRole) =>
+    apiRequest('/admin/users/add-admin', 'POST', { email, staffRole }),
 };
 
 export const messagesAPI = {
-  getMessages: (chatId: string) => apiRequest(`/messages/${chatId}`),
-  sendMessage: (chatId: string, content: string, replyTo?: any) => apiRequest('/messages', 'POST', { chatId, content, replyTo }),
+  getInbox: () => apiRequest('/messages'),
+  getMessages: (peerId: string) => apiRequest(`/messages/${encodeURIComponent(peerId)}`),
+  sendMessage: (
+    recipientId: string,
+    content: string,
+    replyTo?: { id: string; content: string; sender: string },
+    listing?: { id: string; title: string; price: string; image?: string; category: string },
+    offerData?: {
+      listingTitle: string;
+      listingImage?: string;
+      askingPrice: number;
+      offerPrice: number;
+      status: 'pending' | 'accepted' | 'declined' | 'countered' | 'expired';
+      isCounter?: boolean;
+      expiresAt?: number;
+    },
+  ) =>
+    apiRequest('/messages', 'POST', { recipientId, content, replyTo, listing, offerData }),
+  respondToOffer: (messageId: string, action: 'accept' | 'decline' | 'counter', offerPrice?: number) =>
+    apiRequest(`/messages/${encodeURIComponent(messageId)}/offer`, 'PATCH', { action, offerPrice }),
   updateMessageStatus: (messageId: string, status: 'sent' | 'delivered' | 'read') => apiRequest(`/messages/${messageId}/status`, 'PATCH', { status }),
 };
 

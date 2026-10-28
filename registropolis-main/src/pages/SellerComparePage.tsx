@@ -208,6 +208,7 @@ export default function SellerComparePage() {
         listingImage: seller.listings[0].image,
         listingCategory: 'Marketplace',
         sellerName: seller.name,
+        sellerUserId: seller.listings[0].userId ?? '',
       });
     }
   };

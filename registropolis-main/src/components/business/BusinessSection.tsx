@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -45,6 +45,7 @@ import VerificationBadge from '../common/VerificationBadge';
 import FilterPanel from '../common/FilterPanel';
 import { businessesAPI } from '@/services/apiService';
 import { useAuth } from '@/context/AuthContext';
+import { hasAdminPermission, isStaffRole } from '@/config/adminAccess';
 import { useChatContext } from '@/context/ChatContext';
 
 export interface BusinessItem {
@@ -94,11 +95,13 @@ const BusinessSection: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { openChatWithUser } = useChatContext();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [businesses, setBusinesses] = useState<BusinessItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [activeTab, setActiveTab] = useState<'all' | 'ads'>('all');
+  const activeTab: 'all' | 'ads' = searchParams.get('tab') === 'ads' ? 'ads' : 'all';
+  const setActiveTab = (tab: 'all' | 'ads') => setSearchParams(tab === 'ads' ? { tab: 'ads' } : {});
   const [isLoading, setIsLoading] = useState(true);
   const [appliedFilters, setAppliedFilters] = useState<Record<string, any>>({});
   
@@ -534,7 +537,10 @@ const BusinessSection: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredBusinesses.map((biz) => {
             const isOwner = user?.id === biz.ownerId;
-            const isAdmin = user?.role === 'admin';
+            const staffRole = isStaffRole(user?.staffRole) ? user.staffRole : undefined;
+            const canManageAds = staffRole
+              ? hasAdminPermission(staffRole, 'ads:manage')
+              : false;
 
             return (
               <Card 
@@ -661,7 +667,7 @@ const BusinessSection: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-1.5">
-                        {(isOwner || isAdmin) && (
+                        {(isOwner || canManageAds) && (
                           <Button 
                             variant="ghost" 
                             size="sm" 

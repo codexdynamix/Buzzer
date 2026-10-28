@@ -5,6 +5,7 @@ let socket: Socket | null = null;
 export function getSocket(): Socket {
   if (!socket) {
     socket = io('/', {
+      auth: { token: localStorage.getItem('auth_token') },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,

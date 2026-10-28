@@ -1,4 +1,5 @@
 import { UserActivity, UserRestriction } from '@/types/adminTypes';
+import type { StaffRole } from '@/config/adminAccess';
 import { BaseAdminService } from './BaseAdminService';
 import { loggingService } from './LoggingService';
 
@@ -35,7 +36,7 @@ export class UserManagementService extends BaseAdminService {
     }
   }
 
-  async updateUserRole(userId: string, newRole: 'user' | 'admin' | 'moderator'): Promise<void> {
+  async updateUserRole(userId: string, newRole: 'user' | StaffRole): Promise<void> {
     try {
       await apiFetch(`/admin/users/${userId}/role`, 'PATCH', { role: newRole });
     } catch (error) {
@@ -53,19 +54,26 @@ export class UserManagementService extends BaseAdminService {
     }
   }
 
-  async getUserActivities(_userId?: string, _limit: number = 100): Promise<UserActivity[]> {
-    return [];
+  async getUserActivities(userId?: string, limit: number = 100): Promise<UserActivity[]> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (userId) params.set('userId', userId);
+    const data = await apiFetch(`/admin/activity?${params}`);
+    return (data.activities || []).map((activity: UserActivity) => ({
+      ...activity,
+      userId: activity.performedBy || activity.userId,
+      actorName: activity.actorName,
+      timestamp: new Date(activity.timestamp),
+    }));
   }
 
   async getUserRestrictions(userId?: string): Promise<UserRestriction[]> {
-    try {
-      if (!userId) return [];
-      const data = await apiFetch(`/admin/users/${userId}/restrictions`);
-      return data.restrictions || [];
-    } catch (error) {
-      console.error('Error getting user restrictions:', error);
-      return [];
-    }
+    const path = userId ? `/admin/users/${userId}/restrictions` : '/admin/restrictions';
+    const data = await apiFetch(path);
+    return data.restrictions || [];
+  }
+
+  async liftRestriction(restrictionId: string): Promise<void> {
+    await apiFetch(`/admin/restrictions/${restrictionId}/lift`, 'PATCH');
   }
 
   async trackUserActivity(_activity: Omit<UserActivity, 'timestamp'>): Promise<void> {

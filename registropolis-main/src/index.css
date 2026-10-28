@@ -254,6 +254,146 @@
 }
 
 @layer utilities {
+  :root:has(.admin-shell) {
+    scrollbar-color: rgba(26, 51, 83, 0.32) transparent;
+    scrollbar-width: thin;
+  }
+
+  :root:has(.admin-shell)::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  :root:has(.admin-shell)::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  :root:has(.admin-shell)::-webkit-scrollbar-button,
+  .admin-shell *::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  :root:has(.admin-shell)::-webkit-scrollbar-thumb {
+    background: rgba(26, 51, 83, 0.28);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-radius: 999px;
+  }
+
+  :root:has(.admin-shell)::-webkit-scrollbar-thumb:hover {
+    background: rgba(26, 51, 83, 0.48);
+    background-clip: padding-box;
+  }
+
+  .admin-shell,
+  .admin-shell * {
+    scrollbar-color: rgba(26, 51, 83, 0.32) transparent;
+    scrollbar-width: thin;
+  }
+
+  .admin-shell [class*="bg-[#162C48]"],
+  .admin-shell [class*="bg-[#0F1923]"] {
+    border-color: hsl(var(--swiss-stone));
+    background-color: #ffffff;
+    color: hsl(var(--swiss-midnight));
+  }
+
+  .admin-shell [class*="bg-[#162C48]"] [class~="text-white"],
+  .admin-shell [class*="bg-[#0F1923]"] [class~="text-white"],
+  .admin-shell [class*="bg-[#162C48]"][class~="text-white"],
+  .admin-shell [class*="bg-[#0F1923]"][class~="text-white"] {
+    color: hsl(var(--swiss-midnight));
+  }
+
+  .admin-shell [class~="text-slate-400"] {
+    color: hsl(var(--swiss-slate));
+  }
+
+  .admin-shell [class~="text-slate-300"] {
+    color: #526070;
+  }
+
+  .admin-shell [class~="text-slate-200"] {
+    color: hsl(var(--swiss-midnight));
+  }
+
+  .admin-shell [class~="border-slate-700"],
+  .admin-shell [class~="border-slate-800"],
+  .admin-shell [class~="border-slate-700/60"],
+  .admin-shell [class~="border-slate-800/80"],
+  .admin-shell [class~="divide-slate-800"] > :not([hidden]) ~ :not([hidden]) {
+    border-color: hsl(var(--swiss-stone));
+  }
+
+  .admin-shell [class~="bg-slate-800"] {
+    background-color: hsl(var(--swiss-stone));
+    color: hsl(var(--swiss-navy));
+  }
+
+  .admin-shell tr:hover {
+    background-color: hsl(var(--swiss-ivory));
+  }
+
+  .admin-shell::-webkit-scrollbar,
+  .admin-shell *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .admin-shell::-webkit-scrollbar-track,
+  .admin-shell *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .admin-shell::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .admin-shell::-webkit-scrollbar-thumb,
+  .admin-shell *::-webkit-scrollbar-thumb {
+    background: rgba(26, 51, 83, 0.28);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-radius: 999px;
+  }
+
+  .admin-shell::-webkit-scrollbar-thumb:hover,
+  .admin-shell *::-webkit-scrollbar-thumb:hover {
+    background: rgba(26, 51, 83, 0.48);
+    background-clip: padding-box;
+  }
+
+  .admin-tab-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-tab-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .admin-workspace-panel {
+    padding: 1.25rem;
+  }
+
+  .admin-workspace-panel,
+  .admin-entry-card {
+    border: 1px solid hsl(var(--swiss-stone));
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 25, 35, 0.04), 0 4px 12px rgba(15, 25, 35, 0.03);
+  }
+
+  @media (max-width: 640px) {
+    .admin-workspace-panel {
+      padding: 1rem;
+    }
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

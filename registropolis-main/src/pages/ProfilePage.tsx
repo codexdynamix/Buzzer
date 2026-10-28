@@ -7,6 +7,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { isStaffRole } from '@/config/adminAccess';
 import { realAuthAPI } from '@/services/authService';
 import { toast } from 'sonner';
 import AppLayout from '@/components/layout/AppLayout';
@@ -187,9 +188,9 @@ export default function ProfilePage() {
                     >
                       Change photo
                     </button>
-                    {user?.role === 'admin' && (
+                    {(isStaffRole(user?.staffRole) || user?.role === 'moderator') && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#fef3c7', color: '#d97706' }}>
-                        Admin
+                        {user?.staffRole?.replace(/(^|-)(\w)/g, (_, separator, character) => `${separator ? ' ' : ''}${character.toUpperCase()}`) || 'Moderator'}
                       </span>
                     )}
                   </div>

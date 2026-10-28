@@ -290,6 +290,7 @@ export default function JobsSection() {
                           listingImage: '',
                           listingCategory: 'Jobs',
                           sellerName: job.company,
+                          sellerUserId: job.userId ?? job.employerId ?? job.owner?.id ?? '',
                         });
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all"

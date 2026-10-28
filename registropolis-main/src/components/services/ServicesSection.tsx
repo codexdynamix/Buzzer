@@ -158,6 +158,7 @@ export default function ServicesSection() {
                         listingImage: svc.imageUrl ?? svc.image ?? '',
                         listingCategory: 'Services',
                         sellerName: svc.owner?.name ?? svc.name,
+                        sellerUserId: svc.userId ?? svc.owner?.id ?? svc.owner?.userId ?? '',
                       });
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
@@ -177,6 +178,7 @@ export default function ServicesSection() {
                         listingImage: svc.imageUrl ?? svc.image ?? '',
                         listingCategory: 'Services',
                         sellerName: svc.owner?.name ?? svc.name,
+                        sellerUserId: svc.userId ?? svc.owner?.id ?? svc.owner?.userId ?? '',
                       });
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"

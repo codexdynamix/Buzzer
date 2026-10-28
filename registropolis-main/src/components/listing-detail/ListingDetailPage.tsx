@@ -252,6 +252,7 @@ export default function ListingDetailPage() {
                     listingImage: listing.image,
                     listingCategory: listing.category,
                     sellerName: listing.seller,
+                    sellerUserId: listing.userId ?? listing.owner?.id ?? listing.owner?.userId ?? '',
                   })}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
                   style={{ backgroundColor: '#1A3353', color: '#fff' }}
@@ -269,6 +270,7 @@ export default function ListingDetailPage() {
                     listingImage: listing.image,
                     listingCategory: listing.category,
                     sellerName: listing.seller,
+                    sellerUserId: listing.userId ?? listing.owner?.id ?? listing.owner?.userId ?? '',
                     triggerOffer: true,
                   })}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
@@ -923,6 +925,7 @@ export default function ListingDetailPage() {
                     listingImage: listing.image,
                     listingCategory: listing.category,
                     sellerName: listing.seller,
+                    sellerUserId: listing.userId ?? listing.owner?.id ?? listing.owner?.userId ?? '',
                   })}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
                   style={{ backgroundColor: '#1A3353', color: '#fff' }}

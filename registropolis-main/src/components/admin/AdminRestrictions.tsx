@@ -7,14 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Search, Calendar, Ban, User, UserX, Clock } from 'lucide-react';
+import { RefreshCw, Search, Ban, UserX, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { format } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
 
 import { useForm } from 'react-hook-form';
@@ -28,6 +27,24 @@ const restrictionSchema = z.object({
   }),
   reason: z.string().min(10, { message: "Reason must be at least 10 characters" }),
   endDate: z.string().optional(),
+}).superRefine((values, context) => {
+  if (values.type === 'ban') return;
+  if (!values.endDate) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['endDate'],
+      message: 'An end date is required for temporary restrictions',
+    });
+    return;
+  }
+  const endDate = new Date(values.endDate);
+  if (Number.isNaN(endDate.getTime()) || endDate <= new Date()) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['endDate'],
+      message: 'End date must be in the future',
+    });
+  }
 });
 
 type RestrictionFormValues = z.infer<typeof restrictionSchema>;
@@ -66,6 +83,18 @@ const AdminRestrictions: React.FC = () => {
     fetchRestrictions();
   }, []);
 
+  const liftRestriction = async (restriction: UserRestriction) => {
+    if (!window.confirm(`Lift the ${restriction.type} for ${restriction.userName || restriction.userId}?`)) return;
+    try {
+      await userManagementService.liftRestriction(restriction.id);
+      toast.success('Restriction lifted');
+      await fetchRestrictions();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to lift restriction');
+      console.error(error);
+    }
+  };
+
   const onSubmit = async (values: RestrictionFormValues) => {
     try {
       const restriction = {
@@ -82,7 +111,7 @@ const AdminRestrictions: React.FC = () => {
       form.reset();
       await fetchRestrictions();
     } catch (error) {
-      toast.error('Failed to restrict user');
+      toast.error(error instanceof Error ? error.message : 'Failed to restrict user');
       console.error(error);
     }
   };
@@ -255,20 +284,23 @@ const AdminRestrictions: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>User ID</TableHead>
+                  <TableHead>User</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Reason</TableHead>
                   <TableHead>Start Date</TableHead>
                   <TableHead>End Date</TableHead>
                   <TableHead>Created By</TableHead>
+                  <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredRestrictions.length > 0 ? (
                   filteredRestrictions.map((restriction) => (
-                    <TableRow key={`${restriction.userId}-${restriction.startDate.toString()}`}>
+                    <TableRow key={restriction.id}>
                       <TableCell className="font-medium">
                         {restriction.userId}
                       </TableCell>
+                      <TableCell>{restriction.userName || 'Deleted user'}</TableCell>
                       <TableCell>
                         <Badge className={getRestrictionColor(restriction.type)}>
                           {getRestrictionIcon(restriction.type)}
@@ -290,11 +322,16 @@ const AdminRestrictions: React.FC = () => {
                       <TableCell>
                         {restriction.createdBy}
                       </TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" onClick={() => void liftRestriction(restriction)}>
+                          Lift
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       {searchQuery ? 'No matching restrictions found' : 'No active restrictions'}
                     </TableCell>
                   </TableRow>

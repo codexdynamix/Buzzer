@@ -1,379 +1,436 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import {
+  Activity,
+  BarChart3,
+  BriefcaseBusiness,
+  CheckCircle,
+  CircleHelp,
+  Eye,
+  EyeOff,
+  LayoutDashboard,
+  LockKeyhole,
+  LogOut,
+  Megaphone,
+  Search,
+  Settings2,
+  Shield,
+  ShieldCheck,
+  Users,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import AdminRouteGuard from '@/components/admin/AdminRouteGuard';
-import AdminDashboard from '@/components/admin/AdminDashboard';
 import AdminUsers from '@/components/admin/AdminUsers';
-import AdminMessages from '@/components/admin/AdminMessages';
-import AdminGroups from '@/components/admin/AdminGroups';
 import AdminFeatures from '@/components/admin/AdminFeatures';
 import AdminUserActivity from '@/components/admin/AdminUserActivity';
 import AdminRestrictions from '@/components/admin/AdminRestrictions';
-import AdminServices from '@/components/admin/AdminServices';
 import AdminSupport from '@/components/admin/AdminSupport';
 import { AdminModerationQueue } from '@/components/admin/AdminModerationQueue';
 import { AdminVerificationDesk } from '@/components/admin/AdminVerificationDesk';
 import { AdminMerchantPortal } from '@/components/admin/AdminMerchantPortal';
-import { 
-  Shield, 
-  Zap, 
-  Award, 
-  Users, 
-  Megaphone, 
-  HelpCircle, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  Activity, 
-  Sliders, 
-  CheckCircle,
-  Search,
-  Sparkles,
-  BarChart3,
-  Server
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import {
+  ADMIN_TAB_PERMISSIONS,
+  hasAdminPermission,
+  isStaffRole,
+  type AdminTab,
+  type StaffRole,
+} from '@/config/adminAccess';
 
-export type StaffRole = 'superadmin' | 'operations' | 'moderator' | 'support';
-
-const STAFF_PROFILES: Record<StaffRole, { name: string; title: string; badge: string; color: string }> = {
-  superadmin: {
-    name: 'Alex Vance',
-    title: 'Platform Director & Superadmin',
-    badge: 'Super Admin',
-    color: 'bg-red-500/20 text-red-300 border-red-500/30',
-  },
-  operations: {
-    name: 'Elena Rostova',
-    title: 'Commercial Operations & Partner CRM',
-    badge: 'Ops Manager',
-    color: 'bg-[#C9A96E]/20 text-[#C9A96E] border-[#C9A96E]/40',
-  },
-  moderator: {
-    name: 'David Chen',
-    title: 'Trust & Safety Lead Moderator',
-    badge: 'Content Moderator',
-    color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-  },
-  support: {
-    name: 'Sarah Miller',
-    title: 'Customer Experience & Help Desk',
-    badge: 'Support Agent',
-    color: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  },
+type AdminKpis = {
+  totalUsers: number;
+  activeListings: number;
+  pendingModeration: number;
+  pendingVerifications: number;
+  openTickets: number;
+  sponsoredBusinesses: number;
 };
 
+type NavigationItem = {
+  id: AdminTab;
+  label: string;
+  group: 'OPERATIONS' | 'ADMINISTRATION';
+  icon: LucideIcon;
+};
+
+const STAFF_PROFILES: Record<StaffRole, { title: string; badge: string }> = {
+  superadmin: { title: 'Platform Director & Superadmin', badge: 'Super Admin' },
+  operations: { title: 'Commercial Operations & Partner CRM', badge: 'Ops Manager' },
+  moderator: { title: 'Trust & Safety Lead Moderator', badge: 'Content Moderator' },
+  support: { title: 'Customer Experience & Help Desk', badge: 'Support Specialist' },
+};
+
+const NAVIGATION: NavigationItem[] = [
+  { id: 'overview', label: 'Executive Overview', group: 'OPERATIONS', icon: LayoutDashboard },
+  { id: 'users', label: 'User & Merchant CRM', group: 'OPERATIONS', icon: Users },
+  { id: 'moderation', label: 'Catalog & Moderation', group: 'OPERATIONS', icon: BriefcaseBusiness },
+  { id: 'merchants', label: 'Business & Advertising', group: 'OPERATIONS', icon: Megaphone },
+  { id: 'verification', label: 'Verification Desk', group: 'OPERATIONS', icon: ShieldCheck },
+  { id: 'restrictions', label: 'Trust, Safety & Bans', group: 'OPERATIONS', icon: LockKeyhole },
+  { id: 'support', label: 'Help Desk & Support', group: 'OPERATIONS', icon: CircleHelp },
+  { id: 'analytics', label: 'Audit & Analytics', group: 'ADMINISTRATION', icon: BarChart3 },
+  { id: 'features', label: 'System Configuration', group: 'ADMINISTRATION', icon: Settings2 },
+];
+
+const EMPTY_KPIS: AdminKpis = {
+  totalUsers: 0,
+  activeListings: 0,
+  pendingModeration: 0,
+  pendingVerifications: 0,
+  openTickets: 0,
+  sponsoredBusinesses: 0,
+};
+
+const isAdminTab = (value: string | null): value is AdminTab =>
+  value !== null && Object.prototype.hasOwnProperty.call(ADMIN_TAB_PERMISSIONS, value);
+
 const Admin = () => {
+  const { user, signOut, refreshUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const requestedTab = searchParams.get('tab') as any;
-  const validTabs = ['moderation', 'verification', 'merchants', 'users', 'support', 'restrictions', 'features', 'analytics'];
-  const [activeTab, setActiveTab] = useState<'moderation' | 'verification' | 'merchants' | 'users' | 'support' | 'restrictions' | 'features' | 'analytics'>(
-    validTabs.includes(requestedTab) ? requestedTab : 'moderation'
+  const staffRole: StaffRole = isStaffRole(user?.staffRole)
+    ? user.staffRole
+    : user?.role === 'moderator'
+      ? 'moderator'
+      : 'support';
+  const staffProfile = STAFF_PROFILES[staffRole];
+  const allowedNavigation = useMemo(
+    () => NAVIGATION.filter(item => hasAdminPermission(staffRole, ADMIN_TAB_PERMISSIONS[item.id])),
+    [staffRole],
   );
-  const [staffRole, setStaffRole] = useState<StaffRole>('superadmin');
+  const requestedTab = searchParams.get('tab');
+  const activeTab = isAdminTab(requestedTab) &&
+    allowedNavigation.some(item => item.id === requestedTab)
+    ? requestedTab
+    : allowedNavigation[0]?.id ?? 'overview';
   const [piiMasked, setPiiMasked] = useState(true);
-  const [kpis, setKpis] = useState({
-    totalUsers: 31,
-    activeListings: 30,
-    pendingModeration: 4,
-    pendingVerifications: 3,
-    openTickets: 2,
-    sponsoredBusinesses: 3,
-  });
+  const [kpis, setKpis] = useState<AdminKpis>(EMPTY_KPIS);
+  const [isLoadingKpis, setIsLoadingKpis] = useState(true);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{
+    type: string;
+    id: string;
+    label: string;
+    detail?: string;
+    href: string;
+  }>>([]);
+  const [searchError, setSearchError] = useState('');
 
   useEffect(() => {
-    fetch('/api/admin/crm/overview', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}` },
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.kpis) {
-          setKpis(data.kpis);
-        }
-      })
-      .catch(() => {});
-  }, [activeTab]);
+    if (!isAdminTab(requestedTab) || !allowedNavigation.some(item => item.id === requestedTab)) {
+      setSearchParams({ tab: activeTab }, { replace: true });
+    }
+  }, [activeTab, allowedNavigation, requestedTab, setSearchParams]);
 
-  const selectTab = (tab: typeof activeTab) => {
-    setActiveTab(tab);
+  useEffect(() => {
+    const controller = new AbortController();
+    const fetchOverview = async () => {
+      try {
+        setIsLoadingKpis(true);
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch('/api/admin/crm/overview', {
+          headers: token ? { Authorization: 'Bearer'.concat(' ', token) } : {},
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not load operations overview');
+        if (data.success && data.kpis) setKpis(data.kpis);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        toast.error(error instanceof Error ? error.message : 'Could not load operations overview');
+        console.error('Failed to load admin overview:', error);
+      } finally {
+        if (!controller.signal.aborted) setIsLoadingKpis(false);
+      }
+    };
+
+    void fetchOverview();
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const query = globalSearch.trim();
+    if (query.length < 2) {
+      setSearchResults([]);
+      setSearchError('');
+      return;
+    }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      try {
+        setSearchError('');
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`/api/admin/search?q=${encodeURIComponent(query)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Search failed');
+        setSearchResults(data.results || []);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setSearchError(error instanceof Error ? error.message : 'Search failed');
+        setSearchResults([]);
+      }
+    }, 250);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [globalSearch]);
+
+  const openSearchResult = (href: string) => {
+    const url = new URL(href, window.location.origin);
+    setSearchParams(Object.fromEntries(url.searchParams.entries()));
+    setGlobalSearch('');
+    setSearchResults([]);
+  };
+
+  const selectTab = (tab: AdminTab) => {
+    if (!allowedNavigation.some(item => item.id === tab)) return;
     setSearchParams({ tab });
   };
 
-  const switchStaffPersona = async (role: StaffRole) => {
-    setStaffRole(role);
+  const switchDemoRole = async (role: StaffRole) => {
     try {
-      const res = await fetch('/api/admin/auth/staff-token', {
+      const response = await fetch('/api/admin/auth/staff-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role }),
       });
-      const data = await res.json();
-      if (data.token) {
-        localStorage.setItem('auth_token', data.token);
-      }
-    } catch (e) {
-      console.error(e);
+      const data = await response.json();
+      if (!response.ok || !data.token) throw new Error(data.message || 'Could not switch demo role');
+      localStorage.setItem('auth_token', data.token);
+      await refreshUser();
+      const firstTab = NAVIGATION.find(item => hasAdminPermission(role, ADMIN_TAB_PERMISSIONS[item.id]));
+      if (firstTab) setSearchParams({ tab: firstTab.id });
+      toast.info(`Development role: ${STAFF_PROFILES[role].badge}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not switch demo role');
     }
-    toast.info(`Active staff persona: ${STAFF_PROFILES[role].name} (${STAFF_PROFILES[role].badge})`);
-    
-    // Auto-route to role's primary workspace
-    if (role === 'moderator') selectTab('moderation');
-    else if (role === 'operations') selectTab('merchants');
-    else if (role === 'support') selectTab('support');
   };
 
-  const currentProfile = STAFF_PROFILES[staffRole];
+  const canRevealPii = hasAdminPermission(staffRole, 'users:pii');
+  const sections = (['OPERATIONS', 'ADMINISTRATION'] as const).map(group => ({
+    group,
+    items: allowedNavigation.filter(item => item.group === group),
+  })).filter(section => section.items.length > 0);
+
+  const summaryCards = [
+    { label: 'Platform members', value: kpis.totalUsers, icon: Users, tone: 'navy' },
+    { label: 'Live listings', value: kpis.activeListings, icon: BriefcaseBusiness, tone: 'navy' },
+    { label: 'Awaiting review', value: kpis.pendingModeration, icon: Zap, tone: 'gold', tab: 'moderation' as const },
+    { label: 'Verifications', value: kpis.pendingVerifications, icon: ShieldCheck, tone: 'gold', tab: 'verification' as const },
+    { label: 'Open support tickets', value: kpis.openTickets, icon: CircleHelp, tone: 'navy', tab: 'support' as const },
+    { label: 'Promoted businesses', value: kpis.sponsoredBusinesses, icon: Megaphone, tone: 'green', tab: 'merchants' as const },
+  ];
 
   return (
     <AdminRouteGuard>
-      <div className="min-h-screen bg-[#0B1118] text-[#FAFAF7]">
-        {/* Top Operational Navigation Bar */}
-        <header className="sticky top-0 z-40 bg-[#0F1923]/90 border-b border-[#E8E2D8]/15 backdrop-blur-xl px-4 lg:px-8 py-3.5">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-            {/* Platform Branding & Live Telemetry */}
+      <div className="admin-shell min-h-screen bg-[#FAFAF7] text-[#0F1923]">
+        <header className="sticky top-0 z-40 border-b border-[#E8E2D8] bg-[#FAFAF7]/95 px-4 py-3 backdrop-blur-xl lg:px-7">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1A3353] to-[#0F1923] border border-[#C9A96E]/50 flex items-center justify-center text-[#C9A96E] font-black tracking-tight shadow">
-                BZ
-              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#C9A96E]/50 bg-[#1A3353] font-black text-[#C9A96E] shadow-sm">BZ</div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="font-extrabold text-base tracking-tight text-white">BUZZER OPS & CRM</h1>
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    LIVE WORKSPACE
-                  </span>
-                </div>
-                <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                  <span>Engine: Multi-Vertical In-Memory Store</span>
-                  <span>•</span>
-                  <span>Uptime: 99.98%</span>
-                </div>
+                <h1 className="font-extrabold tracking-tight text-[#0F1923]">BUZZER OPERATIONS</h1>
+                <p className="text-[11px] text-[#6E7A8A]">Back-office workspace</p>
               </div>
             </div>
-
-            {/* Controls: Persona Switcher & PII Masking */}
-            <div className="flex items-center gap-2.5 flex-wrap">
-              {/* PII Masking Toggle */}
-              <button
-                onClick={() => {
-                  setPiiMasked(!piiMasked);
-                  toast(piiMasked ? 'PII Unmasked for Audit Review' : 'PII Masking Active (GDPR Enforced)');
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#162C48]/60 hover:bg-[#162C48] text-xs font-semibold border border-slate-700 transition-all cursor-pointer text-slate-300"
-                title="Simulates GDPR compliance by masking phone numbers and emails"
-              >
-                {piiMasked ? <EyeOff size={13} className="text-amber-400" /> : <Eye size={13} className="text-emerald-400" />}
-                <span>PII {piiMasked ? 'Masked' : 'Revealed'}</span>
-              </button>
-
-              {/* Staff Role Switcher */}
-              <div className="flex items-center gap-1.5 bg-[#162C48]/60 border border-slate-700 rounded-xl p-1">
-                <span className="text-[11px] text-slate-400 pl-2 pr-1 font-medium hidden sm:inline">Role:</span>
-                {(['superadmin', 'operations', 'moderator', 'support'] as StaffRole[]).map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => switchStaffPersona(r)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      staffRole === r
-                        ? 'bg-[#C9A96E] text-[#0F1923] font-bold shadow'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
+            <div className="relative order-3 w-full max-w-xl lg:order-none lg:flex-1 lg:px-6">
+              <div className="relative">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#87909A]" />
+                <input
+                  type="search"
+                  value={globalSearch}
+                  onChange={event => setGlobalSearch(event.target.value)}
+                  placeholder="Search users, listings, businesses, tickets…"
+                  aria-label="Search CRM records"
+                  className="w-full rounded-xl border border-[#E8E2D8] bg-white py-2 pl-9 pr-3 text-xs outline-none focus:border-[#C9A96E]"
+                />
+              </div>
+              {globalSearch.trim().length >= 2 && (
+                <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-xl border border-[#E8E2D8] bg-white p-2 shadow-xl lg:left-6">
+                  {searchError ? (
+                    <p className="p-3 text-xs text-red-600">{searchError}</p>
+                  ) : searchResults.length ? searchResults.map(result => (
+                    <button
+                      key={`${result.type}-${result.id}`}
+                      type="button"
+                      onClick={() => openSearchResult(result.href)}
+                      className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#F5F0E8]"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-semibold text-[#1A3353]">{result.label}</span>
+                        <span className="block truncate text-[10px] text-[#6E7A8A]">{result.type} · {result.detail || result.id}</span>
+                      </span>
+                      <span className="text-[10px] text-[#87909A]">Open</span>
+                    </button>
+                  )) : (
+                    <p className="p-3 text-xs text-[#6E7A8A]">No matching records.</p>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {canRevealPii && activeTab === 'users' && (
+                <button
+                  type="button"
+                  onClick={() => setPiiMasked(value => !value)}
+                  className="flex items-center gap-1.5 rounded-xl border border-[#E8E2D8] bg-white px-3 py-2 text-xs font-semibold text-[#1A3353] hover:bg-[#F5F0E8]"
+                  aria-pressed={!piiMasked}
+                >
+                  {piiMasked ? <EyeOff size={14} /> : <Eye size={14} />}
+                  {piiMasked ? 'PII masked' : 'PII visible'}
+                </button>
+              )}
+              {import.meta.env.DEV && user?.demoStaff && (
+                <label className="flex items-center gap-2 rounded-xl border border-[#E8E2D8] bg-white px-2.5 py-1.5 text-xs text-[#526070]">
+                  Demo role
+                  <select
+                    value={staffRole}
+                    onChange={event => void switchDemoRole(event.target.value as StaffRole)}
+                    className="rounded-lg border border-[#E8E2D8] bg-white px-2 py-1 font-semibold text-[#1A3353]"
+                    aria-label="Switch development demo role"
                   >
-                    {r === 'superadmin' ? 'Superadmin' : r === 'operations' ? 'Ops/B2B' : r === 'moderator' ? 'Moderator' : 'Support'}
-                  </button>
-                ))}
+                    {Object.entries(STAFF_PROFILES).map(([role, profile]) => (
+                      <option key={role} value={role}>{profile.badge}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <div className="hidden text-right sm:block">
+                <div className="text-xs font-bold">{user?.name || 'Staff member'}</div>
+                <div className="text-[10px] text-[#6E7A8A]">{user?.staffTitle || staffProfile.title}</div>
               </div>
-
-              {/* Active User Chip */}
-              <div className="hidden lg:flex items-center gap-2 pl-2 border-l border-slate-700">
-                <div className="text-right">
-                  <div className="text-xs font-bold text-white">{currentProfile.name}</div>
-                  <div className="text-[10px] text-slate-400">{currentProfile.title}</div>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-[#1A3353] border border-[#C9A96E]/40 flex items-center justify-center text-xs font-bold text-[#C9A96E]">
-                  {currentProfile.name[0]}
-                </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#C9A96E]/50 bg-[#F5F0E8] text-sm font-bold text-[#1A3353]" aria-hidden="true">
+                {(user?.name || 'S').charAt(0)}
               </div>
-
-              {/* Exit to Marketplace Link */}
-              <a
-                href="/dashboard"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C9A96E]/15 hover:bg-[#C9A96E]/25 border border-[#C9A96E]/40 text-xs font-bold text-[#C9A96E] transition-all cursor-pointer ml-1"
-                title="Return to consumer marketplace view"
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="flex items-center gap-1.5 rounded-xl border border-[#E8E2D8] bg-white px-3 py-2 text-xs font-semibold text-[#6E7A8A] hover:border-red-200 hover:bg-red-50 hover:text-red-700"
               >
-                <span>Marketplace</span>
-                <span>&rarr;</span>
-              </a>
+                <LogOut size={14} />
+                <span>Sign out</span>
+              </button>
             </div>
           </div>
         </header>
 
-        {/* Live KPI Ticker */}
-        <section className="bg-[#121B24] border-b border-slate-800/80 px-4 lg:px-8 py-3">
-          <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
-            <div className="bg-[#162C48]/30 border border-slate-800 p-2.5 rounded-xl">
-              <span className="text-slate-400 block text-[10px] uppercase font-semibold">Active Members</span>
-              <strong className="text-base font-bold text-white">{kpis.totalUsers} accounts</strong>
+        <div className="mx-auto grid min-h-[calc(100vh-65px)] max-w-[1600px] lg:grid-cols-[248px_minmax(0,1fr)]">
+          <aside className="border-b border-[#E8E2D8] bg-white/70 p-3 lg:sticky lg:top-[65px] lg:h-[calc(100vh-65px)] lg:overflow-y-auto lg:border-b-0 lg:border-r lg:p-4">
+            <nav aria-label="Back-office modules" className="admin-tab-scroll flex gap-2 overflow-x-auto lg:block lg:space-y-5">
+              {sections.map(section => (
+                <div key={section.group} className="shrink-0 lg:space-y-1">
+                  <div className="hidden px-3 pb-1 text-[10px] font-bold tracking-[0.12em] text-[#87909A] lg:block">
+                    {section.group}
+                  </div>
+                  {section.items.map(item => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => selectTab(item.id)}
+                        aria-current={isActive ? 'page' : undefined}
+                        className={`flex min-h-10 items-center gap-3 whitespace-nowrap rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-colors lg:w-full ${
+                          isActive
+                            ? 'bg-[#1A3353] text-white shadow-sm'
+                            : 'text-[#526070] hover:bg-[#F5F0E8] hover:text-[#1A3353]'
+                        }`}
+                      >
+                        <Icon size={16} className={isActive ? 'text-[#C9A96E]' : 'text-[#6E7A8A]'} />
+                        <span>{item.label}</span>
+                        {item.id === 'support' && kpis.openTickets > 0 && (
+                          <span className="ml-auto rounded-full bg-[#C9A96E] px-1.5 py-0.5 text-[10px] font-bold text-[#0F1923]">{kpis.openTickets}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </nav>
+            <div className="mt-6 hidden rounded-xl border border-[#E8E2D8] bg-[#F5F0E8] p-3 lg:block">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#1A3353]">
+                <Activity size={14} className="text-emerald-600" />
+                Staff access active
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-[#6E7A8A]">
+                Your role controls which modules and actions are available.
+              </p>
             </div>
-            <div className="bg-[#162C48]/30 border border-slate-800 p-2.5 rounded-xl">
-              <span className="text-slate-400 block text-[10px] uppercase font-semibold">Catalog Listings</span>
-              <strong className="text-base font-bold text-white">{kpis.activeListings} live</strong>
-            </div>
-            <div className={`p-2.5 rounded-xl border ${kpis.pendingModeration > 0 ? 'bg-amber-950/20 border-amber-800/40 text-amber-200' : 'bg-[#162C48]/30 border-slate-800'}`}>
-              <span className="text-slate-400 block text-[10px] uppercase font-semibold">OLX Review Queue</span>
-              <strong className="text-base font-bold text-amber-400">{kpis.pendingModeration} items</strong>
-            </div>
-            <div className={`p-2.5 rounded-xl border ${kpis.pendingVerifications > 0 ? 'bg-[#C9A96E]/10 border-[#C9A96E]/30 text-yellow-200' : 'bg-[#162C48]/30 border-slate-800'}`}>
-              <span className="text-slate-400 block text-[10px] uppercase font-semibold">Rieltor Desks</span>
-              <strong className="text-base font-bold text-[#C9A96E]">{kpis.pendingVerifications} audits</strong>
-            </div>
-            <div className="bg-[#162C48]/30 border border-slate-800 p-2.5 rounded-xl">
-              <span className="text-slate-400 block text-[10px] uppercase font-semibold">Open Support SLAs</span>
-              <strong className="text-base font-bold text-blue-400">{kpis.openTickets} tickets</strong>
-            </div>
-            <div className="bg-[#162C48]/30 border border-slate-800 p-2.5 rounded-xl">
-              <span className="text-slate-400 block text-[10px] uppercase font-semibold">B2B Advertisers</span>
-              <strong className="text-base font-bold text-emerald-400">{kpis.sponsoredBusinesses} promoted</strong>
-            </div>
-          </div>
-        </section>
+          </aside>
 
-        {/* Workspace Hub Container */}
-        <main className="max-w-7xl mx-auto px-4 lg:px-8 py-8 space-y-6">
-          {/* Main Navigation Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800 scrollbar-none">
-            <button
-              onClick={() => selectTab('moderation')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'moderation'
-                  ? 'bg-gradient-to-r from-[#1A3353] to-[#162C48] text-[#C9A96E] border border-[#C9A96E]/50 shadow'
-                  : 'text-slate-300 hover:text-white bg-[#162C48]/20 border border-transparent'
-              }`}
-            >
-              <Zap size={15} className="text-amber-400" />
-              <span>Speed Moderation Queue</span>
-              {kpis.pendingModeration > 0 && (
-                <span className="px-1.5 py-0.2 bg-amber-500 text-black rounded-full text-[10px] font-black">
-                  {kpis.pendingModeration}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => selectTab('verification')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'verification'
-                  ? 'bg-gradient-to-r from-[#1A3353] to-[#162C48] text-[#C9A96E] border border-[#C9A96E]/50 shadow'
-                  : 'text-slate-300 hover:text-white bg-[#162C48]/20 border border-transparent'
-              }`}
-            >
-              <Award size={15} className="text-[#C9A96E]" />
-              <span>Trust & Accreditation Desk</span>
-              {kpis.pendingVerifications > 0 && (
-                <span className="px-1.5 py-0.2 bg-[#C9A96E] text-black rounded-full text-[10px] font-black">
-                  {kpis.pendingVerifications}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => selectTab('merchants')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'merchants'
-                  ? 'bg-gradient-to-r from-[#1A3353] to-[#162C48] text-[#C9A96E] border border-[#C9A96E]/50 shadow'
-                  : 'text-slate-300 hover:text-white bg-[#162C48]/20 border border-transparent'
-              }`}
-            >
-              <Megaphone size={15} className="text-emerald-400" />
-              <span>Booking Extranet & Ads CRM</span>
-            </button>
-
-            <button
-              onClick={() => selectTab('users')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'users'
-                  ? 'bg-gradient-to-r from-[#1A3353] to-[#162C48] text-[#C9A96E] border border-[#C9A96E]/50 shadow'
-                  : 'text-slate-300 hover:text-white bg-[#162C48]/20 border border-transparent'
-              }`}
-            >
-              <Users size={15} className="text-blue-400" />
-              <span>Customer 360 CRM</span>
-            </button>
-
-            <button
-              onClick={() => selectTab('support')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'support'
-                  ? 'bg-gradient-to-r from-[#1A3353] to-[#162C48] text-[#C9A96E] border border-[#C9A96E]/50 shadow'
-                  : 'text-slate-300 hover:text-white bg-[#162C48]/20 border border-transparent'
-              }`}
-            >
-              <HelpCircle size={15} className="text-purple-400" />
-              <span>Help Desk & Disputes</span>
-              {kpis.openTickets > 0 && (
-                <span className="px-1.5 py-0.2 bg-blue-500 text-white rounded-full text-[10px] font-black">
-                  {kpis.openTickets}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => selectTab('restrictions')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'restrictions'
-                  ? 'bg-gradient-to-r from-[#1A3353] to-[#162C48] text-[#C9A96E] border border-[#C9A96E]/50 shadow'
-                  : 'text-slate-300 hover:text-white bg-[#162C48]/20 border border-transparent'
-              }`}
-            >
-              <Lock size={15} className="text-red-400" />
-              <span>Bans & Restrictions</span>
-            </button>
-
-            {staffRole === 'superadmin' && (
-              <button
-                onClick={() => selectTab('features')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                  activeTab === 'features'
-                    ? 'bg-gradient-to-r from-[#1A3353] to-[#162C48] text-[#C9A96E] border border-[#C9A96E]/50 shadow'
-                    : 'text-slate-300 hover:text-white bg-[#162C48]/20 border border-transparent'
-                }`}
-              >
-                <Sliders size={15} className="text-[#C9A96E]" />
-                <span>Superadmin Flags & Logs</span>
-              </button>
-            )}
-
-            {staffRole === 'superadmin' && (
-              <button
-                onClick={() => selectTab('analytics')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                  activeTab === 'analytics'
-                    ? 'bg-gradient-to-r from-[#1A3353] to-[#162C48] text-[#C9A96E] border border-[#C9A96E]/50 shadow'
-                    : 'text-slate-300 hover:text-white bg-[#162C48]/20 border border-transparent'
-                }`}
-              >
-                <BarChart3 size={15} className="text-cyan-400" />
-                <span>System Analytics</span>
-              </button>
-            )}
-          </div>
-
-          {/* Tab Viewports */}
-          <div className="transition-all duration-200">
-            {activeTab === 'moderation' && <AdminModerationQueue />}
-            {activeTab === 'verification' && <AdminVerificationDesk />}
-            {activeTab === 'merchants' && <AdminMerchantPortal />}
-            {activeTab === 'users' && <AdminUsers />}
-            {activeTab === 'support' && <AdminSupport />}
-            {activeTab === 'restrictions' && <AdminRestrictions />}
-            {activeTab === 'features' && (
+          <main className="min-w-0 p-4 sm:p-6 lg:p-8">
+            {activeTab === 'overview' && (
               <div className="space-y-6">
-                <AdminFeatures />
-                <AdminDashboard />
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#8A6A32]">Operations center</p>
+                    <h2 className="mt-1 text-2xl font-bold tracking-tight">Executive Overview</h2>
+                    <p className="mt-1 text-sm text-[#6E7A8A]">Platform activity and the work that needs attention.</p>
+                  </div>
+                  <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                    Workspace operational
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {summaryCards.map(card => {
+                    const Icon = card.icon;
+                    const isActionable = card.tab && allowedNavigation.some(item => item.id === card.tab);
+                    return (
+                      <button
+                        key={card.label}
+                        type="button"
+                        disabled={!isActionable}
+                        onClick={() => card.tab && selectTab(card.tab)}
+                        className={`rounded-2xl border border-[#E8E2D8] bg-white p-4 text-left shadow-[0_1px_3px_rgba(15,25,35,0.04)] ${isActionable ? 'transition hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default'}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-[#6E7A8A]">{card.label}</span>
+                          <Icon size={16} className={card.tone === 'gold' ? 'text-[#A27B37]' : card.tone === 'green' ? 'text-emerald-600' : 'text-[#1A3353]'} />
+                        </div>
+                        <div className="mt-3 text-2xl font-bold text-[#0F1923]">
+                          {isLoadingKpis ? <span className="text-[#AAB1B9]">—</span> : card.value.toLocaleString()}
+                        </div>
+                        {isActionable && <div className="mt-2 text-[11px] font-semibold text-[#1A3353]">Open module →</div>}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="rounded-2xl border border-[#E8E2D8] bg-white p-5 shadow-[0_1px_3px_rgba(15,25,35,0.04)]">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle size={17} className="text-emerald-600" />
+                    <h3 className="font-semibold">Your operational modules</h3>
+                  </div>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {allowedNavigation.filter(item => item.id !== 'overview').map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => selectTab(item.id)}
+                        className="flex items-center gap-2 rounded-xl border border-[#E8E2D8] px-3 py-3 text-left text-xs font-semibold text-[#526070] hover:bg-[#F5F0E8] hover:text-[#1A3353]"
+                      >
+                        <item.icon size={15} className="text-[#8A6A32]" />
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
+            {activeTab === 'users' && <AdminUsers piiMasked={piiMasked} canManageUsers={hasAdminPermission(staffRole, 'users:write')} canRestrictUsers={hasAdminPermission(staffRole, 'users:ban')} />}
+            {activeTab === 'moderation' && <AdminModerationQueue />}
+            {activeTab === 'merchants' && <AdminMerchantPortal />}
+            {activeTab === 'verification' && <AdminVerificationDesk />}
+            {activeTab === 'restrictions' && <AdminRestrictions />}
+            {activeTab === 'support' && <AdminSupport />}
+            {activeTab === 'features' && <AdminFeatures />}
             {activeTab === 'analytics' && <AdminUserActivity />}
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </AdminRouteGuard>
   );

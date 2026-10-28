@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
+const apiTarget = process.env.API_TARGET || "http://localhost:3000";
+
 export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0",
@@ -9,11 +11,11 @@ export default defineConfig(({ mode }) => ({
     allowedHosts: true,
     proxy: {
       "/api": {
-        target: "http://localhost:3001",
+        target: apiTarget,
         changeOrigin: true,
       },
       "/socket.io": {
-        target: "http://localhost:3001",
+        target: apiTarget,
         changeOrigin: true,
         ws: true,
       },

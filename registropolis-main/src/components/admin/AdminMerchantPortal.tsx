@@ -30,10 +30,10 @@ export interface MerchantItem {
   isSponsored: boolean;
   adHeadline?: string;
   adTag?: string;
-  impressions: number;
-  clicks: number;
-  ctr: string;
-  leadsGenerated: number;
+  impressions: number | null;
+  clicks: number | null;
+  ctr: string | null;
+  leadsGenerated: number | null;
   tier: string;
 }
 
@@ -99,8 +99,6 @@ export const AdminMerchantPortal: React.FC = () => {
     return true;
   });
 
-  const totalImpressions = merchants.reduce((sum, m) => sum + m.impressions, 0);
-  const totalClicks = merchants.reduce((sum, m) => sum + m.clicks, 0);
   const sponsoredCount = merchants.filter(m => m.isSponsored).length;
 
   return (
@@ -127,16 +125,16 @@ export const AdminMerchantPortal: React.FC = () => {
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
             <Eye size={14} className="text-blue-400" /> Ad Impressions (30d)
           </div>
-          <div className="text-2xl font-bold text-white">{(totalImpressions / 1000).toFixed(1)}k Views</div>
-          <div className="text-xs text-emerald-400 mt-1">+14.2% month-over-month</div>
+          <div className="text-2xl font-bold text-white">Not tracked</div>
+          <div className="text-xs text-slate-400 mt-1">Impression analytics are not connected</div>
         </div>
 
         <div className="bg-[#162C48]/40 border border-[#E8E2D8]/20 rounded-2xl p-5 backdrop-blur-md">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
             <MousePointerClick size={14} className="text-emerald-400" /> Customer Actions
           </div>
-          <div className="text-2xl font-bold text-emerald-400">{totalClicks} Inquiries</div>
-          <div className="text-xs text-slate-400 mt-1">Calls, directions & chats</div>
+          <div className="text-2xl font-bold text-emerald-400">Not tracked</div>
+          <div className="text-xs text-slate-400 mt-1">Lead attribution is not connected</div>
         </div>
       </div>
 
@@ -223,15 +221,15 @@ export const AdminMerchantPortal: React.FC = () => {
                     </td>
 
                     <td className="p-3.5 font-mono text-slate-200">
-                      <strong>{merchant.impressions.toLocaleString()}</strong> views
+                      {merchant.impressions === null ? 'Not tracked' : `${merchant.impressions.toLocaleString()} views`}
                     </td>
 
                     <td className="p-3.5 font-mono text-emerald-400">
-                      <strong>{merchant.clicks}</strong> leads
+                      {merchant.clicks === null ? 'Not tracked' : `${merchant.clicks} leads`}
                     </td>
 
                     <td className="p-3.5 font-mono text-slate-200">
-                      {merchant.ctr}
+                      {merchant.ctr ?? '—'}
                     </td>
 
                     <td className="p-3.5">

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Search, Filter, Download, Eye } from 'lucide-react';
+import { RefreshCw, Search, Download, Eye } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -45,7 +45,7 @@ const AdminUserActivity: React.FC = () => {
       
       const a = document.createElement('a');
       a.href = url;
-      a.download = `user-activities-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `staff-audit-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -60,9 +60,9 @@ const AdminUserActivity: React.FC = () => {
 
   const filteredActivities = activities.filter(activity => {
     const matchesSearch = 
-      activity.userId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      activity.userId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       activity.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (activity.ip && activity.ip.includes(searchQuery));
+      (activity.actorName && activity.actorName.toLowerCase().includes(searchQuery.toLowerCase()));
       
     if (filterType === 'all') return matchesSearch;
     return matchesSearch && activity.action.includes(filterType);
@@ -81,7 +81,10 @@ const AdminUserActivity: React.FC = () => {
   return (
     <div className="space-y-6 mt-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl font-bold">User Activity Monitoring</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Staff Audit Trail</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Recorded CRM actions, actors, and affected accounts. This is not a full end-user session log.</p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <Select value={filterType} onValueChange={setFilterType}>
             <SelectTrigger className="w-[180px]">
@@ -126,9 +129,9 @@ const AdminUserActivity: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Timestamp</TableHead>
-                  <TableHead>User ID</TableHead>
+                  <TableHead>Staff Actor</TableHead>
                   <TableHead>Action</TableHead>
-                  <TableHead>IP Address</TableHead>
+                  <TableHead>Affected Account</TableHead>
                   <TableHead>Details</TableHead>
                 </TableRow>
               </TableHeader>
@@ -139,14 +142,14 @@ const AdminUserActivity: React.FC = () => {
                       <TableCell className="font-mono text-xs">
                         {new Date(activity.timestamp).toLocaleString()}
                       </TableCell>
-                      <TableCell className="font-medium truncate max-w-[120px]">
-                        {activity.userId}
+                      <TableCell className="font-medium truncate max-w-[160px]">
+                        {activity.actorName || activity.userId}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{activity.action}</Badge>
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {activity.ip || 'N/A'}
+                        {activity.details?.targetUserId || activity.details?.userId || '—'}
                       </TableCell>
                       <TableCell>
                         <Dialog>
@@ -168,7 +171,7 @@ const AdminUserActivity: React.FC = () => {
                             </DialogHeader>
                             <div className="mt-4 space-y-4">
                               <div>
-                                <h4 className="font-medium mb-1">User ID</h4>
+                                <h4 className="font-medium mb-1">Staff Actor</h4>
                                 <code className="bg-muted p-2 rounded block">{selectedActivity?.userId}</code>
                               </div>
                               <div>
@@ -180,12 +183,8 @@ const AdminUserActivity: React.FC = () => {
                                 <p>{selectedActivity?.timestamp && new Date(selectedActivity?.timestamp).toLocaleString()}</p>
                               </div>
                               <div>
-                                <h4 className="font-medium mb-1">IP Address</h4>
-                                <p className="font-mono">{selectedActivity?.ip || 'N/A'}</p>
-                              </div>
-                              <div>
-                                <h4 className="font-medium mb-1">User Agent</h4>
-                                <p className="text-xs break-all">{selectedActivity?.userAgent || 'N/A'}</p>
+                                <h4 className="font-medium mb-1">Affected Account</h4>
+                                <p>{selectedActivity?.details?.targetUserId || selectedActivity?.details?.userId || 'Not applicable'}</p>
                               </div>
                               <div>
                                 <h4 className="font-medium mb-1">Details</h4>

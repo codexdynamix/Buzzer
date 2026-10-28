@@ -4,6 +4,7 @@ import { Settings, LogOut, Phone, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import SidebarItem from './SidebarItem';
 import { useAuth } from '@/context/AuthContext';
+import { isStaffRole } from '@/config/adminAccess';
 
 interface SidebarFooterProps {
   isCollapsed: boolean;
@@ -15,6 +16,7 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({ isCollapsed, onItemClick,
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const isStaffAccount = isStaffRole(user?.staffRole) || user?.role === 'moderator';
 
   return (
     <div className="border-t border-slate-100 px-2 py-3 space-y-1">
@@ -37,7 +39,7 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({ isCollapsed, onItemClick,
               >
                 <div className={cn(
                   'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden',
-                  user.role === 'admin'
+                  isStaffAccount
                     ? 'bg-gradient-to-br from-amber-400 to-orange-500'
                     : 'bg-gradient-to-br from-indigo-400 to-violet-500'
                 )}>
@@ -67,7 +69,7 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({ isCollapsed, onItemClick,
             >
               <div className={cn(
                 'w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold overflow-hidden',
-                user.role === 'admin'
+                isStaffAccount
                   ? 'bg-gradient-to-br from-amber-400 to-orange-500'
                   : 'bg-gradient-to-br from-indigo-400 to-violet-500'
               )}>

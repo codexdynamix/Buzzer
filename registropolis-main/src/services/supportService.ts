@@ -11,6 +11,10 @@ export interface SupportTicket {
   createdAt: Date;
   updatedAt: Date;
   userWarned?: boolean;
+  assignedTo?: string;
+  escalatedAt?: Date;
+  slaDueAt?: Date;
+  responses?: TicketResponse[];
 }
 
 export interface TicketResponse {
@@ -73,12 +77,17 @@ class SupportService {
     await apiFetch(`/support/tickets/${ticketId}`, 'PATCH', updates);
   }
 
-  async addResponse(_response: Omit<TicketResponse, 'responseId' | 'createdAt'>): Promise<void> {
-    // Responses stored via support ticket update for now
+  async addResponse(response: Omit<TicketResponse, 'responseId' | 'createdAt'>): Promise<void> {
+    await apiFetch(`/support/tickets/${response.ticketId}/replies`, 'POST', { message: response.message });
   }
 
-  async getResponses(_ticketId: string): Promise<TicketResponse[]> {
-    return [];
+  async getResponses(ticketId: string): Promise<TicketResponse[]> {
+    const tickets = await this.getTickets();
+    return tickets.find(ticket => ticket.ticketId === ticketId)?.responses || [];
+  }
+
+  async escalateTicket(ticketId: string): Promise<void> {
+    await apiFetch(`/support/tickets/${ticketId}/escalate`, 'POST');
   }
 
   async issueWarning(warning: Omit<UserWarning, 'createdAt'>): Promise<void> {
