@@ -38,7 +38,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
     >
       <main
         className={[
-          'flex-1 min-h-0 flex flex-col overflow-hidden w-full',
+          'min-w-0 flex-1 min-h-0 flex flex-col overflow-hidden w-full pt-16',
           centered ? 'items-center justify-center' : '',
         ]
           .filter(Boolean)
@@ -56,7 +56,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
       </main>
 
       {withSidebar && <FloatingNavHub />}
-      <BuzzerBadge />
+      <BuzzerBadge hideOnDesktop={withSidebar} />
     </div>
   );
 };

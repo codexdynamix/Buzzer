@@ -11,7 +11,6 @@ import { realAuthAPI } from '@/services/authService';
 import { SEED_USERS, SeedUser } from '@/data/seedAccounts';
 import { toast } from 'sonner';
 import { useLocalization } from '@/i18n/LocalizationContext';
-import type { StaffRole } from '@/config/adminAccess';
 
 type EmailMode = 'login' | 'signup';
 
@@ -22,7 +21,7 @@ type AuthUser = {
   profileImageUrl?: string;
   email?: string;
   role?: string;
-  staffRole?: StaffRole;
+  staffRole?: 'superadmin' | 'operations' | 'moderator' | 'support';
   staffTitle?: string;
   bio?: string;
   location?: string;
@@ -160,7 +159,7 @@ export default function AuthPage() {
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F5F0E8', fontFamily: "'Inter', -apple-system, sans-serif" }}>
 
       {/* ── Top bar ── */}
-      <div className="flex items-center justify-between gap-4 px-6 py-5 max-w-6xl mx-auto w-full">
+      <div className="flex items-center justify-between gap-4 px-6 pt-16 pb-5 max-w-6xl mx-auto w-full">
         <button onClick={() => navigate('/')} className="flex items-center gap-1.5 text-xl font-bold tracking-tight" style={{ color: '#1a1f36', letterSpacing: '-0.04em' }}>
           BUZZER<span style={{ color: '#C9A96E' }}>•</span>
         </button>

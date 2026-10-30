@@ -3,9 +3,30 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, ArrowUpRight, ArrowDownRight as ArrowDownRightIcon, MessageSquare, ShoppingBag, Briefcase, Wrench, Home, Bus, Calendar, Menu, X, Star, Shield, Zap, Globe, Play, Megaphone, Sparkles, Coffee, Heart, Compass, MapPin } from 'lucide-react';
 import './Index.css';
-import { useLocalization } from '@/i18n/LocalizationContext';
+import { SUPPORTED_LANGUAGES, useLocalization } from '@/i18n/LocalizationContext';
 
 const HomeSection = React.lazy(() => import('@/components/home/HomeSection'));
+
+function LanguagePicker({ className = '' }: { className?: string }) {
+  const { language, setLanguage, t } = useLocalization();
+
+  return (
+    <select
+      aria-label={t('Choose language')}
+      value={language}
+      onChange={event => {
+        const selected = SUPPORTED_LANGUAGES.find(item => item.code === event.target.value);
+        if (selected) setLanguage(selected.code);
+      }}
+      className={`rounded-lg border px-2 py-2 text-sm ${className}`}
+      style={{ borderColor: '#D1C9BC', color: '#4A5568', backgroundColor: '#FAFAF7' }}
+    >
+      {SUPPORTED_LANGUAGES.map(item => (
+        <option key={item.code} value={item.code}>{item.name}</option>
+      ))}
+    </select>
+  );
+}
 
 const FEATURES = [
   { icon: MessageSquare, title: 'Encrypted Messaging', desc: 'Military-grade end-to-end encryption for every conversation. Privacy is not a feature — it is the foundation.', section: 'messages' },
@@ -70,6 +91,7 @@ export default function Index() {
 
           {/* Desktop auth buttons */}
           <div className="hidden md:flex items-center gap-3">
+            <LanguagePicker />
             <button
               onClick={() => navigate('/auth?mode=signin&method=email')}
               className="px-5 py-2.5 text-sm font-semibold rounded-lg border transition-all hover:border-[#1A3353] hover:text-[#1A3353]"
@@ -100,6 +122,7 @@ export default function Index() {
             <button onClick={() => { navigate('/dashboard/home'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Browse')}</button>
             <button onClick={() => { navigate('/dashboard/business?tab=ads'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Advertisements')}</button>
             <button onClick={() => { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('About')}</button>
+            <LanguagePicker className="w-full" />
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => { navigate('/auth?mode=signin&method=email'); setMenuOpen(false); }}

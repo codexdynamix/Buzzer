@@ -1,5 +1,5 @@
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 import type { StaffRole } from '@/config/adminAccess';
 
 const API_BASE = '/api';
@@ -92,41 +92,15 @@ export const realAuthAPI = {
     };
   },
 
-  async staffLogin(email: string, password: string) {
-    const res = await apiCall<{ success: boolean; token: string; user: AuthUser }>(
-      '/auth/staff-login',
-      'POST',
-      { email, password }
-    );
-    if (!res.token || !res.user) throw new Error('Invalid staff credentials');
-    localStorage.setItem('auth_token', res.token);
-    return res;
-  },
-
   async getCurrentUser(accessToken?: string) {
-    let token = accessToken ?? localStorage.getItem('auth_token');
-    if (!token && isSupabaseConfigured()) {
-      try {
-        const session = (await getSupabaseClient().auth.getSession()).data.session;
-        token = session?.access_token ?? null;
-      } catch {
-        // ignore
-      }
-    }
-    if (!token) throw new Error('No active authentication session');
+    const token = accessToken ?? (await getSupabaseClient().auth.getSession()).data.session?.access_token;
+    if (!token) throw new Error('No active Supabase session');
     return apiCall<{ success: boolean; user: AuthUser }>('/auth/me', 'GET', undefined, token);
   },
 
   async logout() {
-    if (isSupabaseConfigured()) {
-      try {
-        await getSupabaseClient().auth.signOut();
-      } catch {
-        // ignore
-      }
-    }
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+    const { error } = await getSupabaseClient().auth.signOut();
+    if (error) throw error;
   },
 
   async sendPasswordReset(email: string) {
@@ -143,6 +117,7 @@ export const realAuthAPI = {
     const { error: signOutError } = await client.auth.signOut();
     if (signOutError) throw signOutError;
   },
+
   updateProfile: (updates: Record<string, unknown>) =>
     apiCall<{ success: boolean; user: AuthUser }>('/users/me', 'PATCH', updates),
 

@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useChatContext } from '@/context/ChatContext';
-import { getSocket } from '@/services/socketService';
-import { messagesAPI } from '@/services/apiService';
 import { useAuth } from '@/context/AuthContext';
+import { getSocket } from '@/services/socketService';
+import { toast } from 'sonner';
 import {
   Search, Send, Paperclip, Smile, MessageSquare,
   MoreVertical, ArrowLeft, Check, CheckCheck, MapPin, PlusCircle, Info, Edit2,
@@ -17,7 +17,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
 
 interface ListingCard {
   id: string;
@@ -48,7 +47,7 @@ interface Message {
   content: string;
   sender: 'me' | 'them';
   timestamp: Date;
-  status: 'sent' | 'delivered' | 'read';
+  status: 'sent' | 'delivered' | 'read' | 'error';
   type: 'text' | 'image' | 'location' | 'listing' | 'audio' | 'offer';
   media?: string;
   listing?: ListingCard;
@@ -81,33 +80,12 @@ const CAT_STYLE: Record<string, { bg: string; text: string }> = {
 
 const OFFER_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-function mapServerMessage(message: any, currentUserId: string): Message {
-  const listing = message.listing as ListingCard | undefined;
-  return {
-    id: message.id,
-    content: message.content ?? '',
-    sender: message.senderId === currentUserId ? 'me' : 'them',
-    timestamp: new Date(message.timestamp),
-    status: message.status ?? 'sent',
-    type: message.offerData ? 'offer' : listing ? 'listing' : 'text',
-    ...(listing ? { listing } : {}),
-    ...(message.offerData ? { offerData: message.offerData as OfferData } : {}),
-    ...(message.replyTo ? { quotedMsg: message.replyTo } : {}),
-  };
-}
+const getChatRoomId = (userId: string, contactId: string) =>
+  [userId, contactId].sort().join('-');
 
-function MessageStatusIndicator({ status, dark = false }: { status: Message['status']; dark?: boolean }) {
-  const color = status === 'read'
-    ? dark ? '#93C5FD' : '#3B82F6'
-    : dark ? 'rgba(255,255,255,0.6)' : '#6E7A8A';
-  const label = status === 'read' ? 'Seen' : status === 'delivered' ? 'Delivered' : null;
-
-  return (
-    <span className="inline-flex items-center gap-0.5" title={label ?? 'Sent'}>
-      {status === 'sent' ? <Check size={13} style={{ color }} /> : <CheckCheck size={14} style={{ color }} />}
-      {label && <span className="text-[10px]" style={{ color }}>{label}</span>}
-    </span>
-  );
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 const fmtCountdown = (ms: number): string => {
@@ -847,16 +825,15 @@ const EmptyState = () => (
 const MessagesSection: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { pendingChat, clearPendingChat, markAllRead } = useChatContext();
   const { user } = useAuth();
-  const currentUserId = user?.id ?? '';
+  const { pendingChat, clearPendingChat, markAllRead } = useChatContext();
 
-  useEffect(() => { markAllRead(); }, []);
+  useEffect(() => { markAllRead(); }, [markAllRead]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [isContactsLoading, setIsContactsLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [input, setInput] = useState('');
-  const [isSending, setIsSending] = useState(false);
   const [pendingListing, setPendingListing] = useState<ListingCard | null>(null);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const [showMsgSearch, setShowMsgSearch] = useState(false);
@@ -874,38 +851,53 @@ const MessagesSection: React.FC = () => {
   const swipeTouchRef = useRef<{ startX: number; startY: number; msgId: string; el: HTMLDivElement; hapticFired: boolean } | null>(null);
   const [showStarred, setShowStarred] = useState(false);
 
+  useEffect(() => {
+    let active = true;
+    if (!user?.id) {
+      setContacts([]);
+      setIsContactsLoading(false);
+      return () => { active = false; };
+    }
+
+    setIsContactsLoading(true);
+    fetch('/api/contacts', { headers: getAuthHeaders() })
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not load contacts');
+        if (!Array.isArray(data.contacts)) throw new Error('The server returned an invalid contact list');
+        return data.contacts;
+      })
+      .then((users: Array<{ id: string; name: string; profileImageUrl?: string }>) => {
+        if (!active) return;
+        setContacts(users.map(contact => ({
+          id: contact.id,
+          name: contact.name,
+          lastMessage: '',
+          time: '',
+          unread: 0,
+          category: 'Marketplace',
+          avatar: contact.profileImageUrl ?? '',
+          messages: [],
+        })));
+      })
+      .catch(error => {
+        if (active) {
+          toast.error(error instanceof Error ? error.message : 'Could not load contacts');
+        }
+      })
+      .finally(() => {
+        if (active) setIsContactsLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [user?.id]);
+
   const selected = contacts.find(c => c.id === selectedId) ?? null;
   const filtered = search.trim()
     ? contacts.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.lastMessage.toLowerCase().includes(search.toLowerCase()))
     : contacts;
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [selected?.messages.length]);
-
-  useEffect(() => {
-    if (!currentUserId) return;
-    void messagesAPI.getInbox().then(response => {
-      const inboxContacts: Contact[] = (response.conversations ?? []).map((conversation: any) => {
-        const lastMessage = conversation.lastMessage;
-        return {
-          id: conversation.peer.id,
-          name: conversation.peer.name,
-          lastMessage: lastMessage.content || (lastMessage.listing ? `Re: ${lastMessage.listing.title}` : ''),
-          time: lastMessage.timestamp ? format(new Date(lastMessage.timestamp), 'p') : '',
-          unread: 0,
-          category: conversation.category ?? lastMessage.listing?.category ?? 'Messages',
-          avatar: conversation.peer.profileImageUrl ?? '',
-          messages: [],
-        };
-      });
-      setContacts(previous => {
-        const contactsById = new Map(previous.map(contact => [contact.id, contact]));
-        inboxContacts.forEach(contact => {
-          if (!contactsById.has(contact.id)) contactsById.set(contact.id, contact);
-        });
-        return [...contactsById.values()];
-      });
-    }).catch(error => console.error('Unable to load message inbox:', error));
-  }, [currentUserId]);
 
   /* ── In-conversation search ── */
   const msgSearchMatches = useMemo(() => {
@@ -932,92 +924,90 @@ const MessagesSection: React.FC = () => {
   // reset search when switching contacts
   useEffect(() => { setShowMsgSearch(false); setMsgSearch(''); }, [selectedId]);
 
-  // Subscribe to every inbox conversation so delivery is acknowledged before a thread is opened.
-  const peerRoomIds = contacts.map(contact => contact.id).join(',');
+  // Socket.IO — join/leave room when selected contact changes
   useEffect(() => {
+    if (!selectedId || !user?.id) return;
     const socket = getSocket();
-    const peerIds = peerRoomIds ? peerRoomIds.split(',') : [];
-    peerIds.forEach(peerId => socket.emit('join-room', peerId));
+    const roomId = getChatRoomId(user.id, selectedId);
+    socket.emit('join-room', roomId);
     return () => {
-      peerIds.forEach(peerId => socket.emit('leave-room', peerId));
+      socket.emit('leave-room', roomId);
     };
-  }, [peerRoomIds]);
+  }, [selectedId, user?.id]);
 
   // Socket.IO — receive messages from other users in real time
   useEffect(() => {
     const socket = getSocket();
-    const handleIncoming = (msg: { id: string; content: string; senderId: string; recipientId: string; timestamp: string; status: Message['status']; listing?: ListingCard; replyTo?: Message['quotedMsg']; offerData?: OfferData; senderName?: string; senderAvatar?: string }) => {
-      const incomingMsg = mapServerMessage(msg, currentUserId);
-      const preview = incomingMsg.type === 'offer'
-        ? `${incomingMsg.offerData?.isCounter ? '💬 Counter' : '💰 Offer'}: $${incomingMsg.offerData?.offerPrice.toLocaleString()}`
-        : incomingMsg.content || `Re: ${incomingMsg.listing?.title ?? ''}`;
-      setContacts(prev => {
-        const existing = prev.find(contact => contact.id === msg.senderId);
-        if (existing?.messages.some(message => message.id === incomingMsg.id)) return prev;
-        if (!existing) {
-          return [{
-            id: msg.senderId,
-            name: msg.senderName ?? 'Buzzer user',
-            lastMessage: preview,
-            time: 'now',
-            unread: 1,
-            category: incomingMsg.listing?.category ?? 'Messages',
-            avatar: msg.senderAvatar ?? '',
-            messages: [incomingMsg],
-          }, ...prev];
-        }
-        return prev.map(contact => contact.id !== msg.senderId ? contact : {
-          ...contact,
-          messages: [...contact.messages, incomingMsg],
-          lastMessage: preview,
+    const handleIncoming = (msg: {
+      id: string;
+      content: string;
+      roomId: string;
+      senderId: string;
+      timestamp?: string;
+      status?: Message['status'];
+    }) => {
+      if (!user?.id || !msg.senderId || msg.senderId === user.id) return;
+      if (msg.roomId !== getChatRoomId(user.id, msg.senderId)) return;
+      const readNow = selectedId === msg.senderId;
+      setContacts(prev => prev.map(c => {
+        if (c.id !== msg.senderId || getChatRoomId(user.id, c.id) !== msg.roomId) return c;
+        if (c.messages.some(message => message.id === msg.id)) return c;
+        const incomingMsg: Message = {
+          id: msg.id || uuidv4(),
+          content: msg.content,
+          sender: 'them',
+          timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+          status: readNow ? 'read' : 'delivered',
+          type: 'text',
+        };
+        return {
+          ...c,
+          messages: [...c.messages, incomingMsg],
+          lastMessage: msg.content,
           time: 'now',
-          unread: contact.id === selectedId ? 0 : contact.unread + 1,
-        });
-      });
-      if (msg.recipientId === currentUserId && msg.status !== 'read') {
-        void (async () => {
-          await messagesAPI.updateMessageStatus(msg.id, 'delivered');
-          if (selectedId === msg.senderId) {
-            await messagesAPI.updateMessageStatus(msg.id, 'read');
-          }
-        })().catch(error =>
-          console.error(`Unable to update delivery status for message ${msg.id}:`, error)
-        );
-      }
+          unread: readNow ? 0 : c.unread + 1,
+        };
+      }));
+
+      const status = readNow ? 'read' : 'delivered';
+      void fetch(`/api/messages/${encodeURIComponent(msg.id)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ status }),
+      }).then(async response => {
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.message || `Could not mark message ${status}`);
+        }
+      }).catch(error => console.error('Could not update incoming message status:', error));
     };
-    const handleMessageStatus = (update: { messageId: string; status: Message['status'] }) => {
+    const handleStatus = (event: { messageId: string; status: Message['status'] }) => {
       setContacts(prev => prev.map(contact => ({
         ...contact,
         messages: contact.messages.map(message =>
-          message.id === update.messageId ? { ...message, status: update.status } : message
-        ),
-      })));
-    };
-    const handleOfferStatus = (update: { messageId: string; status: OfferData['status'] }) => {
-      setContacts(prev => prev.map(contact => ({
-        ...contact,
-        messages: contact.messages.map(message =>
-          message.id === update.messageId && message.offerData
-            ? { ...message, offerData: { ...message.offerData, status: update.status } }
-            : message
+          message.id === event.messageId ? { ...message, status: event.status } : message
         ),
       })));
     };
     socket.on('new-message', handleIncoming);
-    socket.on('message-status', handleMessageStatus);
-    socket.on('offer-status', handleOfferStatus);
+    socket.on('message-status', handleStatus);
     return () => {
       socket.off('new-message', handleIncoming);
-      socket.off('message-status', handleMessageStatus);
-      socket.off('offer-status', handleOfferStatus);
+      socket.off('message-status', handleStatus);
     };
-  }, [selectedId, currentUserId]);
+  }, [selectedId, user?.id]);
 
   /* ── Consume pendingChat from context ── */
   useEffect(() => {
-    if (!pendingChat) return;
-    const peerId = pendingChat.sellerUserId;
-    if (!peerId) {
+    if (!pendingChat || isContactsLoading) return;
+
+    const contact = contacts.find(item =>
+      pendingChat.sellerId
+        ? item.id === pendingChat.sellerId
+        : item.name.trim().toLocaleLowerCase() === pendingChat.sellerName.trim().toLocaleLowerCase()
+    );
+    if (!contact) {
+      toast.error('The seller account could not be found. Please try again later.');
       clearPendingChat();
       return;
     }
@@ -1030,45 +1020,15 @@ const MessagesSection: React.FC = () => {
       category: pendingChat.listingCategory,
     };
 
-    const contact: Contact = {
-      id: peerId,
-      name: pendingChat.sellerName,
-      lastMessage: `Re: ${listing.title}`,
-      time: 'now',
-      unread: 0,
-      category: pendingChat.listingCategory,
-      avatar: pendingChat.sellerAvatar ?? '',
-      messages: [],
-    };
-    setContacts(prev => {
-      const exists = prev.some(existing => existing.id === peerId);
-      return exists
-        ? prev.map(existing => existing.id === peerId ? { ...existing, ...contact, messages: existing.messages } : existing)
-        : [contact, ...prev];
-    });
-    setSelectedId(peerId);
+    setSelectedId(contact.id);
     setPendingListing(listing);
-    void messagesAPI.getMessages(peerId).then(response => {
-      const savedMessages = response.messages ?? [];
-      savedMessages
-        .filter((message: any) => message.recipientId === currentUserId && message.status !== 'read')
-        .forEach((message: any) => {
-          void messagesAPI.updateMessageStatus(message.id, 'read').catch(error =>
-            console.error(`Unable to mark message ${message.id} as read:`, error)
-          );
-        });
-      setContacts(prev => prev.map(existing => existing.id === peerId
-        ? { ...existing, messages: savedMessages.map((message: any) => mapServerMessage(message, currentUserId)) }
-        : existing
-      ));
-    }).catch(error => console.error(`Unable to load conversation ${peerId}:`, error));
 
     if (pendingChat.triggerOffer) {
       setTimeout(() => setShowOfferModal(true), 200);
     }
 
     clearPendingChat();
-  }, [pendingChat, clearPendingChat, currentUserId]);
+  }, [pendingChat, contacts, isContactsLoading, clearPendingChat]);
 
 
   const handleForward = useCallback((targetContactId: string) => {
@@ -1093,24 +1053,22 @@ const MessagesSection: React.FC = () => {
   }, [forwardingMsg]);
 
 
-  const handleOfferResponse = useCallback(async (msgId: string, response: 'accepted' | 'declined' | 'expired') => {
+  const handleOfferResponse = useCallback((msgId: string, response: 'accepted' | 'declined' | 'expired') => {
     if (!selectedId) return;
     const contactIdSnapshot = selectedId;
 
-    try {
-      if (response !== 'expired') await messagesAPI.respondToOffer(msgId, response === 'accepted' ? 'accept' : 'decline');
-      setContacts(prev => prev.map(c => c.id !== contactIdSnapshot ? c : {
+    setContacts(prev => prev.map(c => {
+      if (c.id !== contactIdSnapshot) return c;
+      return {
         ...c,
         messages: c.messages.map(m =>
           m.id === msgId && m.type === 'offer' && m.offerData
             ? { ...m, offerData: { ...m.offerData, status: response } }
             : m
         ),
-      }));
-    } catch (error) {
-      console.error(`Unable to update offer ${msgId}:`, error);
-      toast.error(error instanceof Error ? error.message : 'Unable to update this offer');
-    }
+      };
+    }));
+
   }, [selectedId]);
 
 
@@ -1148,63 +1106,97 @@ const MessagesSection: React.FC = () => {
     setHoveredMsgId(null);
   }, []);
 
-  const handleSelect = (id: string) => {
+  const handleSelect = async (id: string) => {
     setSelectedId(id);
     setPendingListing(null);
     setReplyingTo(null);
     setContacts(prev => prev.map(c => c.id === id ? { ...c, unread: 0 } : c));
-    void messagesAPI.getMessages(id).then(response => {
-      const savedMessages = response.messages ?? [];
-      savedMessages
-        .filter((message: any) => message.recipientId === currentUserId && message.status !== 'read')
-        .forEach((message: any) => {
-          void messagesAPI.updateMessageStatus(message.id, 'read').catch(error =>
-            console.error(`Unable to mark message ${message.id} as read:`, error)
-          );
-        });
+    if (!user?.id) return;
+
+    const chatId = getChatRoomId(user.id, id);
+    try {
+      const response = await fetch(`/api/messages/${encodeURIComponent(chatId)}`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Could not load this conversation');
+      if (!Array.isArray(data.messages)) throw new Error('The server returned an invalid conversation');
+      const loadedMessages: Message[] = data.messages.map((message: any) => ({
+        id: message.id,
+        content: message.content,
+        sender: message.senderId === user.id || message.sender === 'user' ? 'me' : 'them',
+        timestamp: new Date(message.timestamp),
+        status: message.status ?? 'sent',
+        type: 'text',
+        ...(message.replyTo && {
+          quotedMsg: {
+            id: message.replyTo.id,
+            content: message.replyTo.content,
+            sender: message.replyTo.sender === 'user' || message.replyTo.senderId === user.id ? 'me' : 'them',
+          },
+        }),
+      }));
       setContacts(prev => prev.map(contact => contact.id === id
-        ? { ...contact, messages: savedMessages.map((message: any) => mapServerMessage(message, currentUserId)) }
+        ? {
+            ...contact,
+            messages: loadedMessages,
+            lastMessage: loadedMessages[loadedMessages.length - 1]?.content ?? '',
+            time: loadedMessages.length ? format(loadedMessages[loadedMessages.length - 1].timestamp, 'p') : '',
+          }
         : contact
       ));
-    }).catch(error => console.error(`Unable to load conversation ${id}:`, error));
+
+      const readResponse = await fetch(`/api/messages/${encodeURIComponent(chatId)}/read`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+      });
+      if (!readResponse.ok) {
+        const errorData = await readResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Could not mark messages as read');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not load this conversation');
+    }
   };
 
   /* Promote sent message statuses: sent → delivered → read */
-  const handleSendOffer = useCallback(async (offerPrice: number) => {
+  const handleSendOffer = useCallback((offerPrice: number) => {
     if (!selectedId) return;
     const contact = contacts.find(c => c.id === selectedId);
     if (!contact) return;
 
-    const listingMsg = [...contact.messages].reverse().find(m => m.listing);
-    const listing = pendingListing ?? listingMsg?.listing;
+    const listingMsg = [...contact.messages].reverse().find(m => m.type === 'listing' && m.listing);
+    const listing = listingMsg?.listing;
     const askingNum = listing ? parseInt(listing.price.replace(/[^0-9]/g, ''), 10) : 0;
-    const offerData: OfferData = {
+
+    const msgId = uuidv4();
+    const offerMsg: Message = {
+      id: msgId,
+      content: '',
+      sender: 'me',
+      timestamp: new Date(),
+      status: 'sent',
+      type: 'offer',
+      offerData: {
         listingTitle: listing?.title ?? contact.name,
         listingImage: listing?.image,
         askingPrice: askingNum,
         offerPrice,
         status: 'pending',
         expiresAt: Date.now() + OFFER_EXPIRY_MS,
+      },
     };
-    try {
-      const response = await messagesAPI.sendMessage(selectedId, '', undefined, listing, offerData);
-      const offerMsg = mapServerMessage(response.message, currentUserId);
-      setContacts(prev => prev.map(c => c.id !== selectedId ? c : {
-        ...c,
-        messages: [...c.messages, offerMsg],
-        lastMessage: `💰 Offer: $${offerPrice.toLocaleString()}`,
-        time: 'now',
-      }));
-      getSocket().emit('send-message', { messageId: offerMsg.id });
-      setPendingListing(null);
-      setShowOfferModal(false);
-    } catch (error) {
-      console.error(`Unable to send offer to ${selectedId}:`, error);
-      toast.error(error instanceof Error ? error.message : 'Unable to send this offer');
-    }
-  }, [selectedId, contacts, pendingListing, currentUserId]);
 
-  const handleCounterOffer = useCallback(async (originalMsgId: string, counterPrice: number) => {
+    const contactIdSnapshot = selectedId;
+    setContacts(prev => prev.map(c =>
+      c.id === contactIdSnapshot
+        ? { ...c, messages: [...c.messages, offerMsg], lastMessage: `💰 Offer: $${offerPrice.toLocaleString()}`, time: 'now' }
+        : c
+    ));
+    setShowOfferModal(false);
+  }, [selectedId, contacts]);
+
+  const handleCounterOffer = useCallback((originalMsgId: string, counterPrice: number) => {
     if (!selectedId) return;
     const contactIdSnapshot = selectedId;
     const contact = contacts.find(c => c.id === selectedId);
@@ -1212,76 +1204,121 @@ const MessagesSection: React.FC = () => {
 
     const originalOffer = contact.messages.find(m => m.id === originalMsgId);
     if (!originalOffer?.offerData) return;
-    try {
-      const response = await messagesAPI.respondToOffer(originalMsgId, 'counter', counterPrice);
-      const counterMsg = mapServerMessage(response.message, currentUserId);
-      setContacts(prev => prev.map(c => c.id !== contactIdSnapshot ? c : {
+
+    setContacts(prev => prev.map(c => {
+      if (c.id !== contactIdSnapshot) return c;
+      return {
         ...c,
-        messages: c.messages.map(m => m.id === originalMsgId && m.offerData
-          ? { ...m, offerData: { ...m.offerData, status: 'countered' as const } }
-          : m
-        ).concat(counterMsg),
-        lastMessage: `💬 Counter: $${counterPrice.toLocaleString()}`,
-        time: 'now',
-      }));
-      setShowCounterModal(false);
-      setCounteringMsgId(null);
-    } catch (error) {
-      console.error(`Unable to counter offer ${originalMsgId}:`, error);
-      toast.error(error instanceof Error ? error.message : 'Unable to send this counter-offer');
-    }
-  }, [selectedId, contacts, currentUserId]);
+        messages: c.messages.map(m =>
+          m.id === originalMsgId && m.offerData
+            ? { ...m, offerData: { ...m.offerData, status: 'countered' as const } }
+            : m
+        ),
+      };
+    }));
+
+    const counterMsgId = uuidv4();
+    const counterMsg: Message = {
+      id: counterMsgId,
+      content: '',
+      sender: 'me',
+      timestamp: new Date(),
+      status: 'sent',
+      type: 'offer',
+      offerData: {
+        listingTitle: originalOffer.offerData.listingTitle,
+        listingImage: originalOffer.offerData.listingImage,
+        askingPrice: originalOffer.offerData.askingPrice,
+        offerPrice: counterPrice,
+        status: 'pending',
+        isCounter: true,
+        expiresAt: Date.now() + OFFER_EXPIRY_MS,
+      },
+    };
+
+    setContacts(prev => prev.map(c =>
+      c.id === contactIdSnapshot
+        ? { ...c, messages: [...c.messages, counterMsg], lastMessage: `💬 Counter: $${counterPrice.toLocaleString()}`, time: 'now' }
+        : c
+    ));
+    setShowCounterModal(false);
+    setCounteringMsgId(null);
+  }, [selectedId, contacts]);
 
   const handleSend = async () => {
     const text = input.trim();
-    if (isSending || (!text && !pendingListing) || !selectedId) return;
-    setIsSending(true);
-    const recipientId = selectedId;
+    if ((!text && !pendingListing) || !selectedId) return;
+    if (!user?.id) {
+      toast.error('Sign in to send messages');
+      return;
+    }
+
+    const msgId = uuidv4();
+    const contact = contacts.find(item => item.id === selectedId);
+    if (!contact) {
+      toast.error('Select a valid conversation before sending a message');
+      return;
+    }
     const quoted = replyingTo ? { id: replyingTo.id, content: replyingTo.content, sender: replyingTo.sender } : undefined;
-    const persistMessage = async (content: string, listing?: ListingCard) => {
-      const response = await messagesAPI.sendMessage(recipientId, content, quoted, listing);
-      const savedMessage = response.message;
-      const message = mapServerMessage(savedMessage, currentUserId);
-      setContacts(prev => prev.map(contact => {
-        if (contact.id !== recipientId || contact.messages.some(existing => existing.id === message.id)) return contact;
-        return {
-          ...contact,
-          messages: [...contact.messages, message],
-          lastMessage: message.content || `Re: ${message.listing?.title ?? ''}`,
-          time: 'now',
-        };
-      }));
-      getSocket().emit('send-message', { messageId: message.id });
-    };
+    const msg: Message = pendingListing && !text
+      ? { id: msgId, content: '', sender: 'me', timestamp: new Date(), status: 'sent', type: 'listing', listing: pendingListing }
+      : { id: msgId, content: text, sender: 'me', timestamp: new Date(), status: 'sent', type: 'text', ...(quoted ? { quotedMsg: quoted } : {}) };
+
+    const lastMsg = pendingListing && !text ? `Re: ${pendingListing.title}` : text;
+    const contactIdSnapshot = selectedId;
+
+    setPendingListing(null);
+    setReplyingTo(null);
+    setContacts(prev => prev.map(c => c.id === contactIdSnapshot ? { ...c, messages: [...c.messages, msg], lastMessage: lastMsg, time: 'now' } : c));
+    setInput('');
 
     try {
-      if (pendingListing) {
-        await persistMessage('', pendingListing);
-        setPendingListing(null);
-      }
-      if (text) await persistMessage(text);
-      setReplyingTo(null);
-      setInput('');
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          id: msgId,
+          chatId: getChatRoomId(user.id, contact.id),
+          recipientId: contact.id,
+          content: text || lastMsg,
+          replyTo: quoted,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Could not send this message');
+      setContacts(prev => prev.map(c => c.id !== contactIdSnapshot ? c : {
+        ...c,
+        messages: c.messages.map(message =>
+          message.id === msgId ? { ...message, id: data.message?.id ?? msgId, status: data.message?.status ?? 'sent' } : message
+        ),
+      }));
     } catch (error) {
-      console.error(`Unable to send message to ${recipientId}:`, error);
-    } finally {
-      setIsSending(false);
+      setContacts(prev => prev.map(c => c.id !== contactIdSnapshot ? c : {
+        ...c,
+        messages: c.messages.map(message => message.id === msgId ? { ...message, status: 'error' } : message),
+      }));
+      toast.error(error instanceof Error ? error.message : 'Could not send this message');
     }
+
   };
 
   const offerModalListing = useMemo(() => {
     if (!selected) return null;
-    const listingMsg = [...selected.messages].reverse().find(m => m.listing);
-    const listing = pendingListing ?? listingMsg?.listing;
+    const listingMsg = [...selected.messages].reverse().find(m => m.type === 'listing' && m.listing);
+    const listing = listingMsg?.listing;
     return {
       title: listing?.title ?? selected.name,
       price: listing?.price ?? '$0',
       image: listing?.image,
     };
-  }, [selected, pendingListing]);
+  }, [selected]);
 
   const showList = !isMobile || !selectedId;
   const showChat = !isMobile || !!selectedId;
+
+  const lastReadMsgId = selected
+    ? [...selected.messages].reverse().find(m => m.sender === 'me' && m.status === 'read')?.id ?? null
+    : null;
 
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden relative" style={{ backgroundColor: '#FAFAF7' }}>
@@ -1428,7 +1465,9 @@ const MessagesSection: React.FC = () => {
                   </button>
                 );
               }) : (
-                <div className="py-12 text-center text-sm" style={{ color: '#6E7A8A' }}>No conversations found</div>
+                <div className="py-12 text-center text-sm" style={{ color: '#6E7A8A' }}>
+                  {isContactsLoading ? 'Loading contacts…' : 'No conversations found'}
+                </div>
               )}
             </div>
           </div>
@@ -1701,6 +1740,7 @@ const MessagesSection: React.FC = () => {
                     const isMe = msg.sender === 'me';
                     const isHovered = hoveredMsgId === msg.id;
                     const hasReactions = msg.reactions && msg.reactions.length > 0;
+                    const isLastRead = isMe && msg.id === lastReadMsgId;
                     const matchPos = msgSearchMatches.indexOf(msg.id);
                     const isMatch = matchPos !== -1;
                     const isCurrentMatch = isMatch && matchPos === msgSearchIdx;
@@ -1809,12 +1849,9 @@ const MessagesSection: React.FC = () => {
                                 onCounter={() => { setCounteringMsgId(msg.id); setShowCounterModal(true); }}
                                 onExpire={() => handleOfferResponse(msg.id, 'expired')}
                               />
-                              <div className="flex items-center gap-1 px-1">
-                                <span className="text-[10px]" style={{ color: '#6E7A8A' }}>
-                                  {format(msg.timestamp, 'HH:mm')}
-                                </span>
-                                {isMe && <MessageStatusIndicator status={msg.status} />}
-                              </div>
+                              <span className="text-[10px] px-1" style={{ color: '#6E7A8A' }}>
+                                {format(msg.timestamp, 'HH:mm')}
+                              </span>
                             </div>
                           </div>
                         ) : msg.type === 'listing' && msg.listing ? (
@@ -1934,7 +1971,15 @@ const MessagesSection: React.FC = () => {
                                 <span className="text-[10px]" style={{ color: isMe ? 'rgba(255,255,255,0.5)' : '#6E7A8A' }}>
                                   {format(msg.timestamp, 'HH:mm')}
                                 </span>
-                                {isMe && <MessageStatusIndicator status={msg.status} dark />}
+                                {isMe && (
+                                  msg.status === 'error'
+                                    ? <span role="img" aria-label="Not sent" title="Not sent"><XIcon size={12} style={{ color: '#EF4444' }} /></span>
+                                    : msg.status === 'read'
+                                    ? <span role="img" aria-label="Read" title="Read"><CheckCheck size={12} style={{ color: '#3B82F6' }} /></span>
+                                    : msg.status === 'delivered'
+                                    ? <span role="img" aria-label="Delivered" title="Delivered"><CheckCheck size={12} style={{ color: 'rgba(255,255,255,0.65)' }} /></span>
+                                    : <span role="img" aria-label="Sent" title="Sent"><Check size={12} style={{ color: 'rgba(255,255,255,0.45)' }} /></span>
+                                )}
                               </div>
                             </div>
                             {/* Reactions */}
@@ -1961,6 +2006,21 @@ const MessagesSection: React.FC = () => {
                           </div>
                         )}
                       </div>
+                      {isLastRead && (
+                        <div className="flex justify-end pr-1 -mt-0.5 mb-2">
+                          <div className="flex items-center gap-1">
+                            <Avatar className="h-3.5 w-3.5">
+                              <AvatarImage src={selected.avatar} />
+                              <AvatarFallback style={{ backgroundColor: '#E8E2D8', color: '#1A3353', fontSize: '6px', fontWeight: 700 }}>
+                                {selected.name[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-[10px] tabular-nums" style={{ color: '#6E7A8A' }}>
+                              Seen
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       </React.Fragment>
                     );
                   })}
@@ -2024,13 +2084,7 @@ const MessagesSection: React.FC = () => {
                       style={{ color: '#0F1923' }}
                       value={input}
                       onChange={e => setInput(e.target.value)}
-                      disabled={isSending}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          void handleSend();
-                        }
-                      }}
+                      onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                     />
                     <button
                       className="h-8 w-8 shrink-0 rounded-lg hidden sm:flex items-center justify-center transition-colors"
@@ -2062,7 +2116,7 @@ const MessagesSection: React.FC = () => {
                         color: (input.trim() || pendingListing) ? '#ffffff' : '#6E7A8A',
                       }}
                       onClick={handleSend}
-                      disabled={isSending || (!input.trim() && !pendingListing)}
+                      disabled={!input.trim() && !pendingListing}
                       onMouseEnter={e => { if (input.trim() || pendingListing) (e.currentTarget as HTMLElement).style.backgroundColor = '#142842'; }}
                       onMouseLeave={e => { if (input.trim() || pendingListing) (e.currentTarget as HTMLElement).style.backgroundColor = '#1A3353'; }}
                     >

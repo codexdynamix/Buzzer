@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, ChevronLeft, ChevronRight, CheckCircle2, Send, Camera, Image } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useGuestGate } from '@/context/GuestGateContext';
 import { formatDistanceToNow } from 'date-fns';
 import { storiesAPI } from '@/services/apiService';
 import { toast } from 'sonner';
@@ -386,17 +387,23 @@ function CreateStoryModal({ onClose, onPublish }: {
 
 /* ─── Stories Strip ────────────────────────────────────────────── */
 export default function StoriesStrip() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { requireAuth } = useGuestGate();
   const [stories, setStories] = useState<SellerStory[]>([]);
   const [viewingIdx, setViewingIdx] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
   const refreshStories = useCallback(async () => {
+    if (!isAuthenticated) return;
     const { stories: records } = await storiesAPI.getStories();
     setStories(groupStoryRecords(records ?? [], user?.id));
-  }, [user?.id]);
+  }, [isAuthenticated, user?.id]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setStories([]);
+      return;
+    }
     let cancelled = false;
     storiesAPI.getStories()
       .then(({ stories: records }) => {
@@ -406,7 +413,7 @@ export default function StoriesStrip() {
         if (!cancelled) toast.error(error instanceof Error ? error.message : 'Could not load stories');
       });
     return () => { cancelled = true; };
-  }, [user?.id]);
+  }, [isAuthenticated, user?.id]);
 
   const markSeen = useCallback((sellerId: string) => {
     const story = stories.find(item => item.id === sellerId);
@@ -437,7 +444,7 @@ export default function StoriesStrip() {
       <div className="flex items-center gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {/* My Story bubble */}
         <button
-          onClick={() => setShowCreate(true)}
+          onClick={() => requireAuth(() => setShowCreate(true))}
           className="flex flex-col items-center gap-1.5 shrink-0 group"
         >
           <div className="relative">
@@ -501,7 +508,9 @@ export default function StoriesStrip() {
           </button>
         ))}
         {unseenFirst.length === 0 && (
-          <p className="text-xs py-2" style={{ color: '#6E7A8A' }}>No community stories yet.</p>
+          <p className="text-xs py-2" style={{ color: '#6E7A8A' }}>
+            {isAuthenticated ? 'No community stories yet.' : 'Sign in to view community stories.'}
+          </p>
         )}
       </div>
 

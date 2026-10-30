@@ -11,6 +11,7 @@ import { realAuthAPI } from '@/services/authService';
 import { toast } from 'sonner';
 import AppLayout from '@/components/layout/AppLayout';
 import { useLocalization } from '@/i18n/LocalizationContext';
+import { processProfilePhoto } from '@/lib/processProfilePhoto';
 
 const PLATFORMS = [
   { key: 'whatsapp', label: 'WhatsApp', color: '#25D366', emoji: '💬' },
@@ -82,12 +83,18 @@ export default function ProfilePage() {
   const initials = profile.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
 
   // ── Handlers ───────────────────────────────────────────────
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => setProfile(p => ({ ...p, profileImageUrl: ev.target?.result as string }));
-    reader.readAsDataURL(file);
+    try {
+      const profileImageUrl = await processProfilePhoto(file);
+      setProfile(current => ({ ...current, profileImageUrl }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not process this image');
+    } finally {
+      input.value = '';
+    }
   };
 
   const handleSaveProfile = async () => {

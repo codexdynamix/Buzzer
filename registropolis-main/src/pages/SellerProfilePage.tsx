@@ -48,7 +48,6 @@ export default function SellerProfilePage() {
     listingImage: firstListing.image,
     listingCategory: firstListing.category ?? 'Marketplace',
     sellerName: name,
-    sellerUserId: firstListing.userId ?? firstListing.owner?.id ?? firstListing.owner?.userId ?? '',
   });
 
   const handleShare = async () => {

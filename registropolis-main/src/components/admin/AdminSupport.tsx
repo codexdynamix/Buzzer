@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supportService, SupportTicket } from '@/services/supportService';
+import { supportService } from '@/services/supportService';
+import { SupportTicket } from '@/types/supportTypes';
 import {
   Table,
   TableBody,
@@ -32,9 +33,10 @@ const AdminSupport = () => {
   const { data: tickets, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['support-tickets'],
     queryFn: () => supportService.getTickets(),
+    refetchInterval: 5000,
   });
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: SupportTicket['priority']) => {
     switch (priority) {
       case 'urgent':
         return 'bg-red-500';
@@ -186,13 +188,6 @@ const AdminSupport = () => {
                             </p>
                           </div>
                         ))}
-                        {tickets?.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                              No support tickets have been submitted.
-                            </TableCell>
-                          </TableRow>
-                        )}
                         <Textarea
                           value={reply}
                           onChange={event => setReply(event.target.value)}
@@ -222,6 +217,13 @@ const AdminSupport = () => {
               </TableCell>
             </TableRow>
           ))}
+          {tickets?.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                No support tickets have been submitted.
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </div>

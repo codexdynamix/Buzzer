@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { listingsAPI } from '@/services/listingsService';
+import { useGuestGate } from './GuestGateContext';
 
 export interface WatchedListing {
   watchId: string;
@@ -58,6 +59,7 @@ function saveToStorage(items: WatchedListing[]) {
 export const PriceAlertProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [watchedListings, setWatchedListings] = useState<WatchedListing[]>(loadFromStorage);
   const watchedRef = useRef<WatchedListing[]>(watchedListings);
+  const { requireAuth } = useGuestGate();
 
   useEffect(() => {
     watchedRef.current = watchedListings;
@@ -129,6 +131,7 @@ export const PriceAlertProvider: React.FC<{ children: ReactNode }> = ({ children
     section: string,
     listing: { id: string; title: string; image: string; seller: string; price: number }
   ) => {
+    if (!requireAuth()) return;
     if (watchedRef.current.some(w => w.section === section && w.listingId === listing.id)) return;
 
     const newWatch: WatchedListing = {
@@ -152,19 +155,22 @@ export const PriceAlertProvider: React.FC<{ children: ReactNode }> = ({ children
       duration: 3500,
       position: 'top-right',
     });
-  }, []);
+  }, [requireAuth]);
 
   const removeWatch = useCallback((section: string, listingId: string) => {
+    if (!requireAuth()) return;
     setWatchedListings(prev => prev.filter(w => !(w.section === section && w.listingId === listingId)));
-  }, []);
+  }, [requireAuth]);
 
   const clearAlert = useCallback((watchId: string) => {
+    if (!requireAuth()) return;
     setWatchedListings(prev => prev.map(w => w.watchId === watchId ? { ...w, hasAlert: false } : w));
-  }, []);
+  }, [requireAuth]);
 
   const clearAllAlerts = useCallback(() => {
+    if (!requireAuth()) return;
     setWatchedListings(prev => prev.map(w => ({ ...w, hasAlert: false })));
-  }, []);
+  }, [requireAuth]);
 
   const totalAlerts = watchedListings.filter(w => w.hasAlert).length;
 

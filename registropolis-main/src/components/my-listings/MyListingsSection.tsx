@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { useUserListings, ListingSection, ListingStatus, UserListing } from '@/context/UserListingsContext';
 import CreateListingModal, { ListingType } from '@/components/shared/CreateListingModal';
-import { useLocalization } from '@/i18n/LocalizationContext';
 import { listingEngagementAPI, type ListingEngagement } from '@/services/listingEngagementService';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
@@ -289,7 +288,6 @@ function applyTransform(section: ListingSection, existing: any, fd: any): any {
 
 /* ── Main Component ───────────────────────────────────────────── */
 export default function MyListingsSection() {
-  const { t } = useLocalization();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { listings, totalCount, removeListing, updateListing, setListingStatus } = useUserListings();
@@ -329,7 +327,7 @@ export default function MyListingsSection() {
       <div className="section-header">
         <div>
           <div className="gold-accent mb-3" />
-          <h1 className="text-2xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>{t('My Listings')}</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#0F1923', letterSpacing: '-0.03em' }}>Seller workspace</h1>
           <p className="text-sm mt-1" style={{ color: '#6E7A8A' }}>Manage your listings, customers, and storefront</p>
         </div>
         <div className="relative">

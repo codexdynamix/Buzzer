@@ -44,11 +44,11 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node_modules/.bin/tsx backend/server.ts"
-waitForPort = 3001
+waitForPort = 3000
 
 [[ports]]
-localPort = 3001
-externalPort = 3001
+localPort = 3000
+externalPort = 3000
 
 [[ports]]
 localPort = 5000
@@ -62,6 +62,3 @@ publicDir = "registropolis-main/dist"
 [userenv]
 
 [userenv.shared]
-JWT_SECRET = "a08d3f2fdefa68aacbb297ce1106024652c5b997ac03db16b53638c28a955ad0"
-
-REDIS_URL = "rediss://default:gQAAAAAAAjPeAAIgcDJjOWRiZGUzN2Y0ZmE0N2NlOTYyMmY4Zjc0Nzc4OTljYg@hip-catfish-144350.upstash.io:6379"

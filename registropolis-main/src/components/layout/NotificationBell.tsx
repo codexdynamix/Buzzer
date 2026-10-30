@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Bell, X, Check, CheckCheck, MessageCircle, ShoppingBag, Briefcase, Calendar, Trash2, type LucideIcon } from 'lucide-react';
 import { useNotifications, AppNotification, NotificationType } from '@/context/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -12,13 +12,13 @@ const TYPE_CONFIG: Record<NotificationType, { icon: LucideIcon; color: string; b
   event:       { icon: Calendar,      color: '#7C3AED', bg: '#F5F3FF' },
 };
 
-const panelVariants = {
+const panelVariants: Variants = {
   hidden:  { opacity: 0, scale: 0.95, y: -8 },
-  visible: { opacity: 1, scale: 1,    y: 0, transition: { type: 'spring' as const, stiffness: 400, damping: 30 } },
-  exit:    { opacity: 0, scale: 0.96, y: -6, transition: { duration: 0.14, ease: 'easeIn' as const } },
+  visible: { opacity: 1, scale: 1,    y: 0, transition: { type: 'spring', stiffness: 400, damping: 30 } },
+  exit:    { opacity: 0, scale: 0.96, y: -6, transition: { duration: 0.14, ease: 'easeIn' } },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden:  { opacity: 0, x: 12 },
   visible: (i: number) => ({ opacity: 1, x: 0, transition: { delay: i * 0.04, duration: 0.2 } }),
 };

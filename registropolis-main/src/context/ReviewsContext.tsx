@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useGuestGate } from './GuestGateContext';
 
 export interface Review {
   id: string;
@@ -39,6 +40,7 @@ const SEED_REVIEWS: Review[] = [
 ];
 
 export const ReviewsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { requireAuth } = useGuestGate();
   const [reviews, setReviews] = useState<Review[]>(() => {
     try {
       const stored = localStorage.getItem('buzzer_reviews');
@@ -59,9 +61,10 @@ export const ReviewsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   [reviews]);
 
   const addReview = useCallback((review: Omit<Review, 'id' | 'createdAt'>) => {
+    if (!requireAuth()) return;
     const newReview: Review = { ...review, id: `rev_${Date.now()}`, createdAt: new Date().toISOString() };
     setReviews(prev => [newReview, ...prev]);
-  }, []);
+  }, [requireAuth]);
 
   const getRatingStats = useCallback((listingId: string, section: string) => {
     const listing = reviews.filter(r => r.listingId === listingId && r.section === section);

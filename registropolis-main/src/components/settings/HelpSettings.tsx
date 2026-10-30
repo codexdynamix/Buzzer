@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,8 @@ import {
   AlertCircle, 
   Send 
 } from 'lucide-react';
-import { supportService, type SupportTicket } from '@/services/supportService';
+import { supportService } from '@/services/supportService';
+import type { SupportTicket } from '@/types/supportTypes';
 import { useAuth } from '@/context/AuthContext';
 
 const HelpSettings: React.FC = () => {
@@ -33,19 +34,27 @@ const HelpSettings: React.FC = () => {
   const [category, setCategory] = useState<'general' | 'technical' | 'report'>('general');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const loadFailedRef = useRef(false);
+  const userId = user?.id;
 
-  const loadTickets = async () => {
-    if (!user) return;
+  const loadTickets = useCallback(async () => {
+    if (!userId) return;
     try {
       setTickets(await supportService.getTickets());
+      loadFailedRef.current = false;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not load your support requests');
+      if (!loadFailedRef.current) {
+        toast.error(error instanceof Error ? error.message : 'Could not load your support requests');
+      }
+      loadFailedRef.current = true;
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     void loadTickets();
-  }, [user?.id]);
+    const intervalId = window.setInterval(() => void loadTickets(), 5000);
+    return () => window.clearInterval(intervalId);
+  }, [loadTickets]);
 
   const submitTicket = async (event: React.FormEvent) => {
     event.preventDefault();

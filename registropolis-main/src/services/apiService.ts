@@ -2,24 +2,20 @@ import { toast } from 'sonner';
 import type { CreateReelPayload, ReelComment, ReelRecord, UploadedReelMedia } from '@/types/reelTypes';
 import { getSupabaseClient } from '@/lib/supabase';
 
-type ApiSuccessResponse<T = any> = {
+type ApiSuccessResponse<T> = {
   success: boolean;
-  message?: string;
+  message: string;
   data?: T;
-  agents?: any[];
-  clients?: any[];
-  client?: any;
-  note?: any;
-  total?: number;
-  totalPages?: number;
-  page?: number;
-  limit?: number;
-  temporaryPassword?: string;
-  transferredCount?: number;
-  count?: number;
   businesses?: T;
   advertisements?: T;
-  kpis?: any;
+  kpis?: {
+    totalUsers: number;
+    activeListings: number;
+    pendingModeration: number;
+    pendingVerifications: number;
+    openTickets: number;
+    sponsoredBusinesses: number;
+  };
   analytics?: unknown;
   orders?: unknown;
   order?: unknown;
@@ -54,7 +50,6 @@ type ApiSuccessResponse<T = any> = {
   application?: any;
   applications?: any[];
   stats?: any;
-  [key: string]: any;
 };
 
 const getAuthHeader = (): Record<string, string> => {
@@ -135,38 +130,8 @@ export const adminCRMAPI = {
 
 export const messagesAPI = {
   getMessages: (chatId: string) => apiRequest(`/messages/${chatId}`),
-  sendMessage: (chatId: string, content: string, replyTo?: any, listing?: any, offerData?: any) =>
-    apiRequest('/messages', 'POST', { chatId, content, replyTo, listing, offerData }),
-  updateMessageStatus: (messageId: string, status: 'sent' | 'delivered' | 'read') =>
-    apiRequest(`/messages/${messageId}/status`, 'PATCH', { status }),
-  getInbox: async (): Promise<{ conversations?: any[] }> => {
-    try {
-      const res = await apiRequest('/messages/inbox');
-      return { conversations: res.data?.conversations || (res as any).conversations || [] };
-    } catch {
-      return { conversations: [] };
-    }
-  },
-  respondToOffer: async (messageId: string, action: string, counterPrice?: number): Promise<{ success: boolean; message: any }> => {
-    try {
-      return (await apiRequest(`/messages/${messageId}/offer`, 'POST', { action, counterPrice })) as any;
-    } catch {
-      return {
-        success: true,
-        message: {
-          id: `off_${Date.now()}`,
-          content: action === 'counter' ? `Counter-offer: $${counterPrice?.toLocaleString()}` : `Offer ${action}`,
-          timestamp: new Date().toISOString(),
-          status: 'sent',
-          type: 'offer',
-          offerData: {
-            status: action === 'accept' ? 'accepted' : action === 'decline' ? 'declined' : 'countered',
-            offerPrice: counterPrice ?? 0,
-          },
-        },
-      };
-    }
-  },
+  sendMessage: (chatId: string, content: string, replyTo?: any) => apiRequest('/messages', 'POST', { chatId, content, replyTo }),
+  updateMessageStatus: (messageId: string, status: 'sent' | 'delivered' | 'read') => apiRequest(`/messages/${messageId}/status`, 'PATCH', { status }),
 };
 
 export const groupsAPI = {
@@ -271,80 +236,4 @@ export const businessesAPI = {
   deleteBusiness: (id: string) => apiRequest(`/businesses/${encodeURIComponent(id)}`, 'DELETE'),
   toggleSponsor: (id: string, adDetails?: { adTag: string; adHeadline: string }) =>
     apiRequest(`/businesses/${encodeURIComponent(id)}/sponsor`, 'PATCH', adDetails),
-};
-
-export const executiveOverviewAPI = {
-  getOverview: () => apiRequest('/admin/executive-overview'),
-  getData: () => apiRequest('/admin/executive-overview'),
-};
-
-export const adminAgentsAPI = {
-  getAgents: (department?: string) =>
-    apiRequest(`/admin/agents${department && department !== 'all' ? `?department=${encodeURIComponent(department)}` : ''}`),
-  createAgent: (data: {
-    name: string;
-    email: string;
-    contactPhone?: string;
-    staffRole: string;
-    staffTitle: string;
-    department: string;
-    assignedSupervisorId?: string;
-    maxClientQuota?: number;
-    temporaryPassword?: string;
-    forcePasswordReset?: boolean;
-  }) => apiRequest('/admin/agents', 'POST', data),
-  updateStatus: (agentId: string, status: 'active' | 'away' | 'suspended') =>
-    apiRequest(`/admin/agents/${encodeURIComponent(agentId)}/status`, 'PATCH', { status }),
-  updateCredentials: (agentId: string, data: { temporaryPassword?: string; forcePasswordReset?: boolean }) =>
-    apiRequest(`/admin/agents/${encodeURIComponent(agentId)}/credentials`, 'PATCH', data),
-  reassignPortfolio: (sourceAgentId: string, targetAgentId: string) =>
-    apiRequest(`/admin/agents/${encodeURIComponent(sourceAgentId)}/reassign-portfolio`, 'POST', { targetAgentId }),
-  deleteAgent: (agentId: string) =>
-    apiRequest(`/admin/agents/${encodeURIComponent(agentId)}`, 'DELETE'),
-};
-
-export const adminClientsAPI = {
-  getClients: (params?: {
-    search?: string;
-    sector?: string;
-    tier?: string;
-    assignedAgentId?: string;
-    risk?: string;
-    verification?: string;
-    page?: number;
-    limit?: number;
-    sort?: string;
-  }) => {
-    const qs = new URLSearchParams();
-    if (params?.search) qs.set('search', params.search);
-    if (params?.sector && params.sector !== 'all') qs.set('sector', params.sector);
-    if (params?.tier && params.tier !== 'all') qs.set('tier', params.tier);
-    if (params?.assignedAgentId && params.assignedAgentId !== 'all') qs.set('assignedAgentId', params.assignedAgentId);
-    if (params?.risk && params.risk !== 'all') qs.set('risk', params.risk);
-    if (params?.verification && params.verification !== 'all') qs.set('verification', params.verification);
-    if (params?.page) qs.set('page', String(params.page));
-    if (params?.limit) qs.set('limit', String(params.limit));
-    if (params?.sort) qs.set('sort', params.sort);
-    const query = qs.toString();
-    return apiRequest(`/admin/clients${query ? `?${query}` : ''}`);
-  },
-  getClientDossier: (clientId: string) =>
-    apiRequest(`/admin/clients/${encodeURIComponent(clientId)}`),
-  addStaffNote: (clientId: string, note: { text: string; urgency?: string }) =>
-    apiRequest(`/admin/clients/${encodeURIComponent(clientId)}/notes`, 'POST', note),
-  assignAgent: (clientId: string, agentId: string) =>
-    apiRequest(`/admin/clients/${encodeURIComponent(clientId)}/assign`, 'PATCH', { agentId }),
-  setTier: (clientId: string, tier: string) =>
-    apiRequest(`/admin/clients/${encodeURIComponent(clientId)}/tier`, 'PATCH', { tier }),
-  bulkAssign: (clientIds: string[], agentId: string) =>
-    apiRequest('/admin/clients/bulk-assign', 'POST', { clientIds, agentId }),
-  bulkTier: (clientIds: string[], tier: string) =>
-    apiRequest('/admin/clients/bulk-tier', 'POST', { clientIds, tier }),
-  resetClientCredentials: (clientId: string) =>
-    apiRequest(`/admin/clients/${encodeURIComponent(clientId)}/credentials-reset`, 'POST'),
-};
-
-export const staffAuthAPI = {
-  login: (email: string, password: string) =>
-    apiRequest('/auth/staff-login', 'POST', { email, password }, false),
 };

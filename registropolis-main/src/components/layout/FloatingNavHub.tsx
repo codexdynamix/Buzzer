@@ -1,11 +1,12 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
-  Home, LayoutGrid, X, MessageCircle, ShoppingBag, Briefcase,
-  Wrench, Building2, Truck, Calendar, LayoutList, Heart, Shield, Settings, LogOut, User, Play, Megaphone,
+  Home, LayoutGrid, X, MessageCircle, ShoppingBag, Briefcase, ChevronLeft, ChevronRight,
+  Wrench, Building2, Truck, Calendar, LayoutList, Heart, Shield, Settings, LogOut, User, Play, Megaphone, LifeBuoy,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useSidebar } from '@/context/SidebarContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { useChatContext } from '@/context/ChatContext';
 import { useUserListings } from '@/context/UserListingsContext';
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
   { label: 'Home',        icon: Home,          href: '/dashboard/home' },
   { label: 'Reels',       icon: Play,          href: '/dashboard/reels',       badge: 'NEW' },
   { label: 'Messages',    icon: MessageCircle, href: '/dashboard/messages',    badge: null },
+  { label: 'Help & Support', icon: LifeBuoy, href: '/dashboard/help' },
   { label: 'Marketplace', icon: ShoppingBag,   href: '/dashboard/marketplace' },
   { label: 'Jobs',        icon: Briefcase,     href: '/dashboard/jobs' },
   { label: 'Services',    icon: Wrench,        href: '/dashboard/services' },
@@ -32,28 +34,28 @@ const NAV_ITEMS = [
 const FAB_W = 134;
 const FAB_H = 48;
 const PANEL_W = 296;
-const PANEL_H = 420;
+const PANEL_H = 480;
 const DRAG_THRESHOLD = 6;
 const EDGE_PAD = 16;
 
 /* ─── Spring variants ───────────────────────────────────────────── */
-const panelVariants = {
+const panelVariants: Variants = {
   hidden: { opacity: 0, scale: 0.92, y: 12 },
   visible: {
     opacity: 1, scale: 1, y: 0,
-    transition: { type: 'spring' as const, stiffness: 400, damping: 30, mass: 0.8 },
+    transition: { type: 'spring', stiffness: 400, damping: 30, mass: 0.8 },
   },
   exit: {
     opacity: 0, scale: 0.94, y: 8,
-    transition: { duration: 0.15, ease: 'easeIn' as const },
+    transition: { duration: 0.15, ease: 'easeIn' },
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 10 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.035, type: 'spring' as const, stiffness: 500, damping: 30 },
+    transition: { delay: i * 0.035, type: 'spring', stiffness: 500, damping: 30 },
   }),
 };
 
@@ -62,6 +64,7 @@ const FloatingNavHub: React.FC = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { user, isAdmin, signOut } = useAuth();
+  const { isCollapsed, toggleSidebar } = useSidebar();
   const { t } = useLocalization();
 
   const { unreadMessages } = useNotifications();
@@ -80,6 +83,17 @@ const FloatingNavHub: React.FC = () => {
       x: window.innerWidth - FAB_W - 24,
       y: window.innerHeight - FAB_H - 24,
     });
+  }, []);
+
+  useEffect(() => {
+    const clampPosition = () => {
+      setPos(current => current && ({
+        x: Math.max(EDGE_PAD, Math.min(window.innerWidth - FAB_W - EDGE_PAD, current.x)),
+        y: Math.max(EDGE_PAD, Math.min(window.innerHeight - FAB_H - EDGE_PAD, current.y)),
+      }));
+    };
+    window.addEventListener('resize', clampPosition);
+    return () => window.removeEventListener('resize', clampPosition);
   }, []);
 
   /* Keyboard dismiss */
@@ -154,10 +168,171 @@ const FloatingNavHub: React.FC = () => {
 
   const handleNav = (href: string) => { navigate(href); setOpen(false); };
 
-  if (!pos) return null;
-
   return (
     <>
+      <aside
+        aria-label={t('Main navigation')}
+        className={`order-first hidden h-full shrink-0 flex-col overflow-hidden border-r transition-[width] duration-300 ease-in-out ${
+          isCollapsed ? 'w-16' : 'w-56'
+        }`}
+        style={{
+          background: 'linear-gradient(180deg, #111922 0%, #0c131c 100%)',
+          borderColor: 'rgba(201,169,110,0.16)',
+        }}
+      >
+        <div
+          className={`flex shrink-0 items-center border-b py-5 ${
+            isCollapsed ? 'justify-center px-2' : 'gap-3 px-5'
+          }`}
+          style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+        >
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-xl font-black"
+            style={{ background: 'linear-gradient(135deg, #C9A96E, #a8834e)', color: '#0F1923' }}
+          >
+            BZ
+          </div>
+          {!isCollapsed && (
+            <div className="min-w-0">
+              <p className="text-sm font-bold tracking-[0.16em] text-white">BUZZER</p>
+              <p className="truncate text-[10px]" style={{ color: 'rgba(250,250,247,0.48)' }}>
+                {user?.name ?? t('Community')}
+              </p>
+            </div>
+          )}
+          {!isCollapsed && (
+            <button
+              onClick={toggleSidebar}
+              aria-label={t('Collapse sidebar')}
+              aria-expanded="true"
+              aria-controls="main-sidebar-navigation"
+              title={t('Collapse sidebar')}
+              className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
+              style={{ color: 'rgba(250,250,247,0.62)' }}
+            >
+              <ChevronLeft size={17} />
+            </button>
+          )}
+        </div>
+        {isCollapsed && (
+          <div className="flex shrink-0 justify-center py-2">
+            <button
+              onClick={toggleSidebar}
+              aria-label={t('Expand sidebar')}
+              aria-expanded="false"
+              aria-controls="main-sidebar-navigation"
+              title={t('Expand sidebar')}
+              className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
+              style={{ color: 'rgba(250,250,247,0.62)' }}
+            >
+              <ChevronRight size={17} />
+            </button>
+          </div>
+        )}
+        <nav
+          id="main-sidebar-navigation"
+          className={`scrollbar-gold flex-1 space-y-1 overflow-y-auto ${
+            isCollapsed ? 'p-2' : 'p-3'
+          }`}
+        >
+          {items.map(({ label, icon: Icon, href, badge }) => {
+            const isActive = href === '/dashboard/home'
+              ? pathname === '/dashboard' || pathname === '/dashboard/home'
+              : pathname === href || pathname.startsWith(`${href}/`);
+            const itemBadge = href === '/dashboard/my-listings'
+              ? (totalCount > 0 ? String(totalCount) : null)
+              : badge;
+            return (
+              <button
+                key={href}
+                onClick={() => handleNav(href)}
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={`${t(label)}${itemBadge ? ` (${itemBadge})` : ''}`}
+                title={t(label)}
+                className={`relative flex w-full items-center rounded-xl py-2.5 transition-colors ${
+                  isCollapsed ? 'justify-center px-0' : 'gap-3 px-3 text-left'
+                }`}
+                style={{
+                  background: isActive ? 'rgba(201,169,110,0.14)' : 'transparent',
+                  color: isActive ? '#FAFAF7' : 'rgba(250,250,247,0.62)',
+                  border: `1px solid ${isActive ? 'rgba(201,169,110,0.25)' : 'transparent'}`,
+                }}
+              >
+                <span className="relative flex shrink-0">
+                  <Icon size={17} style={{ color: isActive ? '#C9A96E' : 'currentColor' }} />
+                  {isCollapsed && itemBadge && (
+                    <span
+                      className={`absolute -right-2 -top-1 flex min-h-3 min-w-3 items-center justify-center rounded-full text-[8px] font-bold ${
+                        itemBadge === 'NEW' ? 'px-1' : 'px-0.5'
+                      }`}
+                      style={{ background: '#C9A96E', color: '#0F1923' }}
+                    >
+                      {itemBadge === 'NEW' ? 'N' : parseInt(itemBadge) > 9 ? '9+' : itemBadge}
+                    </span>
+                  )}
+                </span>
+                {!isCollapsed && (
+                  <>
+                    <span className="min-w-0 flex-1 truncate text-xs font-medium">{t(label)}</span>
+                    {itemBadge && (
+                      <span
+                        className="rounded-full px-1.5 py-0.5 text-[9px] font-bold"
+                        style={{ background: '#C9A96E', color: '#0F1923' }}
+                      >
+                        {itemBadge}
+                      </span>
+                    )}
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+        <div
+          className={`shrink-0 space-y-1 border-t ${
+            isCollapsed ? 'p-2' : 'p-3'
+          }`}
+          style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+        >
+          <button
+            onClick={() => handleNav('/dashboard/settings')}
+            aria-label={t('Settings')}
+            title={t('Settings')}
+            className={`flex w-full items-center rounded-xl py-2.5 text-xs font-medium transition-colors ${
+              isCollapsed ? 'justify-center px-0' : 'gap-3 px-3 text-left'
+            }`}
+            style={{ color: 'rgba(250,250,247,0.62)' }}
+          >
+            <Settings size={16} /> {!isCollapsed && t('Settings')}
+          </button>
+          {user ? (
+            <button
+              onClick={() => signOut()}
+              aria-label={t('Sign out')}
+              title={t('Sign out')}
+              className={`flex w-full items-center rounded-xl py-2.5 text-xs font-medium transition-colors ${
+                isCollapsed ? 'justify-center px-0' : 'gap-3 px-3 text-left'
+              }`}
+              style={{ color: 'rgba(248,113,113,0.8)' }}
+            >
+              <LogOut size={16} /> {!isCollapsed && t('Sign out')}
+            </button>
+          ) : (
+            <button
+              onClick={() => handleNav('/auth')}
+              aria-label={t('Sign in')}
+              title={t('Sign in')}
+              className={`flex w-full items-center rounded-xl py-2.5 text-xs font-medium transition-colors ${
+                isCollapsed ? 'justify-center px-0' : 'gap-3 px-3 text-left'
+              }`}
+              style={{ color: '#C9A96E' }}
+            >
+              <User size={16} /> {!isCollapsed && t('Sign in')}
+            </button>
+          )}
+        </div>
+      </aside>
+      {pos && <div className="md:hidden">
       {/* ── Backdrop ── */}
       <AnimatePresence>
         {open && (
@@ -467,6 +642,7 @@ const FloatingNavHub: React.FC = () => {
           }}
         />
       </motion.button>
+      </div>}
     </>
   );
 };

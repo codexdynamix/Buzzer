@@ -6,13 +6,14 @@ Buzzer uses Supabase Auth for email accounts and Supabase Postgres for app data.
 
 1. Create a Supabase project with the VS Code Supabase extension or the Supabase dashboard.
 2. Run [`supabase/migrations/20261028000000_initial_schema.sql`](./supabase/migrations/20261028000000_initial_schema.sql) in the project's SQL editor. It creates the private `app_records` table, enables row-level security, and creates a profile record for each new Auth user.
-3. Copy `.env.example` to `.env` and set:
+3. Run [`supabase/migrations/20261030010000_app_records_service_role_permissions.sql`](./supabase/migrations/20261030010000_app_records_service_role_permissions.sql) to ensure the server role can perform all required record operations, including account deletion.
+4. Copy `.env.example` to `.env` and set:
    - `SUPABASE_URL`: the project URL.
    - `SUPABASE_SERVICE_ROLE_KEY`: the server-only service-role key.
    - `VITE_SUPABASE_URL`: the same project URL.
    - `VITE_SUPABASE_ANON_KEY`: the project's anon/public key.
-4. In Supabase Auth settings, set the site URL to `http://localhost:3000` and allow `http://localhost:3000/auth/reset-password` as a redirect URL. Configure email confirmation and SMTP according to your deployment needs.
-5. Install dependencies and start Buzzer:
+5. In Supabase Auth settings, set the site URL to `http://localhost:3000` and allow `http://localhost:3000/auth/reset-password` as a redirect URL. Configure email confirmation and SMTP according to your deployment needs.
+6. Install dependencies and start Buzzer:
 
    ```sh
    npm install

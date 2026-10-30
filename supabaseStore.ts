@@ -157,11 +157,16 @@ export class SupabaseCollection<T extends Record<string, any>> implements Record
 
   find(filter?: any, options?: { projection?: Projection }) {
     return new SupabaseRecordCursor<T>(async () => {
-      const { data, error } = await this.client
+      let query = this.client
         .from('app_records')
         .select('document')
         .eq('collection', this.collection);
 
+      const canPushExactFilter = Boolean(filter && Object.keys(filter).length > 0) &&
+        Object.values(filter).every(value => value === null || typeof value !== 'object');
+      if (canPushExactFilter) query = query.contains('document', filter);
+
+      const { data, error } = await query;
       if (error) throw new Error(`Supabase read failed for ${this.collection}: ${error.message}`);
 
       return (data ?? [])

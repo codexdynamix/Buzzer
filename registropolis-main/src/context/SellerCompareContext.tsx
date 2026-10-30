@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { MarketplaceListing } from '@/data/marketplaceData';
+import { useGuestGate } from './GuestGateContext';
 
 export interface PinnedSeller {
   name: string;
@@ -27,23 +28,29 @@ const SellerCompareContext = createContext<SellerCompareContextValue>({
 
 export function SellerCompareProvider({ children }: { children: React.ReactNode }) {
   const [pinned, setPinned] = useState<PinnedSeller[]>([]);
+  const { requireAuth } = useGuestGate();
 
   const pin = useCallback((seller: PinnedSeller) => {
+    if (!requireAuth()) return;
     setPinned(prev => {
       if (prev.some(s => s.name === seller.name)) return prev;
       if (prev.length >= 2) return [prev[1], seller];
       return [...prev, seller];
     });
-  }, []);
+  }, [requireAuth]);
 
   const unpin = useCallback((name: string) => {
+    if (!requireAuth()) return;
     setPinned(prev => prev.filter(s => s.name !== name));
-  }, []);
+  }, [requireAuth]);
 
   const isPinned = useCallback((name: string) =>
     pinned.some(s => s.name === name), [pinned]);
 
-  const clear = useCallback(() => setPinned([]), []);
+  const clear = useCallback(() => {
+    if (!requireAuth()) return;
+    setPinned([]);
+  }, [requireAuth]);
 
   return (
     <SellerCompareContext.Provider value={{ pinned, pin, unpin, isPinned, clear }}>

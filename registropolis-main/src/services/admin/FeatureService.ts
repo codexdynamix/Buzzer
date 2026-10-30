@@ -36,17 +36,20 @@ export class FeatureService extends BaseAdminService {
   }
 
   async getAllFeatureFlags(): Promise<FeatureFlag[]> {
-    const data = await apiFetch('/admin/features');
-    return (data.features || []).map((f: any) => ({
-      name: f.name,
-      enabled: f.enabled,
-      scope: f.scope || 'global',
-      targetUsers: f.targetUsers || [],
-      moderationEnabled: f.moderationEnabled ?? false,
-      moderationRules: f.moderationRules || {},
-      lastModified: new Date(f.lastModified || Date.now()),
-      modifiedBy: f.modifiedBy || 'system',
-    }));
+    try {
+      const data = await apiFetch('/admin/features');
+      return (data.features || []).map((f: any) => ({
+        name: f.name,
+        enabled: f.enabled,
+        scope: f.scope || 'global',
+        targetUsers: f.targetUsers || [],
+        lastModified: new Date(f.lastModified || Date.now()),
+        modifiedBy: f.modifiedBy || 'system',
+      }));
+    } catch (error) {
+      console.error('Error getting feature flags:', error);
+      return [];
+    }
   }
 }
 

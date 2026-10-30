@@ -44,8 +44,13 @@ export class LoggingService extends BaseAdminService {
   }
 
   async getAdminLogs(limit: number = 100): Promise<AdminLog[]> {
-    const data = await apiFetch(`/admin/logs?limit=${limit}`);
-    return data.logs || [];
+    try {
+      const data = await apiFetch(`/admin/logs?limit=${limit}`);
+      return data.logs || [];
+    } catch (error) {
+      console.error('Error getting admin logs:', error);
+      return [];
+    }
   }
 }
 

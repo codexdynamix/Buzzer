@@ -1,35 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
-
-export interface SupportTicket {
-  ticketId: string;
-  userId: string;
-  subject: string;
-  description: string;
-  priority: string;
-  category: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  createdAt: Date;
-  updatedAt: Date;
-  userWarned?: boolean;
-  responses?: TicketResponse[];
-}
-
-export interface TicketResponse {
-  responseId: string;
-  ticketId: string;
-  responderId: string;
-  message: string;
-  createdAt: Date;
-  isAdminResponse: boolean;
-}
-
-export interface UserWarning {
-  warningId: string;
-  userId: string;
-  ticketId: string;
-  reason: string;
-  createdAt: Date;
-}
+import type { SupportTicket, TicketResponse, UserWarning } from '@/types/supportTypes';
 
 function getAuthHeader(): Record<string, string> {
   const token = localStorage.getItem('auth_token');

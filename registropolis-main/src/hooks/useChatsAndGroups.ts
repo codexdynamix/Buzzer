@@ -1,25 +1,21 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-export interface ChatItemProps {
+import { GroupChatProps } from '@/components/groups/GroupChat';
+
+interface ChatItemProps {
   id: string;
   name: string;
-  lastMessage?: string;
+  businessInfo?: string;
+  businessType?: string;
+  verified?: boolean;
   message?: string;
   time?: string;
   unread?: number;
-  avatar?: string;
-  imageUrl?: string;
-  online?: boolean;
   isOnline?: boolean;
-  businessInfo?: any;
-  businessType?: string;
-  verified?: boolean;
-  onClick?: () => void;
-  [key: string]: any;
+  imageUrl?: string;
+  onClick: () => void;
 }
-import { GroupChatProps } from '@/components/groups/GroupChat';
 
-// Define a more detailed user type with business roles
 interface BusinessUser {
   id: string;
   name: string;
@@ -109,7 +105,7 @@ export function useChatsAndGroups(onChatSelect: (chatId: string, isGroup: boolea
       id: businessId,
       name: name,
       businessInfo: businessInfo,
-      businessType: businessType as any,
+      businessType,
       verified: false,
       message: "",
       time: "Just now",

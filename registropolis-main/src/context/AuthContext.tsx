@@ -67,34 +67,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
-      const storedToken = localStorage.getItem('auth_token');
-      const storedUser = localStorage.getItem('user');
-      if (storedToken) {
-        if (storedUser) {
-          try {
-            setUser(JSON.parse(storedUser));
-          } catch {
-            // ignore
-          }
-        }
-        void realAuthAPI.getCurrentUser(storedToken)
-          .then(res => {
-            if (res.user) {
-              setUser(res.user);
-              localStorage.setItem('user', JSON.stringify(res.user));
-            }
-          })
-          .catch(() => {
-            // Token expired or invalid
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('user');
-            setUser(null);
-          })
-          .finally(() => {
-            setIsLoading(false);
-          });
-        return;
-      }
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
       setIsLoading(false);
       return;
     }
@@ -111,7 +85,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-    localStorage.setItem('auth_token', session.access_token);
+      localStorage.setItem('auth_token', session.access_token);
       const sessionUser = {
         id: session.user.id,
         email: session.user.email,

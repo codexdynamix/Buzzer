@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Globe2, LogOut, Moon, Settings, Sun, UserRound } from 'lucide-react';
+import { CircleHelp, Globe2, Home, LayoutList, LogOut, MessageCircle, Moon, Settings, Sun, UserRound } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import NotificationBell from './NotificationBell';
@@ -57,12 +57,49 @@ const AccountMenu: React.FC = () => {
     setDarkMode(nextDarkMode);
   };
 
-  if (pathname.startsWith('/admin')) return null;
+  if (pathname === '/' || pathname.startsWith('/admin')) return null;
 
   const iconButtonClass = 'flex h-10 w-10 items-center justify-center rounded-full text-foreground/75 transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
   return (
-    <div ref={menuRef} className="fixed top-4 right-4 z-[60] flex items-center gap-1">
+    <div
+      ref={menuRef}
+      className="fixed inset-x-0 top-0 z-[60] flex h-16 items-center justify-between border-b border-border bg-background px-4"
+    >
+      <button
+        type="button"
+        aria-label="Buzzer home"
+        title="Buzzer"
+        onClick={() => goTo('/dashboard/home')}
+        className="flex h-10 items-center gap-2 rounded-lg px-2 text-foreground transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black text-[#0F1923]" style={{ background: 'linear-gradient(135deg, #C9A96E, #a8834e)' }}>
+          BZ
+        </span>
+        <span className="hidden text-sm font-bold tracking-[0.12em] sm:block">BUZZER</span>
+      </button>
+
+      <div className="flex items-center gap-1">
+      <button
+        type="button"
+        aria-label={t('Home')}
+        title={t('Home')}
+        onClick={() => goTo('/dashboard/home')}
+        className={iconButtonClass}
+      >
+        <Home size={19} />
+      </button>
+
+      <button
+        type="button"
+        aria-label={t('Messages')}
+        title={t('Messages')}
+        onClick={() => goTo('/dashboard/messages')}
+        className={iconButtonClass}
+      >
+        <MessageCircle size={19} />
+      </button>
+
       <NotificationBell inline />
 
       <div className="relative">
@@ -143,11 +180,27 @@ const AccountMenu: React.FC = () => {
               </button>
               <button
                 type="button"
+                onClick={() => goTo('/dashboard/my-listings')}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-accent/20"
+              >
+                <LayoutList size={16} />
+                {t('My Listings')}
+              </button>
+              <button
+                type="button"
                 onClick={() => goTo('/dashboard/settings')}
                 className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-accent/20"
               >
                 <Settings size={16} />
                 {t('Settings')}
+              </button>
+              <button
+                type="button"
+                onClick={() => goTo('/dashboard/help')}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-accent/20"
+              >
+                <CircleHelp size={16} />
+                {t('Help & Support')}
               </button>
               <div className="my-1 border-t border-border" />
               <button
@@ -175,6 +228,7 @@ const AccountMenu: React.FC = () => {
           <span className="hidden sm:block">{t('Sign in')}</span>
         </button>
       )}
+      </div>
     </div>
   );
 };

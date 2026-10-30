@@ -89,9 +89,9 @@ export const mainMenuItems = [
     href: '/dashboard/recently-viewed',
   },
   {
-    title: 'Operations CRM',
+    title: 'Admin',
     icon: Shield,
     href: '/admin',
-    badge: 'STAFF',
+    adminOnly: true,
   },
 ];

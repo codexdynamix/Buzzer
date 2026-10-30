@@ -181,7 +181,7 @@ export default function HomeSection() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="truncate text-xs font-bold text-[#0F1923] dark:text-foreground">{ad.name}</span>
-                    <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-800 shrink-0">AD</span>
+                    <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-800 shrink-0">{t('AD')}</span>
                   </div>
                   <p className="text-[11px] text-amber-700 font-medium line-clamp-1 mt-0.5">
                     {ad.adHeadline || ad.category}
@@ -209,7 +209,7 @@ export default function HomeSection() {
                 border: `1px solid ${activeCategory === category ? 'transparent' : '#E8E2D8'}`,
               }}
             >
-              {category === 'all' ? 'All' : SECTION_META[category]?.label ?? category}
+              {t(category === 'all' ? 'All' : SECTION_META[category]?.label ?? category)}
             </button>
           ))}
         </div>
@@ -241,7 +241,7 @@ export default function HomeSection() {
                     className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                     style={{ backgroundColor: section.bg, color: section.text }}
                   >
-                    {section.label}
+                    {t(section.label)}
                   </span>
                   <p className="text-sm font-semibold leading-snug line-clamp-2" style={{ color: '#0F1923' }}>
                     {item.title}
@@ -260,7 +260,7 @@ export default function HomeSection() {
       ) : (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <TrendingUp size={40} style={{ color: '#E8E2D8' }} />
-          <p className="text-sm" style={{ color: '#6E7A8A' }}>No listings in this category yet.</p>
+          <p className="text-sm" style={{ color: '#6E7A8A' }}>{t('No listings in this category yet.')}</p>
         </div>
       )}
     </div>

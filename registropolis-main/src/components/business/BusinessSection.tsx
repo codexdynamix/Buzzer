@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -45,8 +44,10 @@ import VerificationBadge from '../common/VerificationBadge';
 import FilterPanel from '../common/FilterPanel';
 import { businessesAPI } from '@/services/apiService';
 import { useAuth } from '@/context/AuthContext';
-import { hasAdminPermission, isStaffRole } from '@/config/adminAccess';
 import { useChatContext } from '@/context/ChatContext';
+import { useGuestGate } from '@/context/GuestGateContext';
+import { useSearchParams } from 'react-router-dom';
+import { useLocalization } from '@/i18n/LocalizationContext';
 
 export interface BusinessItem {
   id: string;
@@ -92,16 +93,18 @@ const PRESET_IMAGES = [
 ];
 
 const BusinessSection: React.FC = () => {
+  const { t } = useLocalization();
   const { user, isAuthenticated } = useAuth();
-  const { openChatWithUser } = useChatContext();
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { requireAuth } = useGuestGate();
+  const { openChatWithListing } = useChatContext();
+  const [searchParams] = useSearchParams();
 
   const [businesses, setBusinesses] = useState<BusinessItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const activeTab: 'all' | 'ads' = searchParams.get('tab') === 'ads' ? 'ads' : 'all';
-  const setActiveTab = (tab: 'all' | 'ads') => setSearchParams(tab === 'ads' ? { tab: 'ads' } : {});
+  const [activeTab, setActiveTab] = useState<'all' | 'ads'>(() =>
+    searchParams.get('tab') === 'ads' ? 'ads' : 'all'
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [appliedFilters, setAppliedFilters] = useState<Record<string, any>>({});
   
@@ -271,36 +274,32 @@ const BusinessSection: React.FC = () => {
         <div>
           <div className="gold-accent mb-3" />
           <h1 className="text-3xl font-bold tracking-tight text-[#0F1923]">
-            Business & Advertising Directory
+            {t('Business & Advertising Directory')}
           </h1>
           <p className="text-sm mt-1 text-[#6E7A8A]">
-            Discover verified local enterprises, services, and official sponsored partner advertisements.
+            {t('Discover verified local enterprises, services, and official sponsored partner advertisements.')}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/admin?tab=merchants')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold border-[#C9A96E]/50 text-[#1A3353] bg-amber-50/50 hover:bg-amber-100/70 transition-all shadow-sm"
-          >
-            <Sparkles className="h-4 w-4 text-amber-600" />
-            <span>Merchant Extranet</span>
-          </Button>
-
-          {/* Post Business / Advertisement Modal */}
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button 
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold shadow-sm transition-all"
-                style={{ backgroundColor: '#1A3353', color: '#ffffff' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#142842'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1A3353'; }}
-              >
-                <Megaphone className="h-4 w-4" />
-                <span>Post Advertisement</span>
-              </Button>
-            </DialogTrigger>
+        {/* Post Business / Advertisement Modal */}
+        <Dialog
+          open={isCreateOpen}
+          onOpenChange={open => {
+            if (open) requireAuth(() => setIsCreateOpen(true));
+            else setIsCreateOpen(false);
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold shadow-sm transition-all"
+              style={{ backgroundColor: '#1A3353', color: '#ffffff' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#142842'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1A3353'; }}
+            >
+              <Megaphone className="h-4 w-4" />
+              <span>{t('Post Advertisement')}</span>
+            </Button>
+          </DialogTrigger>
           <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl font-bold text-[#0F1923]">
@@ -474,7 +473,6 @@ const BusinessSection: React.FC = () => {
             </form>
           </DialogContent>
         </Dialog>
-        </div>
       </div>
 
       {/* ── Search & Filter Bar ───────────────────────────────── */}
@@ -482,7 +480,7 @@ const BusinessSection: React.FC = () => {
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-[#6E7A8A] h-4 w-4" />
           <Input
-            placeholder="Search verified businesses, sponsored ads, keywords..."
+            placeholder={t('Search verified businesses, sponsored ads, keywords...')}
             className="pl-10 h-11 bg-white border-[#E8E2D8] text-sm focus:ring-[#1A3353]"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -507,7 +505,7 @@ const BusinessSection: React.FC = () => {
                 : 'bg-white text-[#6E7A8A] border border-[#E8E2D8] hover:text-[#0F1923]'
             }`}
           >
-            All Listings ({businesses.length})
+            {t('All Listings')} ({businesses.length})
           </button>
           <button
             onClick={() => setActiveTab('ads')}
@@ -518,12 +516,12 @@ const BusinessSection: React.FC = () => {
             }`}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Sponsored Ads ({sponsoredAdsCount})</span>
+            <span>{t('Sponsored Ads')} ({sponsoredAdsCount})</span>
           </button>
         </div>
 
         <span className="text-xs text-[#6E7A8A] hidden sm:inline">
-          Connected to Buzzer Database
+          {t('Connected to Buzzer Database')}
         </span>
       </div>
 
@@ -531,16 +529,13 @@ const BusinessSection: React.FC = () => {
       {isLoading ? (
         <div className="h-64 flex flex-col items-center justify-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-[#1A3353]" />
-          <p className="text-sm text-[#6E7A8A]">Querying database for local businesses and ads...</p>
+          <p className="text-sm text-[#6E7A8A]">{t('Querying database for local businesses and ads...')}</p>
         </div>
       ) : filteredBusinesses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredBusinesses.map((biz) => {
             const isOwner = user?.id === biz.ownerId;
-            const staffRole = isStaffRole(user?.staffRole) ? user.staffRole : undefined;
-            const canManageAds = staffRole
-              ? hasAdminPermission(staffRole, 'ads:manage')
-              : false;
+            const isAdmin = user?.role === 'admin';
 
             return (
               <Card 
@@ -559,7 +554,7 @@ const BusinessSection: React.FC = () => {
                       {biz.adHeadline}
                     </span>
                     <span className="text-[10px] uppercase tracking-wider bg-black/20 px-2 py-0.5 rounded font-bold">
-                      {biz.adTag || 'Sponsored Ad'}
+                      {biz.adTag || t('Sponsored Ads')}
                     </span>
                   </div>
                 )}
@@ -581,7 +576,7 @@ const BusinessSection: React.FC = () => {
                     {biz.isSponsored && (
                       <div className="absolute bottom-2 left-2 bg-[#0F1923]/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Sparkles className="h-2.5 w-2.5 text-amber-400" />
-                        AD
+                        {t('AD')}
                       </div>
                     )}
                   </div>
@@ -640,6 +635,7 @@ const BusinessSection: React.FC = () => {
                             href={biz.website.startsWith('http') ? biz.website : `https://${biz.website}`}
                             target="_blank" 
                             rel="noopener noreferrer"
+                            onClick={event => { if (!requireAuth()) event.preventDefault(); }}
                             className="p-1.5 rounded-lg border border-[#E8E2D8] text-[#6E7A8A] hover:text-[#1A3353] hover:bg-[#F5F0E8] transition-colors"
                             title="Visit Official Website"
                           >
@@ -649,6 +645,7 @@ const BusinessSection: React.FC = () => {
                         {biz.phone && (
                           <a 
                             href={`tel:${biz.phone}`}
+                            onClick={event => { if (!requireAuth()) event.preventDefault(); }}
                             className="p-1.5 rounded-lg border border-[#E8E2D8] text-[#6E7A8A] hover:text-[#1A3353] hover:bg-[#F5F0E8] transition-colors"
                             title="Call Business"
                           >
@@ -658,6 +655,7 @@ const BusinessSection: React.FC = () => {
                         {biz.email && (
                           <a 
                             href={`mailto:${biz.email}`}
+                            onClick={event => { if (!requireAuth()) event.preventDefault(); }}
                             className="p-1.5 rounded-lg border border-[#E8E2D8] text-[#6E7A8A] hover:text-[#1A3353] hover:bg-[#F5F0E8] transition-colors"
                             title="Email Business"
                           >
@@ -667,7 +665,7 @@ const BusinessSection: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-1.5">
-                        {(isOwner || canManageAds) && (
+                        {(isOwner || isAdmin) && (
                           <Button 
                             variant="ghost" 
                             size="sm" 
@@ -684,8 +682,15 @@ const BusinessSection: React.FC = () => {
                           className="h-8 text-xs font-semibold rounded-lg"
                           style={{ backgroundColor: '#1A3353', color: '#fff' }}
                           onClick={() => {
+                            if (!requireAuth()) return;
                             if (biz.ownerId) {
-                              openChatWithUser(biz.ownerId, biz.ownerName || biz.name);
+                              openChatWithListing({
+                                listingId: biz.id,
+                                listingTitle: biz.name,
+                                listingPrice: '',
+                                listingCategory: 'business',
+                                sellerName: biz.ownerName || biz.name,
+                              });
                             } else {
                               toast.info(`Contacting ${biz.name} via ${biz.email || biz.phone || 'direct inquiry'}`);
                             }
@@ -705,12 +710,12 @@ const BusinessSection: React.FC = () => {
       ) : (
         <div className="text-center py-16 bg-white rounded-2xl border border-[#E8E2D8] p-8 space-y-3">
           <Building2 className="h-12 w-12 text-[#6E7A8A] mx-auto opacity-40" />
-          <p className="text-base font-semibold text-[#0F1923]">No businesses or advertisements found</p>
+          <p className="text-base font-semibold text-[#0F1923]">{t('No businesses or advertisements found')}</p>
           <p className="text-xs text-[#6E7A8A] max-w-md mx-auto">
             Try adjusting your search query, selecting "All Categories", or be the first to publish a business advertisement to the community!
           </p>
           <Button 
-            onClick={() => setIsCreateOpen(true)}
+            onClick={() => requireAuth(() => setIsCreateOpen(true))}
             size="sm" 
             className="mt-2 text-xs"
             style={{ backgroundColor: '#1A3353', color: '#fff' }}
