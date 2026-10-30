@@ -91,9 +91,9 @@ export default function PublicStorePage() {
     const firstListing = listings[0];
     openChatWithListing({
       listingId: firstListing ? firstListing.id : `store_${store.id}`,
-      listingTitle: firstListing ? (firstListing.data?.title || firstListing.data?.name) : `Inquiry with ${store.name}`,
-      listingPrice: firstListing?.data?.priceDisplay || (firstListing?.data?.price ? `$${firstListing.data.price}` : ''),
-      listingImage: firstListing?.data?.image || store.logoUrl,
+      listingTitle: firstListing ? String(firstListing.data?.title || firstListing.data?.name || `Inquiry with ${store.name}`) : `Inquiry with ${store.name}`,
+      listingPrice: String(firstListing?.data?.priceDisplay || (firstListing?.data?.price ? `$${firstListing.data.price}` : '')),
+      listingImage: firstListing?.data?.image ? String(firstListing.data.image) : store.logoUrl,
       listingCategory: firstListing?.section || 'marketplace',
       sellerName: store.name,
       sellerId: store.id,
@@ -308,7 +308,7 @@ export default function PublicStorePage() {
                 const data = listing.data;
                 const title = String(data.title ?? data.name ?? 'Listing');
                 const image = typeof data.image === 'string' ? data.image : '';
-                const price = data.priceDisplay ?? (data.price ? `$${Number(data.price).toLocaleString()}` : '') ?? data.salary ?? data.rate ?? '';
+                const price = String(data.priceDisplay || (data.price ? `$${Number(data.price).toLocaleString()}` : '') || data.salary || data.rate || '');
                 const location = data.location ?? data.address ?? '';
                 const item = { ...data, id: listing.id, section: listing.section, userId: store.id, seller: store.name };
 

@@ -6,6 +6,8 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createRedisClient } from 'redis';
+import { createAdapter as createRedisAdapter } from '@socket.io/redis-adapter';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer as createViteServer } from 'vite';
 import { SEED_USERS as ACCOUNTS_DATA, SEED_LISTINGS as LISTINGS_DATA, SEED_BUSINESSES as BUSINESSES_DATA, SeedBusiness } from './registropolis-main/src/data/seedAccounts';
@@ -802,11 +804,35 @@ async function initializeDatabase() {
 
 // ── Socket.IO Setup ───────────────────────────────────────────
 
-function setupSocketIO() {
+let redisPubClient: ReturnType<typeof createRedisClient> | null = null;
+let redisSubClient: ReturnType<typeof createRedisClient> | null = null;
+
+async function setupSocketIO() {
   const io = new SocketIOServer(server, {
     cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
   });
   socketServer = io;
+
+  const rawRedisUrl = (process.env.REDIS_URL || '').trim();
+  if (rawRedisUrl) {
+    try {
+      const sanitizedUrl = rawRedisUrl.replace(/\/\/[^@]+@/, '//***@');
+      console.log(`Connecting Socket.io to Redis cluster: ${sanitizedUrl}`);
+      redisPubClient = createRedisClient({ url: rawRedisUrl });
+      redisSubClient = redisPubClient.duplicate();
+
+      redisPubClient.on('error', (err) => console.warn('Redis Pub Client Warning:', err.message));
+      subClientError: redisSubClient.on('error', (err) => console.warn('Redis Sub Client Warning:', err.message));
+
+      await Promise.all([redisPubClient.connect(), redisSubClient.connect()]);
+      io.adapter(createRedisAdapter(redisPubClient, redisSubClient));
+      console.log('✅ Socket.io Redis adapter mounted successfully (Multi-server clustering active)');
+    } catch (err: any) {
+      console.warn('⚠️ Redis cluster connection failed, falling back to local in-memory adapter:', err.message);
+    }
+  } else {
+    console.log('Redis URL not configured — Socket.io running on in-memory adapter (ready to cluster when REDIS_URL is set)');
+  }
 
   io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
@@ -1725,8 +1751,8 @@ app.get('/api/jobs/:listingId/applications', authMiddleware, async (req: any, re
 app.get('/api/contacts', authMiddleware, async (req: any, res) => {
   try {
     const all = await users.find({ id: { $ne: req.user.userId } }).toArray();
-    const authenticatedContacts = all.filter(contact => contact.authUserId === contact.id);
-    res.json({ success: true, contacts: authenticatedContacts.map(safeUser) });
+    const activeContacts = all.filter(contact => contact.role !== 'banned');
+    res.json({ success: true, contacts: activeContacts.map(safeUser) });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
@@ -1749,7 +1775,8 @@ app.get('/api/messages/:chatId', authMiddleware, async (req: any, res) => {
       return res.status(403).json({ message: 'You are not a participant in this conversation' });
     }
     const otherParticipantId = getConversationPeerId(chatId, req.user.userId);
-    if (!otherParticipantId || !await users.findOne({ id: otherParticipantId, authUserId: otherParticipantId })) {
+    const recipient = otherParticipantId ? await users.findOne({ id: otherParticipantId }) : null;
+    if (!otherParticipantId || !recipient) {
       return res.status(404).json({ message: 'Recipient account is unavailable for messaging' });
     }
     const msgs = await messages.find({ chatId }).sort({ timestamp: 1 }).toArray();
@@ -1772,7 +1799,7 @@ app.post('/api/messages', authMiddleware, requireFeature('messaging'), async (re
         return res.status(400).json({ message: 'The conversation does not match its participants' });
       }
       const recipient = await users.findOne({ id: recipientId });
-      if (!recipient || recipient.authUserId !== recipient.id) {
+      if (!recipient) {
         return res.status(404).json({ message: 'Recipient account is unavailable for messaging' });
       }
       participantIds = [senderId, recipientId];
@@ -3276,6 +3303,7 @@ app.get('/health', async (_req, res) => {
     status: 'ok',
     database: databaseProvider === 'supabase' ? 'supabase' : 'local-development',
     auth: supabaseAdmin ? 'supabase' : 'unconfigured',
+    sockets: redisPubClient?.isOpen ? 'redis-clustered' : 'in-memory',
   });
 });
 
@@ -3322,7 +3350,7 @@ const PORT = 3000;
 
 async function start() {
   await initializeDatabase();
-  setupSocketIO();
+  await setupSocketIO();
 
   if (process.env.NODE_ENV === 'production') {
     const distPath = path.resolve(__dirname, 'registropolis-main/dist');
