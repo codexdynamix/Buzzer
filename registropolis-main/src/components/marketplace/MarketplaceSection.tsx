@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, Heart, MessageCircle, MapPin, CheckCircle2, Star, SlidersHorizontal, X, ChevronDown, Pin, Bell, BellOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import CreateListingModal from '@/components/shared/CreateListingModal';
 import { useUserListings } from '@/context/UserListingsContext';
 import { useChatContext } from '@/context/ChatContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSaved } from '@/context/SavedContext';
 import { listingDetailPath } from '@/lib/utils';
 import { useReviews } from '@/context/ReviewsContext';
@@ -42,8 +42,15 @@ function formatTimeAgo(value?: Date | string): string {
 
 export default function MarketplaceSection() {
   const { t } = useLocalization();
+  const [searchParams] = useSearchParams();
   const [activeCat, setActiveCat] = useState('All');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
+
+  useEffect(() => {
+    const q = searchParams.get('search');
+    if (q !== null) setSearch(q);
+  }, [searchParams]);
+
   const [showModal, setShowModal] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);

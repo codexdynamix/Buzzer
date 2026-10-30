@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { ArrowUpRight, BarChart3, Check, Copy, ExternalLink, Image, LoaderCircle, MessageCircle, Package, Search, Store, Tag, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useChatContext } from '@/context/ChatContext';
@@ -12,12 +11,20 @@ import {
   type SellerOrder,
   type SellerOrderStatus,
 } from '@/services/sellerWorkspaceService';
+import { QRCodeSvg } from '@/components/common/QRCodeSvg';
+import {
+  ArrowUpRight, BarChart3, Check, Copy, Download, ExternalLink,
+  Globe, Image, LoaderCircle, Mail, MapPin, MessageCircle,
+  Monitor, Package, Phone, QrCode, Search, Share2, Smartphone,
+  Store, Tag, Upload, UserRound, X,
+} from 'lucide-react';
 
 const fieldClass = 'mt-1 w-full rounded-xl border border-[#E8E2D8] bg-white px-3 py-2.5 text-sm text-[#0F1923] outline-none focus:border-[#1A3353]';
 const panelClass = 'rounded-2xl border border-[#E8E2D8] bg-white p-5 shadow-sm';
 
-function isHttpUrl(value: string) {
+function isHttpOrDataUrl(value: string) {
   if (!value.trim()) return true;
+  if (value.startsWith('data:image/')) return true;
   try {
     const url = new URL(value);
     return url.protocol === 'https:' || url.protocol === 'http:';
@@ -28,8 +35,13 @@ function isHttpUrl(value: string) {
 
 export function SellerStorefrontSettings() {
   const { user, updateUser } = useAuth();
+  const { listings } = useUserListings();
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+  const [activeCatalogTab, setActiveCatalogTab] = useState('all');
+
   const [form, setForm] = useState({
     storeName: '',
     storeSlug: '',
@@ -63,6 +75,25 @@ export function SellerStorefrontSettings() {
     setForm(current => ({ ...current, [key]: value }));
   };
 
+  const handleFileUpload = (field: 'storeLogoUrl' | 'storeBannerUrl', file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file (PNG, JPG, WebP)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be under 5MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        updateField(field, reader.result);
+        toast.success(`${field === 'storeLogoUrl' ? 'Logo' : 'Banner'} image loaded`);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const saveStore = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user) return;
@@ -71,8 +102,8 @@ export function SellerStorefrontSettings() {
       toast.error('Store URL must be 3–32 lowercase letters, numbers, or hyphens');
       return;
     }
-    if (![form.storeLogoUrl, form.storeBannerUrl, form.storeWebsite].every(isHttpUrl)) {
-      toast.error('Store image and website URLs must use http or https');
+    if (![form.storeLogoUrl, form.storeBannerUrl, form.storeWebsite].every(isHttpOrDataUrl)) {
+      toast.error('Store website must use http or https');
       return;
     }
 
@@ -92,7 +123,7 @@ export function SellerStorefrontSettings() {
       });
       updateUser(savedUser);
       setForm(current => ({ ...current, storeSlug: savedUser.storeSlug ?? '' }));
-      toast.success('Storefront saved');
+      toast.success('Storefront saved successfully!');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save your storefront');
     } finally {
@@ -104,105 +135,406 @@ export function SellerStorefrontSettings() {
     try {
       await navigator.clipboard.writeText(storeUrl);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
+      toast.success('Store link copied to clipboard');
+      window.setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error('Could not copy storefront link:', error);
       toast.error('Could not copy the store link');
     }
   };
 
-  return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(280px,.7fr)]">
-      <form className={`${panelClass} space-y-4`} onSubmit={event => void saveStore(event)}>
-        <div>
-          <h2 className="text-base font-bold text-[#0F1923]">Store profile</h2>
-          <p className="mt-1 text-sm text-[#6E7A8A]">Set up the public details buyers will see.</p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-xs font-semibold text-[#52606D]">
-            Store name
-            <input maxLength={80} className={fieldClass} value={form.storeName} onChange={event => updateField('storeName', event.target.value)} placeholder={user?.name || 'Your shop name'} />
-          </label>
-          <label className="text-xs font-semibold text-[#52606D]">
-            Store URL slug
-            <input maxLength={32} className={fieldClass} value={form.storeSlug} onChange={event => updateField('storeSlug', event.target.value)} placeholder={user?.id || 'your-store-name'} />
-          </label>
-        </div>
-        <label className="block text-xs font-semibold text-[#52606D]">
-          Tagline
-          <input maxLength={120} className={fieldClass} value={form.storeTagline} onChange={event => updateField('storeTagline', event.target.value)} placeholder="What makes your shop special?" />
-        </label>
-        <label className="block text-xs font-semibold text-[#52606D]">
-          About your store
-          <textarea maxLength={2000} rows={4} className={fieldClass} value={form.storeDescription} onChange={event => updateField('storeDescription', event.target.value)} placeholder="Tell buyers what you sell and how you work." />
-        </label>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-xs font-semibold text-[#52606D]">
-            Logo image URL
-            <input maxLength={2048} type="url" className={fieldClass} value={form.storeLogoUrl} onChange={event => updateField('storeLogoUrl', event.target.value)} placeholder="https://…" />
-          </label>
-          <label className="text-xs font-semibold text-[#52606D]">
-            Banner image URL
-            <input maxLength={2048} type="url" className={fieldClass} value={form.storeBannerUrl} onChange={event => updateField('storeBannerUrl', event.target.value)} placeholder="https://…" />
-          </label>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-xs font-semibold text-[#52606D]">
-            Public contact phone
-            <input maxLength={40} type="tel" className={fieldClass} value={form.storeContactPhone} onChange={event => updateField('storeContactPhone', event.target.value)} placeholder="Phone number" />
-          </label>
-          <label className="text-xs font-semibold text-[#52606D]">
-            Public contact email
-            <input maxLength={160} type="email" className={fieldClass} value={form.storeEmail} onChange={event => updateField('storeEmail', event.target.value)} placeholder="shop@example.com" />
-          </label>
-        </div>
-        <label className="block text-xs font-semibold text-[#52606D]">
-          Website
-          <input maxLength={300} type="url" className={fieldClass} value={form.storeWebsite} onChange={event => updateField('storeWebsite', event.target.value)} placeholder="https://example.com" />
-        </label>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#F0EBE1] pt-4">
-          <p className="text-xs text-[#6E7A8A]">Only the contact details above are displayed publicly.</p>
-          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[#1A3353] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-            {saving && <LoaderCircle size={15} className="animate-spin" />} Save storefront
-          </button>
-        </div>
-      </form>
+  const activeListings = listings.filter(l => l.status === 'active');
+  const filteredPreviewListings = activeCatalogTab === 'all'
+    ? activeListings
+    : activeListings.filter(l => l.section === activeCatalogTab);
 
-      <div className="space-y-4">
-        <div className={`${panelClass} overflow-hidden p-0`}>
-          <div
-            className="h-28 bg-gradient-to-r from-[#1A3353] via-[#34516E] to-[#C9A96E] bg-cover bg-center"
-            style={form.storeBannerUrl && isHttpUrl(form.storeBannerUrl) ? { backgroundImage: `linear-gradient(90deg, rgba(26,51,83,.48), rgba(52,81,110,.18)), url("${form.storeBannerUrl}")` } : undefined}
-          />
-          <div className="flex items-center gap-3 p-4">
-            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-[#F0EBE1] font-bold text-[#1A3353]">
-              {form.storeLogoUrl && isHttpUrl(form.storeLogoUrl)
-                ? <img src={form.storeLogoUrl} alt="" className="h-full w-full object-cover" />
-                : <Store size={19} />}
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+        {/* Left column: Storefront settings form */}
+        <form className={`${panelClass} space-y-4`} onSubmit={event => void saveStore(event)}>
+          <div className="flex items-center justify-between border-b border-[#F0EBE1] pb-3">
+            <div>
+              <h2 className="text-base font-bold text-[#0F1923]">Store profile & branding</h2>
+              <p className="mt-0.5 text-xs text-[#6E7A8A]">Customize your public merchant shop identity</p>
             </div>
-            <div className="min-w-0">
-              <p className="truncate font-bold text-[#0F1923]">{form.storeName || user?.name || 'Your store'}</p>
-              <p className="truncate text-xs text-[#6E7A8A]">{form.storeTagline || 'Storefront preview'}</p>
+            <span className="rounded-full bg-[#EFF6FF] px-2.5 py-1 text-xs font-semibold text-[#1A3353]">
+              Active Storefront
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-[#52606D]">
+              Store name
+              <input
+                maxLength={80}
+                className={fieldClass}
+                value={form.storeName}
+                onChange={event => updateField('storeName', event.target.value)}
+                placeholder={user?.name || 'Your Business Name'}
+              />
+            </label>
+            <label className="text-xs font-semibold text-[#52606D]">
+              Store handle (@slug)
+              <div className="mt-1 flex items-center rounded-xl border border-[#E8E2D8] bg-white px-3 focus-within:border-[#1A3353]">
+                <span className="text-xs font-semibold text-[#9AA3AE]">/shop/</span>
+                <input
+                  maxLength={32}
+                  className="w-full py-2.5 pl-1 text-sm text-[#0F1923] outline-none placeholder:text-[#9AA3AE]"
+                  value={form.storeSlug}
+                  onChange={event => updateField('storeSlug', event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  placeholder={user?.id?.slice(0, 8) || 'my-shop'}
+                />
+              </div>
+            </label>
+          </div>
+
+          <label className="block text-xs font-semibold text-[#52606D]">
+            Tagline & specialty
+            <input
+              maxLength={120}
+              className={fieldClass}
+              value={form.storeTagline}
+              onChange={event => updateField('storeTagline', event.target.value)}
+              placeholder="e.g. Handmade ceramic homeware & custom coffee drippers"
+            />
+          </label>
+
+          <label className="block text-xs font-semibold text-[#52606D]">
+            About your shop
+            <textarea
+              maxLength={2000}
+              rows={3}
+              className={fieldClass}
+              value={form.storeDescription}
+              onChange={event => updateField('storeDescription', event.target.value)}
+              placeholder="Tell buyers your background, crafting process, guarantees, and delivery details."
+            />
+          </label>
+
+          {/* Logo & Banner with Image Upload options */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <div className="flex items-center justify-between text-xs font-semibold text-[#52606D]">
+                <span>Store logo</span>
+                <label className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-bold text-[#1A3353] hover:underline">
+                  <Upload size={11} /> Upload
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => e.target.files?.[0] && handleFileUpload('storeLogoUrl', e.target.files[0])}
+                  />
+                </label>
+              </div>
+              <input
+                type="text"
+                className={fieldClass}
+                value={form.storeLogoUrl}
+                onChange={event => updateField('storeLogoUrl', event.target.value)}
+                placeholder="Upload file or paste image URL"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between text-xs font-semibold text-[#52606D]">
+                <span>Store banner</span>
+                <label className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-bold text-[#1A3353] hover:underline">
+                  <Upload size={11} /> Upload
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => e.target.files?.[0] && handleFileUpload('storeBannerUrl', e.target.files[0])}
+                  />
+                </label>
+              </div>
+              <input
+                type="text"
+                className={fieldClass}
+                value={form.storeBannerUrl}
+                onChange={event => updateField('storeBannerUrl', event.target.value)}
+                placeholder="Upload file or paste image URL"
+              />
             </div>
           </div>
-          <div className="space-y-3 px-4 pb-4">
-            <p className="line-clamp-3 text-xs leading-5 text-[#6E7A8A]">{form.storeDescription || user?.bio || 'Your store description will appear here.'}</p>
-            <div className="flex items-center justify-between gap-2 rounded-xl bg-[#F8F6F1] p-3">
-              <span className="min-w-0 truncate text-xs text-[#52606D]">{storeUrl}</span>
-              <button type="button" onClick={() => void copyStoreUrl()} aria-label="Copy public store link" className="shrink-0 rounded-lg p-2 text-[#1A3353] hover:bg-white">
-                {copied ? <Check size={15} /> : <Copy size={15} />}
+
+          {/* Contact Details */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-[#52606D]">
+              Public phone / WhatsApp
+              <input
+                maxLength={40}
+                type="tel"
+                className={fieldClass}
+                value={form.storeContactPhone}
+                onChange={event => updateField('storeContactPhone', event.target.value)}
+                placeholder="+1 (555) 000-0000"
+              />
+            </label>
+            <label className="text-xs font-semibold text-[#52606D]">
+              Public support email
+              <input
+                maxLength={160}
+                type="email"
+                className={fieldClass}
+                value={form.storeEmail}
+                onChange={event => updateField('storeEmail', event.target.value)}
+                placeholder="contact@myshop.com"
+              />
+            </label>
+          </div>
+
+          <label className="block text-xs font-semibold text-[#52606D]">
+            External website or portfolio
+            <input
+              maxLength={300}
+              type="url"
+              className={fieldClass}
+              value={form.storeWebsite}
+              onChange={event => updateField('storeWebsite', event.target.value)}
+              placeholder="https://myshop.com"
+            />
+          </label>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#F0EBE1] pt-4">
+            <p className="text-xs text-[#6E7A8A]">
+              Changes update immediately in your live public store and QR code.
+            </p>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#1A3353] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#23456d] disabled:opacity-60"
+            >
+              {saving && <LoaderCircle size={15} className="animate-spin" />}
+              Save storefront
+            </button>
+          </div>
+        </form>
+
+        {/* Right column: Interactive Device Frame Live Preview */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#6E7A8A]">Live buyer preview</span>
+            <div className="flex items-center gap-1 rounded-xl border border-[#E8E2D8] bg-[#F8F6F1] p-1">
+              <button
+                type="button"
+                onClick={() => setPreviewDevice('desktop')}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+                  previewDevice === 'desktop'
+                    ? 'bg-white text-[#1A3353] shadow-sm'
+                    : 'text-[#6E7A8A] hover:text-[#1A3353]'
+                }`}
+              >
+                <Monitor size={13} /> Desktop
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewDevice('mobile')}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+                  previewDevice === 'mobile'
+                    ? 'bg-white text-[#1A3353] shadow-sm'
+                    : 'text-[#6E7A8A] hover:text-[#1A3353]'
+                }`}
+              >
+                <Smartphone size={13} /> Mobile
               </button>
             </div>
-            <a href={`/shop/${encodeURIComponent(publicSlug)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-[#1A3353] hover:underline">
-              Preview public store <ExternalLink size={12} />
+          </div>
+
+          {/* Device Mockup Frame */}
+          <div className={`mx-auto transition-all ${previewDevice === 'mobile' ? 'max-w-[340px]' : 'w-full'}`}>
+            <div className="overflow-hidden rounded-2xl border-2 border-[#1A3353]/15 bg-white shadow-md">
+              {/* Browser / Phone Top Bar */}
+              {previewDevice === 'desktop' ? (
+                <div className="flex items-center gap-2 border-b border-[#E8E2D8] bg-[#F5F2EC] px-3 py-2 text-xs text-[#6E7A8A]">
+                  <div className="flex gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                  </div>
+                  <div className="flex-1 truncate rounded-md bg-white px-2 py-0.5 text-[11px] text-[#52606D]">
+                    {storeUrl}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between border-b border-[#E8E2D8] bg-[#0F1923] px-5 py-2 text-white">
+                  <span className="text-[10px] font-bold">9:41</span>
+                  <div className="h-3 w-16 rounded-full bg-[#1A3353]" />
+                  <span className="text-[10px]">5G</span>
+                </div>
+              )}
+
+              {/* Rendered Store Content */}
+              <div className="max-h-[500px] overflow-y-auto">
+                <div
+                  className="h-28 bg-gradient-to-r from-[#1A3353] via-[#34516E] to-[#C9A96E] bg-cover bg-center"
+                  style={form.storeBannerUrl ? { backgroundImage: `linear-gradient(90deg, rgba(26,51,83,.55), rgba(52,81,110,.25)), url("${form.storeBannerUrl}")` } : undefined}
+                />
+                <div className="px-4 pb-4">
+                  <div className="-mt-8 flex items-end justify-between gap-3">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-[#F0EBE1] text-xl font-bold text-[#1A3353] shadow">
+                      {form.storeLogoUrl ? (
+                        <img src={form.storeLogoUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        (form.storeName?.[0] || user?.name?.[0] || 'B').toUpperCase()
+                      )}
+                    </div>
+                    <span className="rounded-full bg-[#F0EBE1] px-2 py-0.5 text-[10px] font-semibold text-[#1A3353]">
+                      {activeListings.length} items
+                    </span>
+                  </div>
+
+                  <h3 className="mt-2 text-base font-bold text-[#0F1923]">
+                    {form.storeName || user?.storeName || user?.name || 'Your Storefront'}
+                  </h3>
+                  {form.storeTagline && (
+                    <p className="mt-0.5 text-xs text-[#6E7A8A]">{form.storeTagline}</p>
+                  )}
+
+                  <div className="mt-2.5 flex flex-wrap gap-2 text-[11px] text-[#6E7A8A]">
+                    {user?.location && (
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin size={11} /> {user.location}
+                      </span>
+                    )}
+                    {form.storeWebsite && (
+                      <span className="inline-flex items-center gap-1 text-[#1A3353]">
+                        <Globe size={11} /> Web
+                      </span>
+                    )}
+                    {form.storeContactPhone && (
+                      <span className="inline-flex items-center gap-1">
+                        <Phone size={11} /> {form.storeContactPhone}
+                      </span>
+                    )}
+                  </div>
+
+                  {form.storeDescription && (
+                    <p className="mt-2.5 line-clamp-2 text-xs leading-5 text-[#52606D]">
+                      {form.storeDescription}
+                    </p>
+                  )}
+
+                  {/* Micro Catalog in Mockup */}
+                  <div className="mt-4 border-t border-[#F0EBE1] pt-3">
+                    <p className="text-xs font-bold text-[#0F1923]">Catalog Preview</p>
+                    {activeListings.length ? (
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        {activeListings.slice(0, 4).map(l => (
+                          <div key={l.id} className="rounded-xl border border-[#E8E2D8] bg-[#FDFCFB] p-2">
+                            {l.data?.image ? (
+                              <img src={l.data.image} alt="" className="h-14 w-full rounded-lg object-cover" />
+                            ) : (
+                              <div className="flex h-14 w-full items-center justify-center rounded-lg bg-[#F0EBE1]">
+                                <Store size={16} className="text-[#C9A96E]" />
+                              </div>
+                            )}
+                            <p className="mt-1.5 truncate text-[11px] font-semibold text-[#0F1923]">
+                              {l.data?.title ?? l.data?.name ?? 'Item'}
+                            </p>
+                            <p className="text-[11px] font-bold text-[#1A3353]">
+                              {l.data?.priceDisplay ?? (l.data?.price ? `$${Number(l.data.price).toLocaleString()}` : '')}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-[11px] text-[#6E7A8A]">No active listings published yet.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#E8E2D8] bg-white p-3 shadow-sm">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void copyStoreUrl()}
+                className="flex items-center gap-1.5 rounded-xl border border-[#E8E2D8] bg-[#F8F6F1] px-3 py-1.5 text-xs font-semibold text-[#1A3353] hover:bg-white"
+              >
+                {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                {copied ? 'Copied' : 'Copy link'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setQrModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl border border-[#E8E2D8] bg-[#F8F6F1] px-3 py-1.5 text-xs font-semibold text-[#1A3353] hover:bg-white"
+              >
+                <QrCode size={14} /> Store QR Code
+              </button>
+            </div>
+            <a
+              href={`/shop/${encodeURIComponent(publicSlug)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#1A3353] hover:underline"
+            >
+              Open public store <ExternalLink size={12} />
             </a>
           </div>
         </div>
-        <div className={`${panelClass} flex gap-3`}>
-          <Image size={17} className="mt-0.5 shrink-0 text-[#C9A96E]" />
-          <p className="text-xs leading-5 text-[#6E7A8A]">Use direct image URLs for your logo and banner. Buyers only see the public store fields you save here.</p>
-        </div>
       </div>
+
+      {/* QR Code Modal for physical retail, flyers & counters */}
+      {qrModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setQrModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-[#E8E2D8] bg-white p-6 shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#F0EBE1] pb-3">
+              <div className="flex items-center gap-2">
+                <QrCode size={18} className="text-[#C9A96E]" />
+                <h3 className="font-bold text-[#0F1923]">Storefront QR Code</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQrModalOpen(false)}
+                className="rounded-lg p-1 text-[#6E7A8A] hover:bg-[#F5F2EC]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="my-5 flex flex-col items-center text-center">
+              <QRCodeSvg value={storeUrl} size={180} />
+              <p className="mt-3 font-bold text-[#0F1923]">
+                {form.storeName || user?.storeName || user?.name || 'Your Store'}
+              </p>
+              <p className="mt-0.5 text-xs text-[#6E7A8A]">Scan to view live inventory & message merchant</p>
+              <p className="mt-2 rounded-lg bg-[#F8F6F1] px-3 py-1 text-[11px] font-mono text-[#52606D]">
+                {storeUrl}
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void copyStoreUrl()}
+                className="flex-1 rounded-xl border border-[#E8E2D8] py-2 text-xs font-semibold text-[#1A3353] hover:bg-[#F8F6F1]"
+              >
+                Copy Link
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#1A3353] py-2 text-xs font-semibold text-white hover:bg-[#24466e]"
+              >
+                <Download size={13} /> Print QR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

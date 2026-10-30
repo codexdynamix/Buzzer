@@ -1,11 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, ArrowUpRight, ArrowDownRight as ArrowDownRightIcon, MessageSquare, ShoppingBag, Briefcase, Wrench, Home, Bus, Calendar, Menu, X, Star, Shield, Zap, Globe, Play, Megaphone, Sparkles, Coffee, Heart, Compass, MapPin } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ArrowDownRight as ArrowDownRightIcon, MessageSquare, ShoppingBag, Briefcase, Wrench, Home, Bus, Calendar, Menu, X, Star, Shield, Zap, Globe, Play, Megaphone, Sparkles, Coffee, Heart, Compass, MapPin, Search, PlusCircle } from 'lucide-react';
 import './Index.css';
 import { SUPPORTED_LANGUAGES, useLocalization } from '@/i18n/LocalizationContext';
-
-const HomeSection = React.lazy(() => import('@/components/home/HomeSection'));
+import LandingHeroSearch from '@/components/landing/LandingHeroSearch';
+import LandingCommunityShowcase from '@/components/landing/LandingCommunityShowcase';
+import GlobalSearchModal from '@/components/common/GlobalSearchModal';
+import SiteFooterModals, { type FooterModalType } from '@/components/common/SiteFooterModals';
 
 function LanguagePicker({ className = '' }: { className?: string }) {
   const { language, setLanguage, t } = useLocalization();
@@ -64,6 +66,20 @@ export default function Index() {
   const { t } = useLocalization();
   const reduceMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [activeFooterModal, setActiveFooterModal] = React.useState<FooterModalType>(null);
+
+  // Global Cmd+K / Ctrl+K shortcut listener
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div
@@ -89,31 +105,62 @@ export default function Index() {
             <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-[#0F1923] transition-colors">{t('About')}</button>
           </div>
 
-          {/* Desktop auth buttons */}
+          {/* Desktop search + auth buttons + Post Listing */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Quick Search Trigger */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 text-xs text-[#6E7A8A] bg-white border border-[#D1C9BC] rounded-lg hover:border-[#C9A96E] hover:text-[#0F1923] transition-all"
+            >
+              <Search size={14} className="text-[#C9A96E]" />
+              <span>Search listings...</span>
+              <kbd className="font-mono text-[10px] bg-[#F0EBE1] text-[#4A5568] px-1.5 py-0.5 rounded border border-[#E8E2D8]">⌘K</kbd>
+            </button>
+
             <LanguagePicker />
+
+            <button
+              onClick={() => navigate('/dashboard/my-listings')}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg transition-all shadow-sm"
+              style={{ backgroundColor: '#C9A96E', color: '#0F1923' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor = '#ba965c'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor = '#C9A96E'}
+            >
+              <PlusCircle size={14} />
+              <span>+ Post Listing</span>
+            </button>
+
             <button
               onClick={() => navigate('/auth?mode=signin&method=email')}
-              className="px-5 py-2.5 text-sm font-semibold rounded-lg border transition-all hover:border-[#1A3353] hover:text-[#1A3353]"
+              className="px-4 py-2 text-xs font-semibold rounded-lg border transition-all hover:border-[#1A3353] hover:text-[#1A3353]"
               style={{ borderColor: '#D1C9BC', color: '#4A5568', backgroundColor: 'transparent' }}
             >
               {t('Sign In')}
             </button>
             <button
               onClick={() => navigate('/auth?mode=signup')}
-              className="px-5 py-2.5 text-sm font-semibold rounded-lg transition-all"
+              className="px-4 py-2 text-xs font-semibold rounded-lg transition-all"
               style={{ backgroundColor: '#1A3353', color: '#ffffff' }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor = '#142842'}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor = '#1A3353'}
             >
-              {t('Sign Up Free')}
+              {t('Sign Up')}
             </button>
           </div>
 
           {/* Mobile hamburger */}
-          <button className="landing-menu-button md:hidden" aria-label={t(menuOpen ? 'Close menu' : 'Open menu')} aria-expanded={menuOpen} onClick={() => setMenuOpen(o => !o)} style={{ color: '#0F1923' }}>
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          <div className="flex md:hidden items-center gap-2">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="p-2 text-[#0F1923] rounded-lg border border-[#D1C9BC] bg-white"
+              aria-label="Search"
+            >
+              <Search size={18} />
+            </button>
+            <button className="landing-menu-button" aria-label={t(menuOpen ? 'Close menu' : 'Open menu')} aria-expanded={menuOpen} onClick={() => setMenuOpen(o => !o)} style={{ color: '#0F1923' }}>
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile menu */}
@@ -122,6 +169,13 @@ export default function Index() {
             <button onClick={() => { navigate('/dashboard/home'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Browse')}</button>
             <button onClick={() => { navigate('/dashboard/business?tab=ads'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Advertisements')}</button>
             <button onClick={() => { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('About')}</button>
+            <button
+              onClick={() => { navigate('/dashboard/my-listings'); setMenuOpen(false); }}
+              className="w-full py-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#C9A96E', color: '#0F1923' }}
+            >
+              <PlusCircle size={15} /> + Post a Listing
+            </button>
             <LanguagePicker className="w-full" />
             <div className="flex gap-2 pt-1">
               <button
@@ -185,6 +239,7 @@ export default function Index() {
             </button>
           </motion.div>
           <div className="landing-hero-note"><span className="landing-live-dot" /> {t('A little more local. A lot more connected.')}</div>
+          <LandingHeroSearch />
           </div>
 
           <motion.div {...fade(0.18)} className="landing-visual" aria-label="Scenes from a connected neighborhood">
@@ -245,9 +300,7 @@ export default function Index() {
               <button className="landing-text-link" onClick={() => navigate('/dashboard/home')}>Explore the board <ArrowRight size={16} /></button>
             </div>
           </div>
-          <React.Suspense fallback={<div className="py-12 text-center text-sm text-slate-500">Loading community listings…</div>}>
-            <HomeSection />
-          </React.Suspense>
+          <LandingCommunityShowcase />
         </div>
       </section>
 
@@ -408,13 +461,40 @@ export default function Index() {
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#C9A96E' }} />
           </div>
           <div className="flex gap-7 text-sm font-medium" style={{ color: '#6E7A8A' }}>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Contact</a>
+            <button
+              onClick={() => setActiveFooterModal('terms')}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              Terms
+            </button>
+            <button
+              onClick={() => setActiveFooterModal('privacy')}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              Privacy
+            </button>
+            <button
+              onClick={() => setActiveFooterModal('contact')}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              Contact
+            </button>
           </div>
           <div className="text-sm" style={{ color: '#6E7A8A' }}>© {new Date().getFullYear()} Buzzer Inc.</div>
         </div>
       </footer>
+
+      {/* Interactive Footer Legal & Contact Modals */}
+      <SiteFooterModals
+        activeModal={activeFooterModal}
+        onClose={() => setActiveFooterModal(null)}
+      />
+
+      {/* Global Command Search Palette */}
+      <GlobalSearchModal
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+      />
     </div>
   );
 }

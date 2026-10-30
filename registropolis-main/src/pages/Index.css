@@ -20,26 +20,31 @@
 }
 
 .landing-nav {
-  box-shadow: 0 1px 0 rgba(23, 33, 43, 0.025);
+  box-shadow: 0 1px 0 rgba(23, 33, 43, 0.05);
 }
 
 .landing-nav-inner {
-  height: 72px !important;
+  height: 68px;
 }
 
 .landing-menu-button {
   display: inline-flex;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--landing-line);
-  border-radius: 14px;
+  border-radius: 12px;
   background: #fff;
+  transition: all 150ms ease;
+}
+
+.landing-menu-button:hover {
+  background: #f5f0e8;
 }
 
 .landing-hero {
-  padding-top: 72px;
+  padding-top: 68px;
   background: var(--landing-paper);
 }
 

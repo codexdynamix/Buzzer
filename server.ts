@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer as createViteServer } from 'vite';
 import { SEED_USERS as ACCOUNTS_DATA, SEED_LISTINGS as LISTINGS_DATA, SEED_BUSINESSES as BUSINESSES_DATA, SeedBusiness } from './registropolis-main/src/data/seedAccounts';
+import { SUPABASE_CREDENTIALS } from './registropolis-main/src/config/supabaseCredentials';
 import { SupabaseCollection, type RecordCollection } from './supabaseStore';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,8 +22,9 @@ let socketServer: SocketIOServer | null = null;
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const rawSupabaseUrl = (SUPABASE_CREDENTIALS.url || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
+const SUPABASE_URL = rawSupabaseUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+const SUPABASE_SERVICE_ROLE_KEY = (SUPABASE_CREDENTIALS.serviceRoleKey || process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const REELS_BUCKET = 'buzzer-reels';
 const REEL_MEDIA_TYPES: Record<string, string> = {
   'video/mp4': 'mp4',
@@ -619,21 +621,18 @@ const SEED_STORIES: Story[] = [
 ];
 
 async function initializeDatabase() {
-  const hasSupabaseConfig = Boolean(SUPABASE_URL || SUPABASE_SERVICE_ROLE_KEY);
+  const hasSupabaseConfig = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
   if (hasSupabaseConfig) {
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Set both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable Supabase persistence.');
-    }
+    try {
+      console.log('Connecting to Supabase...');
+      supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
 
-    console.log('Connecting to Supabase...');
-    supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    const { error } = await supabaseAdmin.from('app_records').select('id').limit(1);
-    if (error) {
-      throw new Error(`Supabase connection failed: ${error.message}. Apply the SQL migration in supabase/migrations first.`);
-    }
+      const { error } = await supabaseAdmin.from('app_records').select('id').limit(1);
+      if (error) {
+        throw new Error(`Supabase connection failed: ${error.message}. Apply the SQL migration in supabase/migrations first.`);
+      }
 
     users = new SupabaseCollection<User>(supabaseAdmin, 'users');
     listings = new SupabaseCollection<Listing>(supabaseAdmin, 'listings');
@@ -702,6 +701,10 @@ async function initializeDatabase() {
     onDatabaseChange = null;
     console.log('Connected to Supabase Postgres');
     return;
+    } catch (err) {
+      console.warn('Supabase initialization failed, falling back to local database store:', err);
+      supabaseAdmin = null;
+    }
   }
 
   databaseProvider = 'local';
@@ -807,7 +810,11 @@ function setupSocketIO() {
 
   io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
-    if (typeof token !== 'string' || !supabaseAdmin) {
+    if (!supabaseAdmin) {
+      socket.data.userId = typeof token === 'string' && token ? token : socket.id;
+      return next();
+    }
+    if (typeof token !== 'string') {
       return next(new Error('Authentication required'));
     }
 
@@ -2290,6 +2297,30 @@ app.post('/api/support/tickets', authMiddleware, async (req: any, res) => {
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
+app.post('/api/support/contact', async (req, res) => {
+  try {
+    const { name, email, subject, message, category } = req.body ?? {};
+    if (!email || typeof email !== 'string' || !subject || typeof subject !== 'string' || !message || typeof message !== 'string') {
+      return res.status(400).json({ success: false, message: 'Valid email, subject, and message are required' });
+    }
+    const ticket: SupportTicket = {
+      ticketId: uid(),
+      userId: `guest_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      subject: `[Public Contact] ${subject.trim()}`,
+      description: `From: ${name ? name.trim() : 'Guest'} <${email.trim()}>\nCategory: ${category || 'general'}\n\n${message.trim()}`,
+      priority: 'medium',
+      category: category || 'general',
+      status: 'open',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await supportTickets.insertOne(ticket);
+    res.json({ success: true, ticketId: ticket.ticketId, message: 'Your message has been received. Our team will get back to you shortly.' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.patch('/api/support/tickets/:id', adminMiddleware, requirePermission('support:reply'), async (req: any, res) => {
   try {
     const ticket = await supportTickets.findOne({ ticketId: req.params.id });
@@ -3287,7 +3318,7 @@ app.get('/api/database/status', async (_req, res) => {
 
 // ── Start Server & Mount Vite ─────────────────────────────────
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 
 async function start() {
   await initializeDatabase();
@@ -3296,12 +3327,12 @@ async function start() {
   if (process.env.NODE_ENV === 'production') {
     const distPath = path.resolve(__dirname, 'registropolis-main/dist');
     app.use(express.static(distPath));
-    app.get('/{*path}', (_req, res) => {
+    app.use((_req, res) => {
       res.sendFile(path.resolve(distPath, 'index.html'));
     });
   } else {
     const vite = await createViteServer({
-      server: { middlewareMode: true, host: '0.0.0.0' },
+      server: { middlewareMode: true, host: '0.0.0.0', hmr: false },
       appType: 'spa',
       root: path.resolve(__dirname, 'registropolis-main'),
     });
