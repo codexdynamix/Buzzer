@@ -11,7 +11,7 @@ export interface ListingChatInfo {
   listingImage?: string;
   listingCategory: string;
   sellerName: string;
-  sellerUserId: string;
+  sellerUserId?: string;
   sellerAvatar?: string;
   triggerOffer?: boolean;
 }

@@ -1,8 +1,7 @@
 
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supportService } from '@/services/supportService';
-import { SupportTicket } from '@/types/supportTypes';
+import { supportService, SupportTicket } from '@/services/supportService';
 import {
   Table,
   TableBody,
@@ -35,7 +34,7 @@ const AdminSupport = () => {
     queryFn: () => supportService.getTickets(),
   });
 
-  const getPriorityColor = (priority: SupportTicket['priority']) => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent':
         return 'bg-red-500';

@@ -58,8 +58,11 @@ type UserTimeline = {
 const ROLE_LABELS: Record<StaffRole, string> = {
   superadmin: 'Super Admin',
   operations: 'Operations & CRM',
+  department_lead: 'Department Desk Lead',
+  verification: 'Verification Officer',
   moderator: 'Trust Moderator',
   support: 'Support Specialist',
+  account_exec: 'Account Executive',
 };
 
 const AdminUsers: React.FC<AdminUsersProps> = ({

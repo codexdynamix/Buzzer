@@ -11,6 +11,7 @@ import { realAuthAPI } from '@/services/authService';
 import { SEED_USERS, SeedUser } from '@/data/seedAccounts';
 import { toast } from 'sonner';
 import { useLocalization } from '@/i18n/LocalizationContext';
+import type { StaffRole } from '@/config/adminAccess';
 
 type EmailMode = 'login' | 'signup';
 
@@ -21,7 +22,7 @@ type AuthUser = {
   profileImageUrl?: string;
   email?: string;
   role?: string;
-  staffRole?: 'superadmin' | 'operations' | 'moderator' | 'support';
+  staffRole?: StaffRole;
   staffTitle?: string;
   bio?: string;
   location?: string;

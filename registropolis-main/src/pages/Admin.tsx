@@ -29,12 +29,16 @@ import AdminSupport from '@/components/admin/AdminSupport';
 import { AdminModerationQueue } from '@/components/admin/AdminModerationQueue';
 import { AdminVerificationDesk } from '@/components/admin/AdminVerificationDesk';
 import { AdminMerchantPortal } from '@/components/admin/AdminMerchantPortal';
+import { AdminExecutiveOverview } from '@/components/admin/AdminExecutiveOverview';
+import { AdminClientsCRM } from '@/components/admin/AdminClientsCRM';
+import { AdminAgents } from '@/components/admin/AdminAgents';
 import { useAuth } from '@/context/AuthContext';
 import { adminCRMAPI } from '@/services/apiService';
 import {
   ADMIN_TAB_PERMISSIONS,
   hasAdminPermission,
   isStaffRole,
+  ROLE_DEFINITIONS,
   type AdminTab,
   type StaffRole,
 } from '@/config/adminAccess';
@@ -55,16 +59,11 @@ type NavigationItem = {
   icon: LucideIcon;
 };
 
-const STAFF_PROFILES: Record<StaffRole, { title: string; badge: string }> = {
-  superadmin: { title: 'Platform Director & Superadmin', badge: 'Super Admin' },
-  operations: { title: 'Commercial Operations & Partner CRM', badge: 'Ops Manager' },
-  moderator: { title: 'Trust & Safety Lead Moderator', badge: 'Content Moderator' },
-  support: { title: 'Customer Experience & Help Desk', badge: 'Support Specialist' },
-};
-
 const NAVIGATION: NavigationItem[] = [
-  { id: 'overview', label: 'Executive Overview', group: 'OPERATIONS', icon: LayoutDashboard },
-  { id: 'users', label: 'User & Merchant CRM', group: 'OPERATIONS', icon: Users },
+  { id: 'overview', label: 'Executive Command', group: 'OPERATIONS', icon: LayoutDashboard },
+  { id: 'clients', label: 'Institutional CRM (1M+)', group: 'OPERATIONS', icon: Users },
+  { id: 'agents', label: 'Staff & Agents Desk', group: 'OPERATIONS', icon: ShieldCheck },
+  { id: 'users', label: 'All Accounts & Identity', group: 'OPERATIONS', icon: Users },
   { id: 'moderation', label: 'Catalog & Moderation', group: 'OPERATIONS', icon: BriefcaseBusiness },
   { id: 'merchants', label: 'Business & Advertising', group: 'OPERATIONS', icon: Megaphone },
   { id: 'verification', label: 'Verification Desk', group: 'OPERATIONS', icon: ShieldCheck },
@@ -90,7 +89,7 @@ const Admin = () => {
   const { user, signOut } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const staffRole: StaffRole = isStaffRole(user?.staffRole) ? user.staffRole : 'superadmin';
-  const staffProfile = STAFF_PROFILES[staffRole];
+  const staffProfile = ROLE_DEFINITIONS[staffRole] || { title: 'Staff Member', badge: 'Staff' };
   const allowedNavigation = useMemo(
     () => NAVIGATION.filter(item => hasAdminPermission(staffRole, ADMIN_TAB_PERMISSIONS[item.id])),
     [staffRole],
@@ -100,6 +99,7 @@ const Admin = () => {
     allowedNavigation.some(item => item.id === requestedTab)
     ? requestedTab
     : allowedNavigation[0]?.id ?? 'overview';
+  const filterParam = searchParams.get('filter') || undefined;
   const [piiMasked, setPiiMasked] = useState(true);
   const [kpis, setKpis] = useState<AdminKpis>(EMPTY_KPIS);
   const [isLoadingKpis, setIsLoadingKpis] = useState(true);
@@ -315,60 +315,26 @@ const Admin = () => {
 
           <main className="min-w-0 p-4 sm:p-6 lg:p-8">
             {activeTab === 'overview' && (
-              <div className="space-y-6">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#8A6A32]">Operations center</p>
-                    <h2 className="mt-1 text-2xl font-bold tracking-tight">Executive Overview</h2>
-                    <p className="mt-1 text-sm text-[#6E7A8A]">Platform activity and the work that needs attention.</p>
-                  </div>
-                  <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                    Workspace operational
-                  </div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {summaryCards.map(card => {
-                    const Icon = card.icon;
-                    const isActionable = card.tab && allowedNavigation.some(item => item.id === card.tab);
-                    return (
-                      <button
-                        key={card.label}
-                        type="button"
-                        disabled={!isActionable}
-                        onClick={() => card.tab && selectTab(card.tab)}
-                        className={`rounded-2xl border border-[#E8E2D8] bg-white p-4 text-left shadow-[0_1px_3px_rgba(15,25,35,0.04)] ${isActionable ? 'transition hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default'}`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-[#6E7A8A]">{card.label}</span>
-                          <Icon size={16} className={card.tone === 'gold' ? 'text-[#A27B37]' : card.tone === 'green' ? 'text-emerald-600' : 'text-[#1A3353]'} />
-                        </div>
-                        <div className="mt-3 text-2xl font-bold text-[#0F1923]">
-                          {isLoadingKpis ? <span className="text-[#AAB1B9]">—</span> : card.value.toLocaleString()}
-                        </div>
-                        {isActionable && <div className="mt-2 text-[11px] font-semibold text-[#1A3353]">Open module →</div>}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="rounded-2xl border border-[#E8E2D8] bg-white p-5 shadow-[0_1px_3px_rgba(15,25,35,0.04)]">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle size={17} className="text-emerald-600" />
-                    <h3 className="font-semibold">Your operational modules</h3>
-                  </div>
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                    {allowedNavigation.filter(item => item.id !== 'overview').map(item => (
-                      <button
-                        key={item.id}
-                        onClick={() => selectTab(item.id)}
-                        className="flex items-center gap-2 rounded-xl border border-[#E8E2D8] px-3 py-3 text-left text-xs font-semibold text-[#526070] hover:bg-[#F5F0E8] hover:text-[#1A3353]"
-                      >
-                        <item.icon size={15} className="text-[#8A6A32]" />
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <AdminExecutiveOverview
+                onNavigateTab={(tab, param) => {
+                  if (tab === 'clients') {
+                    setSearchParams({ tab: 'clients', ...(param ? { filter: param } : {}) });
+                  } else {
+                    selectTab(tab as AdminTab);
+                  }
+                }}
+              />
+            )}
+            {activeTab === 'clients' && (
+              <AdminClientsCRM
+                initialFilter={filterParam}
+                onNavigateTab={(tab) => selectTab(tab as AdminTab)}
+              />
+            )}
+            {activeTab === 'agents' && (
+              <AdminAgents
+                onNavigateTab={(tab) => selectTab(tab as AdminTab)}
+              />
             )}
             {activeTab === 'users' && <AdminUsers piiMasked={piiMasked} canManageUsers={hasAdminPermission(staffRole, 'users:write')} canRestrictUsers={hasAdminPermission(staffRole, 'users:ban')} />}
             {activeTab === 'moderation' && <AdminModerationQueue />}

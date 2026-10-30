@@ -3,19 +3,24 @@
     {
       "id": "u_admin",
       "email": "admin@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Admin User",
       "role": "admin",
+      "staffRole": "superadmin",
+      "staffTitle": "Platform Director & Owner",
+      "department": "general",
       "profileImageUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
       "bio": "Buzzer Platform Superadmin & City Coordinator",
       "location": "Downtown Center",
       "contactPhone": "+1 (555) 010-0001",
-      "createdAt": "2026-09-26T23:54:31.389Z"
+      "initialPassword": "admin123",
+      "maxClientQuota": 1000,
+      "agentStatus": "active",
+      "createdAt": "2026-09-26T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_mkt_1",
       "email": "elena.vintage@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Elena Torres",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80",
@@ -24,12 +29,41 @@
       "contactPhone": "+1 (555) 201-0101",
       "whatsapp": true,
       "telegram": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "vip",
+      "assignedSector": "marketplace",
+      "assignedAgentId": "u_agent_n58qho3138sp7ydydfm2ng",
+      "assignedAgentName": "Sarah Connor",
+      "riskScore": 5,
+      "lifetimeSpend": 12400,
+      "verified": true,
+      "verifiedLevel": 3,
+      "businessName": "Elena Torres Holdings / Services",
+      "taxOrRegNumber": "REG-100000",
+      "crmNotes": [
+        {
+          "id": "04z6bfr1qc2yc4n3cguwtua",
+          "authorId": "u_agent_n58qho3138sp7ydydfm2ng",
+          "authorName": "Sarah Connor",
+          "authorRole": "account_exec",
+          "content": "Conducted Q3 portfolio review with Elena. Upgraded tier to VIP Enterprise with dedicated SLA guarantee.",
+          "createdAt": "2026-10-29T00:57:00.837Z",
+          "urgency": "urgent"
+        },
+        {
+          "id": "note_u_mkt_1_1",
+          "authorId": "u_vip_exec",
+          "authorName": "Julian Brooks",
+          "text": "Key enterprise partner. VIP SLA guaranteed, weekly review scheduled.",
+          "timestamp": "2026-10-28T12:56:40.629Z",
+          "urgency": "warning"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_mkt_2",
       "email": "marcus.tech@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Marcus Vance",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop&q=80",
@@ -37,12 +71,28 @@
       "location": "Tech District, Tower 2",
       "contactPhone": "+1 (555) 201-0102",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "standard",
+      "assignedSector": "marketplace",
+      "riskScore": 8,
+      "lifetimeSpend": 150,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_mkt_2_1",
+          "authorId": "u_ops_lead",
+          "authorName": "Marcus Vance",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-28T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_mkt_3",
       "email": "maya.ceramics@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Maya Lin",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
@@ -50,12 +100,30 @@
       "location": "Metro Center",
       "contactPhone": "+1 (555) 201-0103",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "power",
+      "assignedSector": "marketplace",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 16,
+      "lifetimeSpend": 1150,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_mkt_3_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-27T12:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_mkt_4",
       "email": "julian.outdoor@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Julian Brooks",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
@@ -63,12 +131,32 @@
       "location": "Greenway Basin",
       "contactPhone": "+1 (555) 201-0104",
       "telegram": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "pro",
+      "assignedSector": "marketplace",
+      "assignedAgentId": "u_kyb_agent",
+      "assignedAgentName": "Chloe Bennett",
+      "riskScore": 12,
+      "lifetimeSpend": 4100,
+      "verified": true,
+      "verifiedLevel": 2,
+      "businessName": "Julian Brooks Holdings / Services",
+      "taxOrRegNumber": "REG-100741",
+      "crmNotes": [
+        {
+          "id": "note_u_mkt_4_1",
+          "authorId": "u_kyb_agent",
+          "authorName": "Chloe Bennett",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-27T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_mkt_5",
       "email": "chloe.sound@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Chloe Dupont",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80",
@@ -76,12 +164,30 @@
       "location": "Old Town Historic",
       "contactPhone": "+1 (555) 201-0105",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "power",
+      "assignedSector": "marketplace",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 16,
+      "lifetimeSpend": 1350,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_mkt_5_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-26T12:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_re_1",
       "email": "liam.properties@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Liam O'Connor",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80",
@@ -89,12 +195,28 @@
       "location": "Historic Center",
       "contactPhone": "+1 (555) 301-0201",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "standard",
+      "assignedSector": "real-estate",
+      "riskScore": 8,
+      "lifetimeSpend": 150,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_re_1_1",
+          "authorId": "u_ops_lead",
+          "authorName": "Marcus Vance",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-26T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_re_2",
       "email": "sophia.lofts@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Sophia Rossi",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80",
@@ -102,12 +224,32 @@
       "location": "Waterfront Marina",
       "contactPhone": "+1 (555) 301-0202",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "vip",
+      "assignedSector": "real-estate",
+      "assignedAgentId": "u_vip_exec",
+      "assignedAgentName": "Julian Brooks",
+      "riskScore": 5,
+      "lifetimeSpend": 17200,
+      "verified": true,
+      "verifiedLevel": 3,
+      "businessName": "Sophia Rossi Holdings / Services",
+      "taxOrRegNumber": "REG-101482",
+      "crmNotes": [
+        {
+          "id": "note_u_re_2_1",
+          "authorId": "u_vip_exec",
+          "authorName": "Julian Brooks",
+          "text": "Key enterprise partner. VIP SLA guaranteed, weekly review scheduled.",
+          "timestamp": "2026-10-25T12:56:40.629Z",
+          "urgency": "warning"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_re_3",
       "email": "daniel.villas@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Daniel Kim",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80",
@@ -116,12 +258,30 @@
       "contactPhone": "+1 (555) 301-0203",
       "whatsapp": true,
       "telegram": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "high_risk",
+      "assignedSector": "real-estate",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 78,
+      "lifetimeSpend": 0,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_re_3_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Flagged for multiple unverified high-value listings. Account restricted to manual review.",
+          "timestamp": "2026-10-25T00:56:40.629Z",
+          "urgency": "critical"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_re_4",
       "email": "clara.spaces@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Clara Moreau",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80",
@@ -129,12 +289,30 @@
       "location": "Arts District",
       "contactPhone": "+1 (555) 301-0204",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "power",
+      "assignedSector": "real-estate",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 16,
+      "lifetimeSpend": 1750,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_re_4_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-24T12:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_re_5",
       "email": "oliver.urban@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Oliver Thorne",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
@@ -142,12 +320,32 @@
       "location": "Downtown Metro",
       "contactPhone": "+1 (555) 301-0205",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "pro",
+      "assignedSector": "real-estate",
+      "assignedAgentId": "u_re_lead",
+      "assignedAgentName": "Sophia Laurent",
+      "riskScore": 12,
+      "lifetimeSpend": 5900,
+      "verified": true,
+      "verifiedLevel": 2,
+      "businessName": "Oliver Thorne Holdings / Services",
+      "taxOrRegNumber": "REG-102223",
+      "crmNotes": [
+        {
+          "id": "note_u_re_5_1",
+          "authorId": "u_re_lead",
+          "authorName": "Sophia Laurent",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-24T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_job_1",
       "email": "rachel.talent@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Rachel Adams",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80",
@@ -155,12 +353,30 @@
       "location": "Tech District",
       "contactPhone": "+1 (555) 401-0301",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "power",
+      "assignedSector": "jobs",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 16,
+      "lifetimeSpend": 1950,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_job_1_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-23T12:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_job_2",
       "email": "kevin.robotics@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Kevin Patel",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=200&auto=format&fit=crop&q=80",
@@ -169,12 +385,28 @@
       "contactPhone": "+1 (555) 401-0302",
       "whatsapp": true,
       "telegram": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "standard",
+      "assignedSector": "jobs",
+      "riskScore": 8,
+      "lifetimeSpend": 150,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_job_2_1",
+          "authorId": "u_ops_lead",
+          "authorName": "Marcus Vance",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-23T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_job_3",
       "email": "tara.creative@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Tara Sterling",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=200&auto=format&fit=crop&q=80",
@@ -182,12 +414,32 @@
       "location": "Design Quarter",
       "contactPhone": "+1 (555) 401-0303",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "vip",
+      "assignedSector": "jobs",
+      "assignedAgentId": "u_vip_exec",
+      "assignedAgentName": "Julian Brooks",
+      "riskScore": 5,
+      "lifetimeSpend": 22000,
+      "verified": true,
+      "verifiedLevel": 3,
+      "businessName": "Tara Sterling Holdings / Services",
+      "taxOrRegNumber": "REG-102964",
+      "crmNotes": [
+        {
+          "id": "note_u_job_3_1",
+          "authorId": "u_vip_exec",
+          "authorName": "Julian Brooks",
+          "text": "Key enterprise partner. VIP SLA guaranteed, weekly review scheduled.",
+          "timestamp": "2026-10-22T12:56:40.629Z",
+          "urgency": "warning"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_job_4",
       "email": "amir.healthtech@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Amir Hosseini",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop&q=80",
@@ -195,12 +447,28 @@
       "location": "BioMedical Center",
       "contactPhone": "+1 (555) 401-0304",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "standard",
+      "assignedSector": "jobs",
+      "riskScore": 8,
+      "lifetimeSpend": 150,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_job_4_1",
+          "authorId": "u_ops_lead",
+          "authorName": "Marcus Vance",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-22T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_job_5",
       "email": "zoe.greentech@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Zoe Lindqvist",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80",
@@ -208,12 +476,30 @@
       "location": "Eco District",
       "contactPhone": "+1 (555) 401-0305",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "power",
+      "assignedSector": "jobs",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 16,
+      "lifetimeSpend": 2350,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_job_5_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-21T12:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_srv_1",
       "email": "nathan.electric@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Nathan Cross",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop&q=80",
@@ -221,12 +507,32 @@
       "location": "Metro Wide",
       "contactPhone": "+1 (555) 501-0401",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "pro",
+      "assignedSector": "services",
+      "assignedAgentId": "u_kyb_agent",
+      "assignedAgentName": "Chloe Bennett",
+      "riskScore": 12,
+      "lifetimeSpend": 7700,
+      "verified": true,
+      "verifiedLevel": 2,
+      "businessName": "Nathan Cross Holdings / Services",
+      "taxOrRegNumber": "REG-103705",
+      "crmNotes": [
+        {
+          "id": "note_u_srv_1_1",
+          "authorId": "u_kyb_agent",
+          "authorName": "Chloe Bennett",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-21T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_srv_2",
       "email": "isabella.design@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Isabella Santos",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=200&auto=format&fit=crop&q=80",
@@ -234,12 +540,30 @@
       "location": "Design Quarter",
       "contactPhone": "+1 (555) 501-0402",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "power",
+      "assignedSector": "services",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 16,
+      "lifetimeSpend": 2550,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_srv_2_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-20T12:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_srv_3",
       "email": "lucas.music@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Lucas Reinhardt",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80",
@@ -247,12 +571,28 @@
       "location": "Conservatory Park",
       "contactPhone": "+1 (555) 501-0403",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "standard",
+      "assignedSector": "services",
+      "riskScore": 8,
+      "lifetimeSpend": 150,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_srv_3_1",
+          "authorId": "u_ops_lead",
+          "authorName": "Marcus Vance",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-20T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_srv_4",
       "email": "mateo.plumbing@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Mateo Vargas",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
@@ -260,12 +600,32 @@
       "location": "Westside Metro",
       "contactPhone": "+1 (555) 501-0404",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "vip",
+      "assignedSector": "services",
+      "assignedAgentId": "u_vip_exec",
+      "assignedAgentName": "Julian Brooks",
+      "riskScore": 5,
+      "lifetimeSpend": 26800,
+      "verified": true,
+      "verifiedLevel": 3,
+      "businessName": "Mateo Vargas Holdings / Services",
+      "taxOrRegNumber": "REG-104446",
+      "crmNotes": [
+        {
+          "id": "note_u_srv_4_1",
+          "authorId": "u_vip_exec",
+          "authorName": "Julian Brooks",
+          "text": "Key enterprise partner. VIP SLA guaranteed, weekly review scheduled.",
+          "timestamp": "2026-10-19T12:56:40.629Z",
+          "urgency": "warning"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_srv_5",
       "email": "hannah.bikes@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Hannah Lind",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
@@ -274,12 +634,28 @@
       "contactPhone": "+1 (555) 501-0405",
       "whatsapp": true,
       "telegram": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "standard",
+      "assignedSector": "services",
+      "riskScore": 8,
+      "lifetimeSpend": 150,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_srv_5_1",
+          "authorId": "u_ops_lead",
+          "authorName": "Marcus Vance",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-19T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_trn_1",
       "email": "darius.chauffeur@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Darius Cole",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
@@ -287,12 +663,30 @@
       "location": "International Airport & City",
       "contactPhone": "+1 (555) 601-0501",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "power",
+      "assignedSector": "transport",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 16,
+      "lifetimeSpend": 2950,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_trn_1_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-18T12:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_trn_2",
       "email": "emily.evshare@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Emily Zhang",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80",
@@ -300,12 +694,32 @@
       "location": "Tech Corridor",
       "contactPhone": "+1 (555) 601-0502",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "pro",
+      "assignedSector": "transport",
+      "assignedAgentId": "u_auto_lead",
+      "assignedAgentName": "Tariq Mansour",
+      "riskScore": 12,
+      "lifetimeSpend": 9500,
+      "verified": true,
+      "verifiedLevel": 2,
+      "businessName": "Emily Zhang Holdings / Services",
+      "taxOrRegNumber": "REG-105187",
+      "crmNotes": [
+        {
+          "id": "note_u_trn_2_1",
+          "authorId": "u_auto_lead",
+          "authorName": "Tariq Mansour",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-18T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_trn_3",
       "email": "felix.camper@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Felix Baum",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80",
@@ -314,12 +728,30 @@
       "contactPhone": "+1 (555) 601-0503",
       "whatsapp": true,
       "telegram": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "power",
+      "assignedSector": "transport",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 16,
+      "lifetimeSpend": 3150,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_trn_3_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-17T12:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_trn_4",
       "email": "samira.logistics@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Samira Al-Mansoor",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80",
@@ -327,12 +759,30 @@
       "location": "Freight Zone Hub",
       "contactPhone": "+1 (555) 601-0504",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "high_risk",
+      "assignedSector": "transport",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 78,
+      "lifetimeSpend": 0,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_trn_4_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Flagged for multiple unverified high-value listings. Account restricted to manual review.",
+          "timestamp": "2026-10-17T00:56:40.629Z",
+          "urgency": "critical"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_trn_5",
       "email": "tyler.moto@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Tyler Vance",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop&q=80",
@@ -340,12 +790,32 @@
       "location": "Mountain Gateway",
       "contactPhone": "+1 (555) 601-0505",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "vip",
+      "assignedSector": "transport",
+      "assignedAgentId": "u_vip_exec",
+      "assignedAgentName": "Julian Brooks",
+      "riskScore": 5,
+      "lifetimeSpend": 31600,
+      "verified": true,
+      "verifiedLevel": 3,
+      "businessName": "Tyler Vance Holdings / Services",
+      "taxOrRegNumber": "REG-105928",
+      "crmNotes": [
+        {
+          "id": "note_u_trn_5_1",
+          "authorId": "u_vip_exec",
+          "authorName": "Julian Brooks",
+          "text": "Key enterprise partner. VIP SLA guaranteed, weekly review scheduled.",
+          "timestamp": "2026-10-16T12:56:40.629Z",
+          "urgency": "warning"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_evt_1",
       "email": "gabriel.festivals@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Gabriel Silva",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=200&auto=format&fit=crop&q=80",
@@ -353,12 +823,28 @@
       "location": "Waterfront Marina",
       "contactPhone": "+1 (555) 701-0601",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "standard",
+      "assignedSector": "events",
+      "riskScore": 8,
+      "lifetimeSpend": 150,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_evt_1_1",
+          "authorId": "u_ops_lead",
+          "authorName": "Marcus Vance",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-16T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_evt_2",
       "email": "nina.tasting@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Nina Kostas",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
@@ -366,12 +852,30 @@
       "location": "Old Mill Courtyard",
       "contactPhone": "+1 (555) 701-0602",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "power",
+      "assignedSector": "events",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 16,
+      "lifetimeSpend": 3550,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_evt_2_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-15T12:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_evt_3",
       "email": "ethan.hackathons@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Ethan Wright",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
@@ -380,12 +884,32 @@
       "contactPhone": "+1 (555) 701-0603",
       "whatsapp": true,
       "telegram": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "pro",
+      "assignedSector": "events",
+      "assignedAgentId": "u_kyb_agent",
+      "assignedAgentName": "Chloe Bennett",
+      "riskScore": 12,
+      "lifetimeSpend": 11300,
+      "verified": true,
+      "verifiedLevel": 2,
+      "businessName": "Ethan Wright Holdings / Services",
+      "taxOrRegNumber": "REG-106669",
+      "crmNotes": [
+        {
+          "id": "note_u_evt_3_1",
+          "authorId": "u_kyb_agent",
+          "authorName": "Chloe Bennett",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-15T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_evt_4",
       "email": "leila.wellness@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Leila Jamison",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80",
@@ -393,12 +917,30 @@
       "location": "Skyline Terrace",
       "contactPhone": "+1 (555) 701-0604",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "power",
+      "assignedSector": "events",
+      "assignedAgentId": "u_mod_agent",
+      "assignedAgentName": "David Chen",
+      "riskScore": 16,
+      "lifetimeSpend": 3750,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_evt_4_1",
+          "authorId": "u_mod_agent",
+          "authorName": "David Chen",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-14T12:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
     },
     {
       "id": "u_evt_5",
       "email": "victor.artfest@buzzer.com",
-      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2",
       "name": "Victor Vance",
       "role": "user",
       "profileImageUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80",
@@ -406,7 +948,176 @@
       "location": "Civic Sculpture Gardens",
       "contactPhone": "+1 (555) 701-0605",
       "whatsapp": true,
-      "createdAt": "2026-10-11T23:54:31.389Z"
+      "clientTier": "standard",
+      "assignedSector": "events",
+      "riskScore": 8,
+      "lifetimeSpend": 150,
+      "verified": false,
+      "verifiedLevel": 1,
+      "crmNotes": [
+        {
+          "id": "note_u_evt_5_1",
+          "authorId": "u_ops_lead",
+          "authorName": "Marcus Vance",
+          "text": "Account registered and active in local directory. Standard compliance verified.",
+          "timestamp": "2026-10-14T00:56:40.629Z",
+          "urgency": "routine"
+        }
+      ],
+      "createdAt": "2026-10-11T23:54:31.389Z",
+      "passwordHash": "$2b$10$jjX8HfhbdMWOTiV5KEN/M.QOgsh7aHgD.4XKuz3hAOOYVWJM1/Ma2"
+    },
+    {
+      "id": "u_ops_lead",
+      "email": "marcus.ops@buzzer.com",
+      "name": "Marcus Vance",
+      "role": "admin",
+      "staffRole": "operations",
+      "staffTitle": "Head of Operations & Regional CRM",
+      "department": "general",
+      "assignedSupervisorId": "u_admin",
+      "assignedSupervisorName": "Admin User",
+      "profileImageUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+      "bio": "Oversees operational standards, cross-sector SLA compliance, and agent workflows.",
+      "location": "Operations Floor 3",
+      "contactPhone": "+1 (555) 010-0002",
+      "initialPassword": "agent123",
+      "maxClientQuota": 500,
+      "agentStatus": "active",
+      "createdAt": "2026-09-14T00:56:40.629Z"
+    },
+    {
+      "id": "u_re_lead",
+      "email": "sophia.re@buzzer.com",
+      "name": "Sophia Laurent",
+      "role": "admin",
+      "staffRole": "department_lead",
+      "staffTitle": "Real Estate & Properties Desk Lead",
+      "department": "real-estate",
+      "assignedSupervisorId": "u_ops_lead",
+      "assignedSupervisorName": "Marcus Vance",
+      "profileImageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80",
+      "bio": "Manages commercial and luxury residential real estate brokerages and portfolio agents.",
+      "location": "Real Estate Desk, Suite 204",
+      "contactPhone": "+1 (555) 010-0003",
+      "initialPassword": "agent123",
+      "maxClientQuota": 250,
+      "agentStatus": "active",
+      "createdAt": "2026-09-19T00:56:40.629Z"
+    },
+    {
+      "id": "u_auto_lead",
+      "email": "tariq.auto@buzzer.com",
+      "name": "Tariq Mansour",
+      "role": "admin",
+      "staffRole": "department_lead",
+      "staffTitle": "Motors & Fleet Operations Lead",
+      "department": "transport",
+      "assignedSupervisorId": "u_ops_lead",
+      "assignedSupervisorName": "Marcus Vance",
+      "profileImageUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+      "bio": "Specialist in vehicle dealership verification, fleet transport compliance, and disputes.",
+      "location": "Mobility Center, Bay 1",
+      "contactPhone": "+1 (555) 010-0004",
+      "initialPassword": "agent123",
+      "maxClientQuota": 250,
+      "agentStatus": "active",
+      "createdAt": "2026-09-24T00:56:40.629Z"
+    },
+    {
+      "id": "u_kyb_agent",
+      "email": "chloe.kyb@buzzer.com",
+      "name": "Chloe Bennett",
+      "role": "admin",
+      "staffRole": "verification",
+      "staffTitle": "Senior KYB Verification Specialist",
+      "department": "commercial",
+      "assignedSupervisorId": "u_ops_lead",
+      "assignedSupervisorName": "Marcus Vance",
+      "profileImageUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80",
+      "bio": "Audits business trade registers, merchant tax credentials, and enterprise legitimacy.",
+      "location": "Compliance Desk",
+      "contactPhone": "+1 (555) 010-0005",
+      "initialPassword": "agent123",
+      "maxClientQuota": 300,
+      "agentStatus": "active",
+      "createdAt": "2026-09-29T00:56:40.629Z"
+    },
+    {
+      "id": "u_mod_agent",
+      "email": "david.mod@buzzer.com",
+      "name": "David Chen",
+      "role": "admin",
+      "staffRole": "moderator",
+      "staffTitle": "Trust & Safety Moderator",
+      "department": "marketplace",
+      "assignedSupervisorId": "u_ops_lead",
+      "assignedSupervisorName": "Marcus Vance",
+      "profileImageUrl": "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&auto=format&fit=crop&q=80",
+      "bio": "Handles content moderation, item authenticity, spam prevention, and seller integrity.",
+      "location": "Trust & Safety Bay",
+      "contactPhone": "+1 (555) 010-0006",
+      "initialPassword": "agent123",
+      "maxClientQuota": 300,
+      "agentStatus": "active",
+      "createdAt": "2026-10-04T00:56:40.629Z"
+    },
+    {
+      "id": "u_care_agent",
+      "email": "aisha.care@buzzer.com",
+      "name": "Aisha Patel",
+      "role": "admin",
+      "staffRole": "support",
+      "staffTitle": "Customer Care & Dispute Specialist",
+      "department": "general",
+      "assignedSupervisorId": "u_ops_lead",
+      "assignedSupervisorName": "Marcus Vance",
+      "profileImageUrl": "https://images.unsplash.com/photo-1534751516642-a171ed292022?w=200&auto=format&fit=crop&q=80",
+      "bio": "Resolves client inquiries, buyer protection claims, and payment escrow communications.",
+      "location": "Support Operations",
+      "contactPhone": "+1 (555) 010-0007",
+      "initialPassword": "agent123",
+      "maxClientQuota": 300,
+      "agentStatus": "active",
+      "createdAt": "2026-10-09T00:56:40.629Z"
+    },
+    {
+      "id": "u_vip_exec",
+      "email": "julian.vip@buzzer.com",
+      "name": "Julian Brooks",
+      "role": "admin",
+      "staffRole": "account_exec",
+      "staffTitle": "Enterprise Commercial Account Exec",
+      "department": "commercial",
+      "assignedSupervisorId": "u_admin",
+      "assignedSupervisorName": "Admin User",
+      "profileImageUrl": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80",
+      "bio": "Dedicated key account manager for top-tier advertising merchants and sponsor campaigns.",
+      "location": "Corporate Accounts Floor",
+      "contactPhone": "+1 (555) 010-0008",
+      "initialPassword": "agent123",
+      "maxClientQuota": 100,
+      "agentStatus": "active",
+      "createdAt": "2026-10-14T00:56:40.629Z"
+    },
+    {
+      "id": "u_agent_n58qho3138sp7ydydfm2ng",
+      "name": "Sarah Connor",
+      "email": "sarah.c@buzzer.com",
+      "role": "admin",
+      "staffRole": "account_exec",
+      "staffTitle": "Real Estate Brokerage Specialist",
+      "department": "real-estate",
+      "assignedSupervisorId": "u_admin",
+      "assignedSupervisorName": "Admin User",
+      "contactPhone": "",
+      "initialPassword": "Agent-Sarah2026!",
+      "passwordHash": "$2b$10$5TgJ3ScQXi5oh9CGmZUkxu6hzqv3.QGdxk3UcVnUQVJnNqF45mmte",
+      "maxClientQuota": 300,
+      "agentStatus": "active",
+      "profileImageUrl": "https://images.unsplash.com/photo-1534528769269?w=200&auto=format&fit=crop&q=80",
+      "bio": "Dedicated agent in real-estate managing high-velocity client accounts.",
+      "createdAt": "2026-10-29T00:56:51.661Z"
     }
   ],
   "listings": [
@@ -1258,7 +1969,104 @@
       "timestamp": "2026-10-25T11:54:31.389Z"
     }
   ],
-  "adminLogs": [],
+  "adminLogs": [
+    {
+      "id": "j63ugf1lttj7zco0ie9rpb",
+      "action": "staff_login",
+      "performedBy": "u_admin",
+      "timestamp": "2026-10-29T00:56:41.763Z",
+      "details": {
+        "email": "admin@buzzer.com",
+        "staffRole": "superadmin"
+      }
+    },
+    {
+      "id": "t2ry793zi4e8denwylkf5",
+      "action": "staff_login",
+      "performedBy": "u_admin",
+      "timestamp": "2026-10-29T00:56:46.439Z",
+      "details": {
+        "email": "admin@buzzer.com",
+        "staffRole": "superadmin"
+      }
+    },
+    {
+      "id": "zl1g00vmsbnsw1mj34n5fj",
+      "action": "staff_login",
+      "performedBy": "u_admin",
+      "timestamp": "2026-10-29T00:56:51.515Z",
+      "details": {
+        "email": "admin@buzzer.com",
+        "staffRole": "superadmin"
+      }
+    },
+    {
+      "id": "liwxg0mr6fagnobn2f3whn",
+      "action": "create_agent",
+      "performedBy": "u_admin",
+      "timestamp": "2026-10-29T00:56:51.662Z",
+      "details": {
+        "agentId": "u_agent_n58qho3138sp7ydydfm2ng",
+        "name": "Sarah Connor",
+        "email": "sarah.c@buzzer.com",
+        "staffRole": "account_exec",
+        "department": "real-estate",
+        "createdBy": "Admin User"
+      }
+    },
+    {
+      "id": "483db3dcd8ac5ljp5huaxf",
+      "action": "staff_login",
+      "performedBy": "u_agent_n58qho3138sp7ydydfm2ng",
+      "timestamp": "2026-10-29T00:56:55.634Z",
+      "details": {
+        "email": "sarah.c@buzzer.com",
+        "staffRole": "account_exec"
+      }
+    },
+    {
+      "id": "3l9z8cvbg8p6m383j3zshi",
+      "action": "staff_login",
+      "performedBy": "u_agent_n58qho3138sp7ydydfm2ng",
+      "timestamp": "2026-10-29T00:57:00.801Z",
+      "details": {
+        "email": "sarah.c@buzzer.com",
+        "staffRole": "account_exec"
+      }
+    },
+    {
+      "id": "lwpfmv7uth4hpfc2a3mq5",
+      "action": "add_client_crm_note",
+      "performedBy": "u_agent_n58qho3138sp7ydydfm2ng",
+      "timestamp": "2026-10-29T00:57:00.839Z",
+      "details": {
+        "clientId": "u_mkt_1",
+        "urgency": "urgent",
+        "noteId": "04z6bfr1qc2yc4n3cguwtua"
+      }
+    },
+    {
+      "id": "e9arvordl0rsrj67jocfll",
+      "action": "staff_login",
+      "performedBy": "u_admin",
+      "timestamp": "2026-10-29T00:57:06.562Z",
+      "details": {
+        "email": "admin@buzzer.com",
+        "staffRole": "superadmin"
+      }
+    },
+    {
+      "id": "5qm749bwrienoip0ejjdh",
+      "action": "assign_client_agent",
+      "performedBy": "u_admin",
+      "timestamp": "2026-10-29T00:57:06.582Z",
+      "details": {
+        "clientId": "u_mkt_1",
+        "agentId": "u_agent_n58qho3138sp7ydydfm2ng",
+        "agentName": "Sarah Connor"
+      }
+    }
+  ],
   "featureFlags": [
     {
       "name": "instant_chat",
@@ -1352,5 +2160,5 @@
       }
     }
   ],
-  "passwordResetTokens": []
+  "verificationRequests": []
 }

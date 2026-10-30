@@ -14,8 +14,8 @@ const TYPE_CONFIG: Record<NotificationType, { icon: LucideIcon; color: string; b
 
 const panelVariants = {
   hidden:  { opacity: 0, scale: 0.95, y: -8 },
-  visible: { opacity: 1, scale: 1,    y: 0, transition: { type: 'spring', stiffness: 400, damping: 30 } },
-  exit:    { opacity: 0, scale: 0.96, y: -6, transition: { duration: 0.14, ease: 'easeIn' } },
+  visible: { opacity: 1, scale: 1,    y: 0, transition: { type: 'spring' as const, stiffness: 400, damping: 30 } },
+  exit:    { opacity: 0, scale: 0.96, y: -6, transition: { duration: 0.14, ease: 'easeIn' as const } },
 };
 
 const itemVariants = {
