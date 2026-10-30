@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 export interface ListingChatInfo {
   listingId: string;
+  sellerId?: string;
   listingTitle: string;
   listingPrice: string;
   listingImage?: string;

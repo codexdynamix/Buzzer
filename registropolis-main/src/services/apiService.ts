@@ -1,4 +1,6 @@
 import { toast } from 'sonner';
+import type { CreateReelPayload, ReelComment, ReelRecord, UploadedReelMedia } from '@/types/reelTypes';
+import { getSupabaseClient } from '@/lib/supabase';
 
 type ApiSuccessResponse<T = any> = {
   success: boolean;
@@ -18,6 +20,12 @@ type ApiSuccessResponse<T = any> = {
   businesses?: T;
   advertisements?: T;
   kpis?: any;
+  analytics?: unknown;
+  orders?: unknown;
+  order?: unknown;
+  store?: unknown;
+  listings?: unknown;
+  promotionEndAt?: unknown;
   results?: Array<{ type: string; id: string; label: string; detail?: string; href: string }>;
   items?: unknown;
   merchants?: unknown;
@@ -33,6 +41,16 @@ type ApiSuccessResponse<T = any> = {
   messages?: any[];
   groups?: any[];
   stories?: any[];
+  reels?: ReelRecord[];
+  reel?: ReelRecord;
+  customers?: Array<{ id: string; name: string; profileImageUrl?: string; createdAt: string }>;
+  media?: UploadedReelMedia;
+  upload?: UploadedReelMedia;
+  comments?: ReelComment[];
+  comment?: ReelComment;
+  liked?: boolean;
+  saved?: boolean;
+  likes?: number;
   application?: any;
   applications?: any[];
   stats?: any;
@@ -101,6 +119,10 @@ export const adminCRMAPI = {
   search: (query: string, signal?: AbortSignal) =>
     apiRequest(`/admin/search?q=${encodeURIComponent(query)}`, 'GET', undefined, true, signal),
   getModerationQueue: () => apiRequest('/admin/moderation/queue'),
+  getListingReports: (status = 'pending') =>
+    apiRequest(`/admin/listing-reports?status=${encodeURIComponent(status)}`),
+  reviewListingReport: (reportId: string, action: 'dismiss' | 'flag_listing', notes: string) =>
+    apiRequest(`/admin/listing-reports/${encodeURIComponent(reportId)}`, 'PATCH', { action, notes }),
   decideModeration: (decision: { listingId: string; decision: 'approve' | 'reject' | 'flag'; reason?: string }) =>
     apiRequest('/admin/moderation/decide', 'POST', decision),
   bulkDecideModeration: (decision: { listingIds: string[]; decision: 'approve' | 'reject' | 'flag' }) =>
@@ -159,6 +181,72 @@ export const storiesAPI = {
   createStory: (media: { type: 'image' | 'video'; url: string }[], content: string) =>
     apiRequest('/stories', 'POST', { media, content }),
   markViewed: (storyId: string) => apiRequest(`/stories/${storyId}/view`, 'PATCH', {}),
+};
+
+export const reelsAPI = {
+  async getFeed(reelId?: string): Promise<ReelRecord[]> {
+    const query = reelId ? `?reel=${encodeURIComponent(reelId)}` : '';
+    const response = await apiRequest(`/reels${query}`, 'GET', undefined, false);
+    if (!Array.isArray(response.reels)) throw new Error('The server returned an invalid reels feed');
+    return response.reels;
+  },
+  async uploadMedia(file: File): Promise<UploadedReelMedia> {
+    const response = await apiRequest('/reels/media/upload-url', 'POST', { contentType: file.type });
+    const upload = response.upload as UploadedReelMedia | undefined;
+    if (!upload?.path || !upload.token || !upload.url) {
+      throw new Error('The server returned an invalid media upload authorization');
+    }
+    const { error } = await getSupabaseClient()
+      .storage
+      .from('buzzer-reels')
+      .uploadToSignedUrl(upload.path, upload.token, file, { contentType: file.type, upsert: false });
+    if (error) throw new Error(`Media upload failed: ${error.message}`);
+    return upload;
+  },
+  async deleteMedia(paths: string[]): Promise<void> {
+    await apiRequest('/reels/media', 'DELETE', { paths });
+  },
+  async create(payload: CreateReelPayload): Promise<ReelRecord> {
+    const response = await apiRequest('/reels', 'POST', payload);
+    if (!response.reel) throw new Error('The server did not return the published reel');
+    return response.reel;
+  },
+  async toggleLike(reelId: string): Promise<{ liked: boolean; likes: number }> {
+    const response = await apiRequest(`/reels/${encodeURIComponent(reelId)}/like`, 'POST');
+    if (typeof response.liked !== 'boolean' || typeof response.likes !== 'number') {
+      throw new Error('The server returned an invalid reel like response');
+    }
+    return { liked: response.liked, likes: response.likes };
+  },
+  async toggleSave(reelId: string): Promise<{ saved: boolean }> {
+    const response = await apiRequest(`/reels/${encodeURIComponent(reelId)}/save`, 'POST');
+    if (typeof response.saved !== 'boolean') throw new Error('The server returned an invalid reel save response');
+    return { saved: response.saved };
+  },
+  async recordView(reelId: string): Promise<void> {
+    await apiRequest(`/reels/${encodeURIComponent(reelId)}/view`, 'POST');
+  },
+  async recordShare(reelId: string): Promise<void> {
+    await apiRequest(`/reels/${encodeURIComponent(reelId)}/share`, 'POST');
+  },
+  async getComments(reelId: string): Promise<ReelComment[]> {
+    const response = await apiRequest(`/reels/${encodeURIComponent(reelId)}/comments`, 'GET', undefined, false);
+    if (!Array.isArray(response.comments)) throw new Error('The server returned invalid reel comments');
+    return response.comments;
+  },
+  async addComment(reelId: string, text: string): Promise<ReelComment> {
+    const response = await apiRequest(`/reels/${encodeURIComponent(reelId)}/comments`, 'POST', { text });
+    if (!response.comment) throw new Error('The server did not return the new comment');
+    return response.comment;
+  },
+  async toggleCommentLike(reelId: string, commentId: string): Promise<ReelComment> {
+    const response = await apiRequest(
+      `/reels/${encodeURIComponent(reelId)}/comments/${encodeURIComponent(commentId)}/like`,
+      'POST',
+    );
+    if (!response.comment) throw new Error('The server did not return the updated comment');
+    return response.comment;
+  },
 };
 
 export const jobApplicationsAPI = {
@@ -260,4 +348,3 @@ export const staffAuthAPI = {
   login: (email: string, password: string) =>
     apiRequest('/auth/staff-login', 'POST', { email, password }, false),
 };
-

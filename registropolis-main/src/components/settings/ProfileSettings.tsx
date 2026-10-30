@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { Camera, Save, User, AtSign, Phone, MapPin, Info, Edit2, Check, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { processProfilePhoto } from '@/lib/processProfilePhoto';
 
 const PLATFORMS = [
   { key: 'whatsapp', label: 'WhatsApp', color: '#25D366', emoji: '💬' },
@@ -43,15 +44,18 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user: propUser }) => 
     setProfileData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const dataUrl = ev.target?.result as string;
-      setProfileData(prev => ({ ...prev, profileImageUrl: dataUrl }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      const profileImageUrl = await processProfilePhoto(file);
+      setProfileData(prev => ({ ...prev, profileImageUrl }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not process this image');
+    } finally {
+      input.value = '';
+    }
   };
 
   const handlePlatformToggle = (key: string) => {
@@ -173,9 +177,9 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user: propUser }) => 
           {isEditing ? (
             <>
               {[
-                { label: 'Full Name', name: 'name', placeholder: 'Your full name', icon: User },
-                { label: 'Email', name: 'email', placeholder: 'your@email.com', icon: AtSign },
-                { label: 'Location', name: 'location', placeholder: 'e.g. Port of Spain', icon: MapPin },
+                { label: 'Full Name', name: 'name' as const, placeholder: 'Your full name', icon: User },
+                { label: 'Email', name: 'email' as const, placeholder: 'your@email.com', icon: AtSign },
+                { label: 'Location', name: 'location' as const, placeholder: 'e.g. Port of Spain', icon: MapPin },
               ].map(field => (
                 <div key={field.name}>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: '#6E7A8A' }}>{field.label}</label>
@@ -183,12 +187,17 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user: propUser }) => 
                     <field.icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#C9A96E' }} />
                     <input
                       name={field.name}
-                      value={(profileData as any)[field.name]}
+                      value={profileData[field.name]}
                       onChange={handleChange}
                       placeholder={field.placeholder}
+                      readOnly={field.name === 'email'}
+                      title={field.name === 'email' ? 'Email is managed by your sign-in provider' : undefined}
                       className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm outline-none"
                       style={{ backgroundColor: '#F9F7F4', border: '1px solid #E8E2D8', color: '#0F1923' }}
                     />
+                    {field.name === 'email' && (
+                      <p className="mt-1 text-xs text-muted-foreground">Email is managed by your sign-in provider.</p>
+                    )}
                   </div>
                 </div>
               ))}

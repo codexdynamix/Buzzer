@@ -1,14 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const BuzzerBadge: React.FC = () => (
+const BuzzerBadge: React.FC<{ hideOnDesktop?: boolean }> = ({ hideOnDesktop = false }) => (
   <motion.a
     href="/"
     aria-label="Buzzer platform"
     initial={{ opacity: 0, y: 4 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: 1.2, duration: 0.5, ease: 'easeOut' }}
-    className="fixed bottom-5 left-5 z-40 flex items-center gap-2 select-none"
+    className={`fixed bottom-5 left-5 z-40 flex items-center gap-2 select-none${hideOnDesktop ? ' md:hidden' : ''}`}
     style={{
       height: 32,
       paddingLeft: 10,

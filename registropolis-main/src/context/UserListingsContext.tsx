@@ -14,6 +14,7 @@ export interface UserListing {
   createdAt: Date;
   status: ListingStatus;
   userId?: string;
+  promotionEndAt?: string;
 }
 
 interface UserListingsContextValue {
@@ -22,6 +23,7 @@ interface UserListingsContextValue {
   removeListing: (id: string) => Promise<void>;
   updateListing: (id: string, data: any) => Promise<void>;
   setListingStatus: (id: string, status: ListingStatus) => Promise<void>;
+  setListingPromotion: (id: string, active: boolean) => Promise<void>;
   getListingsForSection: (section: ListingSection) => any[];
   getAllListings: () => any[];
   totalCount: number;
@@ -33,6 +35,7 @@ const UserListingsContext = createContext<UserListingsContextValue>({
   removeListing: async () => {},
   updateListing: async () => {},
   setListingStatus: async () => {},
+  setListingPromotion: async () => {},
   getListingsForSection: () => [],
   getAllListings: () => [],
   totalCount: 0,
@@ -51,6 +54,7 @@ function fromAPI(l: any): UserListing {
     createdAt: new Date(l.createdAt),
     status: (l.status ?? 'active') as ListingStatus,
     userId: l.userId,
+    promotionEndAt: l.promotionEndAt,
   };
 }
 
@@ -121,6 +125,19 @@ export const UserListingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [requireAuth]);
 
+  const setListingPromotion = useCallback(async (id: string, active: boolean) => {
+    if (!requireAuth()) return;
+    try {
+      const { promotionEndAt } = await listingsAPI.setPromotion(id, active);
+      setAllListings(prev => prev.map(item => item.id === id
+        ? { ...item, promotionEndAt: promotionEndAt ?? undefined }
+        : item));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update listing promotion');
+      throw error;
+    }
+  }, [requireAuth]);
+
   const getListingsForSection = useCallback(
     (section: ListingSection) =>
       allListings
@@ -149,10 +166,11 @@ export const UserListingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     removeListing,
     updateListing,
     setListingStatus,
+    setListingPromotion,
     getListingsForSection,
     getAllListings,
     totalCount: listings.length,
-  }), [listings, addListing, removeListing, updateListing, setListingStatus, getListingsForSection, getAllListings]);
+  }), [listings, addListing, removeListing, updateListing, setListingStatus, setListingPromotion, getListingsForSection, getAllListings]);
 
   return (
     <UserListingsContext.Provider value={value}>

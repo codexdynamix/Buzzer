@@ -18,6 +18,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
+let socketServer: SocketIOServer | null = null;
 
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
@@ -25,12 +26,22 @@ app.use(express.json({ limit: '10mb' }));
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const JWT_SECRET = process.env.JWT_SECRET || 'buzzer_crm_enterprise_secret_2026';
+const REELS_BUCKET = 'buzzer-reels';
+const REEL_MEDIA_TYPES: Record<string, string> = {
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/webm': 'webm',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
 let supabaseAdmin: ReturnType<typeof createClient> | null = null;
 
 // ── Types ─────────────────────────────────────────────────────
 
 type User = {
   id: string;
+  authUserId?: string;
   phoneNumber?: string;
   email?: string;
   name: string;
@@ -74,6 +85,15 @@ type User = {
   telegram?: boolean;
   signal?: boolean;
   messenger?: boolean;
+  storeName?: string;
+  storeSlug?: string;
+  storeTagline?: string;
+  storeDescription?: string;
+  storeLogoUrl?: string;
+  storeBannerUrl?: string;
+  storeWebsite?: string;
+  storeContactPhone?: string;
+  storeEmail?: string;
 };
 
 type Listing = {
@@ -83,9 +103,33 @@ type Listing = {
   userId: string;
   status: 'active' | 'paused' | 'sold' | 'pending_review' | 'flagged' | 'rejected';
   createdAt: string;
+  promotionEndAt?: string;
   riskScore?: number;
   riskFlags?: string[];
   riskSummary?: string;
+};
+
+type ListingInteraction = {
+  id: string;
+  listingId: string;
+  listingOwnerId: string;
+  actorId: string;
+  type: 'view' | 'like' | 'save' | 'share' | 'inquiry';
+  createdAt: string;
+};
+
+type ListingReport = {
+  id: string;
+  listingId: string;
+  listingOwnerId: string;
+  reporterId: string;
+  reason: string;
+  details: string;
+  status: 'pending' | 'reviewed' | 'dismissed';
+  createdAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  reviewNotes?: string;
 };
 
 type JobApplication = {
@@ -97,12 +141,28 @@ type JobApplication = {
   createdAt: string;
 };
 
+type SellerOrder = {
+  id: string;
+  listingId: string;
+  listingTitle: string;
+  listingImage?: string;
+  sellerId: string;
+  buyerId: string;
+  buyerName: string;
+  price: number;
+  status: 'new' | 'confirmed' | 'fulfilled' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+};
+
 type Business = SeedBusiness;
 
 type Message = {
   id: string;
   chatId: string;
   senderId: string;
+  recipientId?: string;
+  participantIds?: string[];
   content: string;
   timestamp: string;
   status: 'sent' | 'delivered' | 'read';
@@ -166,6 +226,48 @@ type Story = {
   timestamp: string;
   viewers: string[];
   isExpired: boolean;
+};
+
+type ReelMediaType = 'video' | 'animation';
+
+type Reel = {
+  id: string;
+  ownerId: string;
+  sellerId: string;
+  seller: string;
+  sellerAvatar: string;
+  location: string;
+  productTitle: string;
+  price: number;
+  originalPrice?: number;
+  category: string;
+  description: string;
+  mediaType: ReelMediaType;
+  videoUrl?: string;
+  posterUrl: string;
+  photos?: string[];
+  isAnimation: boolean;
+  musicTrackId?: string;
+  likes: number;
+  commentCount: number;
+  shares: number;
+  views: number;
+  tag: string;
+  likedBy: string[];
+  savedBy: string[];
+  mediaPaths: string[];
+  createdAt: string;
+};
+
+type ReelCommentRecord = {
+  id: string;
+  reelId: string;
+  userId: string;
+  user: string;
+  avatar: string;
+  text: string;
+  createdAt: string;
+  likedBy: string[];
 };
 
 type SupportTicket = {
@@ -413,6 +515,9 @@ let users: RecordCollection<User>;
 let listings: RecordCollection<Listing>;
 let businesses: RecordCollection<Business>;
 let jobApplications: RecordCollection<JobApplication>;
+let listingInteractions: RecordCollection<ListingInteraction>;
+let listingReports: RecordCollection<ListingReport>;
+let sellerOrders: RecordCollection<SellerOrder>;
 let messages: RecordCollection<Message>;
 let groups: RecordCollection<Group>;
 let groupMessages: RecordCollection<GroupMessage>;
@@ -420,6 +525,8 @@ let adminLogs: RecordCollection<AdminLog>;
 let featureFlags: RecordCollection<FeatureFlag>;
 let userRestrictions: RecordCollection<UserRestriction>;
 let stories: RecordCollection<Story>;
+let reels: RecordCollection<Reel>;
+let reelComments: RecordCollection<ReelCommentRecord>;
 let supportTickets: RecordCollection<SupportTicket>;
 let analytics: RecordCollection<AnalyticsRecord>;
 let verificationRequests: RecordCollection<VerificationRequest>;
@@ -768,6 +875,9 @@ async function initializeDatabase() {
     listings = new SupabaseCollection<Listing>(supabaseAdmin, 'listings');
     businesses = new SupabaseCollection<Business>(supabaseAdmin, 'businesses');
     jobApplications = new SupabaseCollection<JobApplication>(supabaseAdmin, 'job_applications');
+    listingInteractions = new SupabaseCollection<ListingInteraction>(supabaseAdmin, 'listing_interactions');
+    listingReports = new SupabaseCollection<ListingReport>(supabaseAdmin, 'listing_reports');
+    sellerOrders = new SupabaseCollection<SellerOrder>(supabaseAdmin, 'seller_orders');
     messages = new SupabaseCollection<Message>(supabaseAdmin, 'messages');
     groups = new SupabaseCollection<Group>(supabaseAdmin, 'groups');
     groupMessages = new SupabaseCollection<GroupMessage>(supabaseAdmin, 'group_messages');
@@ -775,6 +885,8 @@ async function initializeDatabase() {
     featureFlags = new SupabaseCollection<FeatureFlag>(supabaseAdmin, 'feature_flags');
     userRestrictions = new SupabaseCollection<UserRestriction>(supabaseAdmin, 'user_restrictions');
     stories = new SupabaseCollection<Story>(supabaseAdmin, 'stories');
+    reels = new SupabaseCollection<Reel>(supabaseAdmin, 'reels');
+    reelComments = new SupabaseCollection<ReelCommentRecord>(supabaseAdmin, 'reel_comments');
     supportTickets = new SupabaseCollection<SupportTicket>(supabaseAdmin, 'support_tickets');
     analytics = new SupabaseCollection<AnalyticsRecord>(supabaseAdmin, 'analytics');
     verificationRequests = new SupabaseCollection<VerificationRequest>(supabaseAdmin, 'verification_requests');
@@ -839,8 +951,11 @@ async function initializeDatabase() {
       const dump = {
         users: (users as InMemoryCollection<User>).docs,
         listings: (listings as InMemoryCollection<Listing>).docs,
+        listingInteractions: (listingInteractions as InMemoryCollection<ListingInteraction>).docs,
+        listingReports: (listingReports as InMemoryCollection<ListingReport>).docs,
         businesses: (businesses as InMemoryCollection<Business>).docs,
         jobApplications: (jobApplications as InMemoryCollection<JobApplication>).docs,
+        sellerOrders: (sellerOrders as InMemoryCollection<SellerOrder>).docs,
         messages: (messages as InMemoryCollection<Message>).docs,
         groups: (groups as InMemoryCollection<Group>).docs,
         groupMessages: (groupMessages as InMemoryCollection<GroupMessage>).docs,
@@ -848,6 +963,8 @@ async function initializeDatabase() {
         featureFlags: (featureFlags as InMemoryCollection<FeatureFlag>).docs,
         userRestrictions: (userRestrictions as InMemoryCollection<UserRestriction>).docs,
         stories: (stories as InMemoryCollection<Story>).docs,
+        reels: (reels as InMemoryCollection<Reel>).docs,
+        reelComments: (reelComments as InMemoryCollection<ReelCommentRecord>).docs,
         supportTickets: (supportTickets as InMemoryCollection<SupportTicket>).docs,
         analytics: (analytics as InMemoryCollection<AnalyticsRecord>).docs,
         verificationRequests: (verificationRequests as InMemoryCollection<VerificationRequest>).docs,
@@ -890,8 +1007,11 @@ async function initializeDatabase() {
   }
   users = new InMemoryCollection<User>(mergedUsers);
   listings = new InMemoryCollection<Listing>(initialDump?.listings || SEED_LISTINGS);
+  listingInteractions = new InMemoryCollection<ListingInteraction>(initialDump?.listingInteractions || []);
+  listingReports = new InMemoryCollection<ListingReport>(initialDump?.listingReports || []);
   businesses = new InMemoryCollection<Business>(initialDump?.businesses || BUSINESSES_DATA);
   jobApplications = new InMemoryCollection<JobApplication>(initialDump?.jobApplications || []);
+  sellerOrders = new InMemoryCollection<SellerOrder>(initialDump?.sellerOrders || []);
   messages = new InMemoryCollection<Message>(initialDump?.messages || []);
   groups = new InMemoryCollection<Group>(initialDump?.groups || SEED_GROUPS);
   groupMessages = new InMemoryCollection<GroupMessage>(initialDump?.groupMessages || SEED_GROUP_MESSAGES);
@@ -902,6 +1022,8 @@ async function initializeDatabase() {
   ]);
   userRestrictions = new InMemoryCollection<UserRestriction>(initialDump?.userRestrictions || []);
   stories = new InMemoryCollection<Story>(initialDump?.stories || SEED_STORIES);
+  reels = new InMemoryCollection<Reel>(initialDump?.reels || []);
+  reelComments = new InMemoryCollection<ReelCommentRecord>(initialDump?.reelComments || []);
   supportTickets = new InMemoryCollection<SupportTicket>(initialDump?.supportTickets || [
     {
       ticketId: 'tck_101',
@@ -935,17 +1057,59 @@ function setupSocketIO() {
   const io = new SocketIOServer(server, {
     cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
   });
+  socketServer = io;
+
+  io.use(async (socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (typeof token !== 'string' || !supabaseAdmin) {
+      return next(new Error('Authentication required'));
+    }
+
+    try {
+      const { data, error } = await supabaseAdmin.auth.getUser(token);
+      if (error || !data.user) return next(new Error('Invalid or expired token'));
+      socket.data.userId = data.user.id;
+      next();
+    } catch (error) {
+      console.error('Socket authentication failed:', error);
+      next(new Error('Unable to verify socket session'));
+    }
+  });
 
   io.on('connection', (socket) => {
-    socket.on('join-room', (roomId: string) => socket.join(roomId));
-    socket.on('leave-room', (roomId: string) => socket.leave(roomId));
+    socket.on('join-room', (roomId: string) => {
+      if (typeof roomId === 'string' && isConversationForUser(roomId, socket.data.userId)) {
+        socket.join(roomId);
+      }
+    });
+    socket.on('leave-room', (roomId: string) => {
+      if (typeof roomId === 'string' && isConversationForUser(roomId, socket.data.userId)) {
+        socket.leave(roomId);
+      }
+    });
 
     socket.on('send-message', (data: { roomId: string; message: any }) => {
-      io.to(data.roomId).emit('new-message', data.message);
+      if (
+        typeof data?.roomId === 'string' &&
+        isConversationForUser(data.roomId, socket.data.userId) &&
+        socket.rooms.has(data.roomId)
+      ) {
+        socket.to(data.roomId).emit('new-message', { ...data.message, roomId: data.roomId });
+      }
     });
 
     socket.on('typing', (data: { roomId: string; userId: string; isTyping: boolean }) => {
-      socket.to(data.roomId).emit('user-typing', data);
+      if (
+        typeof data?.roomId === 'string' &&
+        isConversationForUser(data.roomId, socket.data.userId) &&
+        socket.rooms.has(data.roomId)
+      ) {
+        socket.to(data.roomId).emit('user-typing', {
+          roomId: data.roomId,
+          userId: socket.data.userId,
+          isTyping: Boolean(data.isTyping),
+        });
+      }
     });
   });
 
@@ -957,6 +1121,7 @@ function setupSocketIO() {
 function safeUser(u: User) {
   const safe = { ...u } as User & { passwordHash?: string };
   delete safe.passwordHash;
+  delete safe.authUserId;
   return safe;
 }
 
@@ -979,6 +1144,7 @@ async function getOrCreateAuthProfile(authUser: {
         ...profileByEmail,
         ...profileById,
         id: authUser.id,
+        authUserId: authUser.id,
         email: email ?? profileById.email,
         name: profileByEmail.name || profileById.name,
         role: profileByEmail.role === 'admin' ? 'admin' : profileById.role,
@@ -992,11 +1158,20 @@ async function getOrCreateAuthProfile(authUser: {
       await users.deleteOne({ id: profileByEmail.id });
       return linkedProfile;
     }
+    if (profileById.authUserId !== authUser.id) {
+      await users.updateOne({ id: authUser.id }, { $set: { authUserId: authUser.id } });
+      return { ...profileById, authUserId: authUser.id };
+    }
     return profileById;
   }
 
   if (profileByEmail) {
-    const linkedProfile = { ...profileByEmail, id: authUser.id, email: email ?? profileByEmail.email };
+    const linkedProfile = {
+      ...profileByEmail,
+      id: authUser.id,
+      authUserId: authUser.id,
+      email: email ?? profileByEmail.email,
+    };
     if (databaseProvider === 'supabase') {
       await users.insertOne(linkedProfile);
       await users.deleteOne({ id: profileByEmail.id });
@@ -1009,6 +1184,7 @@ async function getOrCreateAuthProfile(authUser: {
   const metadataName = authUser.user_metadata?.name;
   const createdProfile: User = {
     id: authUser.id,
+    authUserId: authUser.id,
     email,
     name: typeof metadataName === 'string' && metadataName.trim()
       ? metadataName.trim()
@@ -1104,6 +1280,11 @@ async function authenticateRequest(req: any, res: any): Promise<boolean> {
 }
 
 async function authMiddleware(req: any, res: any, next: any) {
+  if (await authenticateRequest(req, res)) next();
+}
+
+async function optionalAuthMiddleware(req: any, res: any, next: any) {
+  if (!req.headers.authorization) return next();
   if (await authenticateRequest(req, res)) next();
 }
 
@@ -1238,6 +1419,18 @@ function requireFeature(name: string) {
 app.get('/api/auth/me', authMiddleware, async (req: any, res) => {
   try {
     const user = await getOrCreateAuthProfile(req.authUser);
+    const seededProfile = ACCOUNTS_DATA.find(
+      account => account.email.trim().toLowerCase() === user.email?.trim().toLowerCase(),
+    );
+    if (seededProfile && seededProfile.id !== user.id) {
+      const seededListings = await listings.find({ userId: seededProfile.id }).toArray();
+      await Promise.all(seededListings.map(listing =>
+        listings.updateOne(
+          { id: listing.id, userId: seededProfile.id },
+          { $set: { userId: user.id } },
+        ),
+      ));
+    }
     res.json({ success: true, user: safeUser(user) });
   } catch (error) {
     console.error('Authenticated user profile lookup failed:', error);
@@ -1312,13 +1505,65 @@ app.post('/api/auth/staff-login', async (req, res) => {
 
 // ── Listings API ──────────────────────────────────────────────
 
+app.get('/api/stores/:slug', async (req, res) => {
+  try {
+    const key = String(req.params.slug ?? '').trim();
+    const owner = await users.findOne({ id: key }) ??
+      (await users.find().toArray()).find(user => user.storeSlug === key.toLowerCase());
+    if (!owner) return res.status(404).json({ success: false, message: 'Store not found' });
+
+    const activeListings = await listings.find({ userId: owner.id, status: 'active' }).sort({ createdAt: -1 }).toArray();
+    res.json({
+      success: true,
+      store: {
+        id: owner.id,
+        name: owner.storeName || owner.name,
+        slug: owner.storeSlug || owner.id,
+        tagline: owner.storeTagline || '',
+        description: owner.storeDescription || owner.bio || '',
+        logoUrl: owner.storeLogoUrl || owner.profileImageUrl || '',
+        bannerUrl: owner.storeBannerUrl || '',
+        website: owner.storeWebsite || '',
+        contactPhone: owner.storeContactPhone || '',
+        email: owner.storeEmail || '',
+        location: owner.location || '',
+        listingCount: activeListings.length,
+      },
+      listings: activeListings.map(listing => ({
+        ...listing,
+        data: listingDataForOwner(listing.section, listing.data, listing.id, owner.storeName || owner.name),
+        sellerName: owner.storeName || owner.name,
+        owner: {
+          id: owner.id,
+          name: owner.storeName || owner.name,
+          profileImageUrl: owner.storeLogoUrl || owner.profileImageUrl,
+          bio: owner.storeDescription || owner.bio,
+          location: owner.location,
+          storeSlug: owner.storeSlug,
+        },
+      })),
+    });
+  } catch (error) {
+    console.error('Public storefront lookup failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load this storefront' });
+  }
+});
+
 app.get('/api/listings', async (_req, res) => {
   try {
-    const all = await listings.find({ status: 'active' }).sort({ createdAt: -1 }).toArray();
+    const all = (await listings.find({ status: 'active' }).sort({ createdAt: -1 }).toArray())
+      .sort((left, right) => {
+        const leftFeatured = left.promotionEndAt && new Date(left.promotionEndAt).getTime() > Date.now();
+        const rightFeatured = right.promotionEndAt && new Date(right.promotionEndAt).getTime() > Date.now();
+        return Number(Boolean(rightFeatured)) - Number(Boolean(leftFeatured));
+      });
     const ownerIds = [...new Set(all.map(listing => listing.userId))];
     const owners = await users.find(
       { id: { $in: ownerIds } },
-      { projection: { id: 1, name: 1, profileImageUrl: 1, bio: 1, location: 1 } },
+      { projection: {
+        id: 1, name: 1, profileImageUrl: 1, bio: 1, location: 1,
+        storeName: 1, storeSlug: 1, storeDescription: 1, storeLogoUrl: 1,
+      } },
     ).toArray();
     const ownerById = new Map(owners.map(owner => [owner.id, owner]));
     res.json({
@@ -1328,14 +1573,16 @@ app.get('/api/listings', async (_req, res) => {
         if (!owner) return [];
         return [{
           ...listing,
-          data: listingDataForOwner(listing.section, listing.data, listing.id, owner.name),
-          sellerName: owner.name,
+          data: listingDataForOwner(listing.section, listing.data, listing.id, owner.storeName || owner.name),
+          sellerName: owner.storeName || owner.name,
           owner: {
             id: owner.id,
-            name: owner.name,
-            profileImageUrl: owner.profileImageUrl,
-            bio: owner.bio,
+            name: owner.storeName || owner.name,
+            profileImageUrl: owner.storeLogoUrl || owner.profileImageUrl,
+            bio: owner.storeDescription || owner.bio,
             location: owner.location,
+            storeName: owner.storeName,
+            storeSlug: owner.storeSlug,
           },
         }];
       }),
@@ -1456,6 +1703,34 @@ app.patch('/api/listings/:id/status', authMiddleware, async (req: any, res) => {
   res.json({ success: true });
 });
 
+app.patch('/api/listings/:id/promotion', authMiddleware, async (req: any, res) => {
+  try {
+    const listing = await listings.findOne({ id: req.params.id });
+    if (!listing) return res.status(404).json({ success: false, message: 'Listing not found' });
+    if (listing.userId !== req.user.userId) return res.status(403).json({ success: false, message: 'Not your listing' });
+    if (listing.status !== 'active') {
+      return res.status(409).json({ success: false, message: 'Only active listings can be featured' });
+    }
+    if (typeof req.body.active !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'Choose whether to enable or disable featuring' });
+    }
+
+    const promotionEndAt = req.body.active
+      ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      : undefined;
+    await listings.updateOne(
+      { id: listing.id },
+      promotionEndAt
+        ? { $set: { promotionEndAt } }
+        : { $unset: { promotionEndAt: true } },
+    );
+    res.json({ success: true, promotionEndAt: promotionEndAt ?? null });
+  } catch (error) {
+    console.error('Listing promotion update failed:', error);
+    res.status(500).json({ success: false, message: 'Could not update listing promotion' });
+  }
+});
+
 app.delete('/api/listings/:id', authMiddleware, async (req: any, res) => {
   const { id } = req.params;
   const listing = await listings.findOne({ id });
@@ -1463,6 +1738,306 @@ app.delete('/api/listings/:id', authMiddleware, async (req: any, res) => {
   if (listing.userId !== req.user.userId) return res.status(403).json({ message: 'Not your listing' });
   await listings.deleteOne({ id });
   res.json({ success: true });
+});
+
+app.get('/api/orders/mine', authMiddleware, async (req: any, res) => {
+  try {
+    const orders = await sellerOrders.find({ sellerId: req.user.userId }).sort({ updatedAt: -1 }).toArray();
+    res.json({ success: true, orders });
+  } catch (error) {
+    console.error('Seller order lookup failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load seller orders' });
+  }
+});
+
+app.post('/api/orders', authMiddleware, async (req: any, res) => {
+  try {
+    const { listingId, buyerId, price } = req.body;
+    if (typeof listingId !== 'string' || typeof buyerId !== 'string' ||
+        typeof price !== 'number' || !Number.isFinite(price) || price < 0 || price > 1_000_000_000) {
+      return res.status(400).json({ success: false, message: 'A listing, buyer, and valid order amount are required' });
+    }
+
+    const listing = await listings.findOne({ id: listingId });
+    if (!listing) return res.status(404).json({ success: false, message: 'Listing not found' });
+    if (listing.userId !== req.user.userId) return res.status(403).json({ success: false, message: 'Not your listing' });
+
+    const inquiry = await listingInteractions.findOne({ listingId, actorId: buyerId, type: 'inquiry' });
+    if (!inquiry) return res.status(403).json({ success: false, message: 'Orders can only be created for customers who contacted you about this listing' });
+    const buyer = await users.findOne({ id: buyerId }, { projection: { id: 1, name: 1 } });
+    if (!buyer) return res.status(404).json({ success: false, message: 'Customer not found' });
+
+    const duplicate = await sellerOrders.findOne({ listingId, buyerId });
+    if (duplicate && duplicate.status !== 'cancelled') {
+      return res.status(409).json({ success: false, message: 'An active order already exists for this customer and listing' });
+    }
+
+    const now = new Date().toISOString();
+    const order: SellerOrder = {
+      id: `ord_${uid()}`,
+      listingId,
+      listingTitle: listing.data?.title ?? listing.data?.name ?? 'Listing',
+      listingImage: listing.data?.image,
+      sellerId: req.user.userId,
+      buyerId: buyer.id,
+      buyerName: buyer.name,
+      price: Math.round(price * 100) / 100,
+      status: 'new',
+      createdAt: now,
+      updatedAt: now,
+    };
+    await sellerOrders.insertOne(order);
+    res.status(201).json({ success: true, order });
+  } catch (error) {
+    console.error('Seller order creation failed:', error);
+    res.status(500).json({ success: false, message: 'Could not create seller order' });
+  }
+});
+
+app.patch('/api/orders/:id/status', authMiddleware, async (req: any, res) => {
+  try {
+    const order = await sellerOrders.findOne({ id: req.params.id });
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.sellerId !== req.user.userId) return res.status(403).json({ success: false, message: 'Not your order' });
+
+    const nextStatus = req.body.status;
+    const transitions: Record<SellerOrder['status'], SellerOrder['status'][]> = {
+      new: ['confirmed', 'cancelled'],
+      confirmed: ['fulfilled', 'cancelled'],
+      fulfilled: [],
+      cancelled: [],
+    };
+    if (!Object.hasOwn(transitions, nextStatus) || !transitions[order.status].includes(nextStatus)) {
+      return res.status(409).json({ success: false, message: 'That order status transition is not allowed' });
+    }
+    await sellerOrders.updateOne({ id: order.id }, { $set: { status: nextStatus, updatedAt: new Date().toISOString() } });
+    res.json({ success: true, order: { ...order, status: nextStatus, updatedAt: new Date().toISOString() } });
+  } catch (error) {
+    console.error('Seller order status update failed:', error);
+    res.status(500).json({ success: false, message: 'Could not update seller order' });
+  }
+});
+
+app.get('/api/seller/analytics', authMiddleware, async (req: any, res) => {
+  try {
+    const mine = await listings.find({ userId: req.user.userId }).toArray();
+    const interactions = await listingInteractions.find({ listingOwnerId: req.user.userId }).toArray();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const start = new Date(Date.now() - 29 * dayMs);
+    const daily = Array.from({ length: 30 }, (_, index) => {
+      const date = new Date(start.getTime() + index * dayMs).toISOString().slice(0, 10);
+      const dayInteractions = interactions.filter(item => item.createdAt.slice(0, 10) === date);
+      return {
+        date,
+        views: dayInteractions.filter(item => item.type === 'view').length,
+        inquiries: dayInteractions.filter(item => item.type === 'inquiry').length,
+        saves: dayInteractions.filter(item => item.type === 'save').length,
+        shares: dayInteractions.filter(item => item.type === 'share').length,
+      };
+    });
+    const recent = interactions.filter(item => new Date(item.createdAt).getTime() >= start.getTime());
+    const byListing = new Map<string, { views: number; inquiries: number; saves: number; shares: number }>();
+    for (const interaction of recent) {
+      const totals = byListing.get(interaction.listingId) ?? { views: 0, inquiries: 0, saves: 0, shares: 0 };
+      if (interaction.type === 'view') totals.views += 1;
+      if (interaction.type === 'inquiry') totals.inquiries += 1;
+      if (interaction.type === 'save') totals.saves += 1;
+      if (interaction.type === 'share') totals.shares += 1;
+      byListing.set(interaction.listingId, totals);
+    }
+    const listingById = new Map(mine.map(listing => [listing.id, listing]));
+    const topListings = [...byListing.entries()]
+      .map(([listingId, stats]) => {
+        const listing = listingById.get(listingId);
+        return listing ? {
+          listingId,
+          title: listing.data?.title ?? listing.data?.name ?? 'Listing',
+          status: listing.status,
+          ...stats,
+        } : null;
+      })
+      .filter(Boolean)
+      .sort((left: any, right: any) => right.views + right.inquiries + right.saves + right.shares - (left.views + left.inquiries + left.saves + left.shares))
+      .slice(0, 5);
+    res.json({
+      success: true,
+      analytics: {
+        periodDays: 30,
+        totals: {
+          views: recent.filter(item => item.type === 'view').length,
+          inquiries: recent.filter(item => item.type === 'inquiry').length,
+          saves: recent.filter(item => item.type === 'save').length,
+          shares: recent.filter(item => item.type === 'share').length,
+        },
+        daily,
+        topListings,
+      },
+    });
+  } catch (error) {
+    console.error('Seller analytics lookup failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load seller analytics' });
+  }
+});
+
+app.get('/api/listings/:id/engagement', optionalAuthMiddleware, async (req: any, res) => {
+  try {
+    const listing = await listings.findOne({ id: req.params.id });
+    if (!listing) return res.status(404).json({ success: false, message: 'Listing not found' });
+
+    const interactions = await listingInteractions.find({ listingId: listing.id }).toArray();
+    const viewerId = req.user?.userId;
+    const response: Record<string, any> = {
+      success: true,
+      stats: {
+        views: interactions.filter(item => item.type === 'view').length,
+        likes: interactions.filter(item => item.type === 'like').length,
+        saves: interactions.filter(item => item.type === 'save').length,
+        shares: interactions.filter(item => item.type === 'share').length,
+        inquiries: interactions.filter(item => item.type === 'inquiry').length,
+        liked: viewerId ? interactions.some(item => item.type === 'like' && item.actorId === viewerId) : false,
+        saved: viewerId ? interactions.some(item => item.type === 'save' && item.actorId === viewerId) : false,
+      },
+    };
+
+    if (viewerId === listing.userId) {
+      const inquiries = interactions
+        .filter(item => item.type === 'inquiry')
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const customerIds = [...new Set(inquiries.map(item => item.actorId))];
+      const customers = await users.find({ id: { $in: customerIds } }, {
+        projection: { id: 1, name: 1, profileImageUrl: 1 },
+      }).toArray();
+      const customerById = new Map(customers.map(customer => [customer.id, customer]));
+      response.customers = inquiries.flatMap(inquiry => {
+        const customer = customerById.get(inquiry.actorId);
+        return customer ? [{
+          id: customer.id,
+          name: customer.name,
+          profileImageUrl: customer.profileImageUrl,
+          createdAt: inquiry.createdAt,
+        }] : [];
+      });
+    }
+
+    res.json(response);
+  } catch (error) {
+    console.error('Listing engagement lookup failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load listing engagement' });
+  }
+});
+
+app.post('/api/listings/:id/interactions', authMiddleware, async (req: any, res) => {
+  try {
+    const { type, active } = req.body;
+    if (!['view', 'like', 'save', 'share', 'inquiry'].includes(type)) {
+      return res.status(400).json({ success: false, message: 'Choose a valid listing interaction' });
+    }
+    if ((type === 'like' || type === 'save') && typeof active !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'An active state is required for likes and saves' });
+    }
+
+    const listing = await listings.findOne({ id: req.params.id, status: 'active' });
+    if (!listing) return res.status(404).json({ success: false, message: 'This listing is not available' });
+    const actorId = req.user.userId;
+    if (listing.userId === actorId) {
+      return res.status(403).json({ success: false, message: 'You cannot interact with your own listing' });
+    }
+    if (!await users.findOne({ id: actorId })) {
+      return res.status(401).json({ success: false, message: 'Sign in again to interact with this listing' });
+    }
+
+    const interactionId = `${type}_${listing.id}_${actorId}`;
+    if (type === 'like' || type === 'save') {
+      if (active) {
+        await listingInteractions.updateOne(
+          { id: interactionId },
+          { $setOnInsert: {
+            id: interactionId,
+            listingId: listing.id,
+            listingOwnerId: listing.userId,
+            actorId,
+            type,
+            createdAt: new Date().toISOString(),
+          } },
+          { upsert: true },
+        );
+      } else {
+        await listingInteractions.deleteOne({ id: interactionId });
+      }
+    } else {
+      await listingInteractions.updateOne(
+        { id: interactionId },
+        { $setOnInsert: {
+          id: interactionId,
+          listingId: listing.id,
+          listingOwnerId: listing.userId,
+          actorId,
+          type,
+          createdAt: new Date().toISOString(),
+        } },
+        { upsert: true },
+      );
+    }
+
+    const interactions = await listingInteractions.find({ listingId: listing.id }).toArray();
+    res.json({
+      success: true,
+      stats: {
+        views: interactions.filter(item => item.type === 'view').length,
+        likes: interactions.filter(item => item.type === 'like').length,
+        saves: interactions.filter(item => item.type === 'save').length,
+        shares: interactions.filter(item => item.type === 'share').length,
+        inquiries: interactions.filter(item => item.type === 'inquiry').length,
+        liked: interactions.some(item => item.type === 'like' && item.actorId === actorId),
+        saved: interactions.some(item => item.type === 'save' && item.actorId === actorId),
+      },
+    });
+  } catch (error) {
+    console.error('Listing interaction failed:', error);
+    res.status(500).json({ success: false, message: 'Could not record listing interaction' });
+  }
+});
+
+app.post('/api/listing-reports', authMiddleware, async (req: any, res) => {
+  try {
+    const { listingId, reason, details } = req.body;
+    const validReasons = ['spam', 'misleading', 'prohibited', 'wrong_cat', 'inappropriate', 'other'];
+    if (typeof listingId !== 'string' || !validReasons.includes(reason)) {
+      return res.status(400).json({ success: false, message: 'A listing and valid report reason are required' });
+    }
+    if (typeof details !== 'undefined' && typeof details !== 'string') {
+      return res.status(400).json({ success: false, message: 'Report details must be text' });
+    }
+    const listing = await listings.findOne({ id: listingId });
+    if (!listing) return res.status(404).json({ success: false, message: 'Listing not found' });
+    if (listing.userId === req.user.userId) {
+      return res.status(403).json({ success: false, message: 'You cannot report your own listing' });
+    }
+    const existingReport = await listingReports.findOne({
+      listingId,
+      reporterId: req.user.userId,
+      status: 'pending',
+    });
+    if (existingReport) {
+      return res.status(409).json({ success: false, message: 'You already have a pending report for this listing' });
+    }
+
+    const report: ListingReport = {
+      id: `report_${uid()}`,
+      listingId,
+      listingOwnerId: listing.userId,
+      reporterId: req.user.userId,
+      reason,
+      details: typeof details === 'string' ? details.trim().slice(0, 500) : '',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    await listingReports.insertOne(report);
+    res.json({ success: true, reportId: report.id });
+  } catch (error) {
+    console.error('Listing report submission failed:', error);
+    res.status(500).json({ success: false, message: 'Could not submit listing report' });
+  }
 });
 
 // ── Job Applications API ──────────────────────────────────────
@@ -1546,15 +2121,33 @@ app.get('/api/jobs/:listingId/applications', authMiddleware, async (req: any, re
 app.get('/api/contacts', authMiddleware, async (req: any, res) => {
   try {
     const all = await users.find({ id: { $ne: req.user.userId } }).toArray();
-    res.json({ success: true, contacts: all.map(safeUser) });
+    const authenticatedContacts = all.filter(contact => contact.authUserId === contact.id);
+    res.json({ success: true, contacts: authenticatedContacts.map(safeUser) });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
 // ── Messages ──────────────────────────────────────────────────
 
+function isConversationForUser(chatId: string, userId: string) {
+  return chatId.startsWith(`${userId}-`) || chatId.endsWith(`-${userId}`);
+}
+
+function getConversationPeerId(chatId: string, userId: string) {
+  if (chatId.startsWith(`${userId}-`)) return chatId.slice(userId.length + 1);
+  if (chatId.endsWith(`-${userId}`)) return chatId.slice(0, -(userId.length + 1));
+  return '';
+}
+
 app.get('/api/messages/:chatId', authMiddleware, async (req: any, res) => {
   try {
     const { chatId } = req.params;
+    if (!isConversationForUser(chatId, req.user.userId)) {
+      return res.status(403).json({ message: 'You are not a participant in this conversation' });
+    }
+    const otherParticipantId = getConversationPeerId(chatId, req.user.userId);
+    if (!otherParticipantId || !await users.findOne({ id: otherParticipantId, authUserId: otherParticipantId })) {
+      return res.status(404).json({ message: 'Recipient account is unavailable for messaging' });
+    }
     const msgs = await messages.find({ chatId }).sort({ timestamp: 1 }).toArray();
     res.json({ success: true, messages: msgs });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
@@ -1562,13 +2155,41 @@ app.get('/api/messages/:chatId', authMiddleware, async (req: any, res) => {
 
 app.post('/api/messages', authMiddleware, requireFeature('messaging'), async (req: any, res) => {
   try {
-    const { chatId, content, replyTo, listing, offerData } = req.body;
+    const { chatId, content, replyTo, listing, offerData, recipientId } = req.body;
     const resolvedContent = content || (offerData ? `Offer: $${offerData.offerPrice?.toLocaleString?.() ?? offerData.offerPrice}` : (listing ? `Listing: ${listing.title}` : ''));
     if (!chatId || (!resolvedContent && !listing && !offerData)) return res.status(400).json({ message: 'chatId and content are required' });
+
+    const senderId = req.user.userId;
+    let participantIds: string[] | undefined;
+    if (recipientId !== undefined) {
+      if (typeof recipientId !== 'string' || recipientId === senderId) {
+        return res.status(400).json({ message: 'A valid recipient is required' });
+      }
+      const expectedChatId = [senderId, recipientId].sort().join('-');
+      if (chatId !== expectedChatId) {
+        return res.status(400).json({ message: 'The conversation does not match its participants' });
+      }
+      const recipient = await users.findOne({ id: recipientId });
+      if (!recipient || recipient.authUserId !== recipient.id) {
+        return res.status(404).json({ message: 'Recipient account is unavailable for messaging' });
+      }
+      participantIds = [senderId, recipientId];
+    }
+
+    const id = typeof req.body.id === 'string' && req.body.id.length <= 128 ? req.body.id : uid();
+    const existing = await messages.findOne({ id });
+    if (existing) {
+      if (existing.senderId !== senderId || existing.chatId !== chatId) {
+        return res.status(409).json({ message: 'Message ID is already in use' });
+      }
+      return res.json({ success: true, message: existing });
+    }
+
     const msg: any = {
-      id: uid(),
+      id,
       chatId,
-      senderId: req.user.userId,
+      senderId,
+      ...(recipientId && { recipientId, participantIds }),
       content: resolvedContent,
       timestamp: new Date().toISOString(),
       status: 'sent',
@@ -1577,6 +2198,9 @@ app.post('/api/messages', authMiddleware, requireFeature('messaging'), async (re
       ...(offerData && { offerData, type: 'offer' }),
     };
     await messages.insertOne(msg);
+    if (recipientId) {
+      socketServer?.to(chatId).emit('new-message', { ...msg, roomId: chatId });
+    }
     res.json({ success: true, message: msg });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
@@ -1586,8 +2210,49 @@ app.patch('/api/messages/:id/status', authMiddleware, async (req: any, res) => {
     const { id } = req.params;
     const { status } = req.body;
     if (!['sent', 'delivered', 'read'].includes(status)) return res.status(400).json({ message: 'Invalid status' });
-    await messages.updateOne({ id }, { $set: { status } });
-    res.json({ success: true });
+    const message = await messages.findOne({ id });
+    if (!message) return res.status(404).json({ message: 'Message not found' });
+    if (message.recipientId && status === 'sent' && message.senderId !== req.user.userId) {
+      return res.status(403).json({ message: 'Only the sender can set the sent status' });
+    }
+    if (message.recipientId && status !== 'sent' && message.recipientId !== req.user.userId) {
+      return res.status(403).json({ message: 'Only the recipient can update delivery status' });
+    }
+
+    const statusRank = { sent: 0, delivered: 1, read: 2 } as const;
+    const nextStatus = statusRank[status as keyof typeof statusRank] > statusRank[message.status]
+      ? status
+      : message.status;
+    if (nextStatus !== message.status) {
+      await messages.updateOne({ id }, { $set: { status: nextStatus } });
+      socketServer?.to(message.chatId).emit('message-status', { messageId: id, status: nextStatus });
+    }
+    res.json({ success: true, status: nextStatus });
+  } catch (err: any) { res.status(500).json({ message: err.message }); }
+});
+
+app.patch('/api/messages/:chatId/read', authMiddleware, async (req: any, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.userId;
+    if (!isConversationForUser(chatId, userId)) {
+      return res.status(403).json({ message: 'You are not a participant in this conversation' });
+    }
+
+    const conversationMessages = await messages.find({ chatId }).toArray();
+    const unreadMessages = conversationMessages.filter(message =>
+      message.senderId !== userId &&
+      message.status !== 'read' &&
+      (!message.recipientId || message.recipientId === userId)
+    );
+    await Promise.all(unreadMessages.map(message => messages.updateOne(
+      { id: message.id },
+      { $set: { status: 'read' } },
+    )));
+    unreadMessages.forEach(message =>
+      socketServer?.to(chatId).emit('message-status', { messageId: message.id, status: 'read' })
+    );
+    res.json({ success: true, updated: unreadMessages.length });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
 
@@ -1691,6 +2356,309 @@ app.patch('/api/stories/:id/expire', authMiddleware, async (req: any, res) => {
     await stories.updateOne({ id: req.params.id }, { $set: { isExpired: true } });
     res.json({ success: true });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
+});
+
+// ── Reels ─────────────────────────────────────────────────────
+
+function publicReel(reel: Reel, viewerId?: string) {
+  const { likedBy, savedBy, mediaPaths: _mediaPaths, ...publicFields } = reel;
+  return {
+    ...publicFields,
+    likedByMe: !!viewerId && likedBy.includes(viewerId),
+    savedByMe: !!viewerId && savedBy.includes(viewerId),
+  };
+}
+
+function publicReelComment(comment: ReelCommentRecord, viewerId?: string) {
+  const { likedBy, ...publicFields } = comment;
+  return {
+    ...publicFields,
+    likes: likedBy.length,
+    likedByMe: !!viewerId && likedBy.includes(viewerId),
+  };
+}
+
+app.get('/api/reels', optionalAuthMiddleware, async (req: any, res) => {
+  try {
+    const recentFeed = await reels.find().sort({ createdAt: -1 }).limit(50).toArray();
+    const requestedId = typeof req.query.reel === 'string' ? req.query.reel : '';
+    let feed = recentFeed;
+    if (requestedId) {
+      const requestedReel = await reels.findOne({ id: requestedId });
+      if (requestedReel) {
+        feed = [requestedReel, ...recentFeed.filter(reel => reel.id !== requestedId)];
+      }
+    }
+    res.json({ success: true, reels: feed.map(reel => publicReel(reel, req.user?.userId)) });
+  } catch (err: any) {
+    console.error('Reels feed request failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to load reels' });
+  }
+});
+
+app.post('/api/reels/media/upload-url', authMiddleware, async (req: any, res) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ success: false, message: 'Reel media storage is not configured' });
+    }
+    const contentType = typeof req.body?.contentType === 'string'
+      ? req.body.contentType.toLowerCase().split(';')[0].trim()
+      : '';
+    const extension = REEL_MEDIA_TYPES[contentType];
+    if (!extension) {
+      return res.status(415).json({ success: false, message: 'Unsupported reel media type' });
+    }
+
+    const objectPath = `${req.user.userId}/${crypto.randomUUID()}.${extension}`;
+    const { data, error } = await supabaseAdmin.storage
+      .from(REELS_BUCKET)
+      .createSignedUploadUrl(objectPath, { upsert: false });
+    if (error || !data?.token) {
+      throw new Error(`Could not create reel upload authorization: ${error?.message || 'missing upload token'}`);
+    }
+    const { data: publicUrl } = supabaseAdmin.storage.from(REELS_BUCKET).getPublicUrl(objectPath);
+    res.json({
+      success: true,
+      upload: { path: objectPath, token: data.token, url: publicUrl.publicUrl },
+    });
+  } catch (err: any) {
+    console.error('Reel upload authorization failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to prepare reel media upload' });
+  }
+});
+
+app.delete('/api/reels/media', authMiddleware, async (req: any, res) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ success: false, message: 'Reel media storage is not configured' });
+    }
+    const requestedPaths: unknown = req.body?.paths;
+    if (!Array.isArray(requestedPaths) || requestedPaths.length > 10 || requestedPaths.some((objectPath: unknown) =>
+      typeof objectPath !== 'string' ||
+      !objectPath.startsWith(`${req.user.userId}/`) ||
+      objectPath.includes('..')
+    )) {
+      return res.status(400).json({ success: false, message: 'Invalid reel media paths' });
+    }
+    const paths: string[] = [...new Set(requestedPaths.filter(
+      (objectPath): objectPath is string => typeof objectPath === 'string',
+    ))];
+    if (paths.length === 0) return res.json({ success: true });
+
+    const { error } = await supabaseAdmin.storage.from(REELS_BUCKET).remove(paths);
+    if (error) throw new Error(`Could not remove reel media: ${error.message}`);
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Reel media cleanup failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to remove uploaded reel media' });
+  }
+});
+
+app.post('/api/reels', authMiddleware, requireFeature('reels_feed'), async (req: any, res) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ success: false, message: 'Reel media storage is not configured' });
+    }
+    const {
+      productTitle, price, originalPrice, category, description,
+      mediaType, mediaPaths, musicTrackId,
+    } = req.body ?? {};
+    if (
+      typeof productTitle !== 'string' || !productTitle.trim() || productTitle.trim().length > 120 ||
+      !Number.isFinite(price) || price <= 0 ||
+      (originalPrice !== undefined && (!Number.isFinite(originalPrice) || originalPrice <= price)) ||
+      typeof category !== 'string' || !category.trim() || category.length > 80 ||
+      typeof description !== 'string' || description.length > 2000 ||
+      (mediaType !== 'video' && mediaType !== 'animation') ||
+      !Array.isArray(mediaPaths) ||
+      (mediaType === 'video' && mediaPaths.length !== 1) ||
+      (mediaType === 'animation' && (mediaPaths.length < 2 || mediaPaths.length > 5)) ||
+      mediaPaths.some((objectPath: unknown) =>
+        typeof objectPath !== 'string' ||
+        !objectPath.startsWith(`${req.user.userId}/`) ||
+        objectPath.includes('..')
+      ) ||
+      new Set(mediaPaths).size !== mediaPaths.length
+    ) {
+      return res.status(400).json({ success: false, message: 'Reel details or media are invalid' });
+    }
+    if (musicTrackId !== undefined && !['m1', 'm2', 'm3', 'm4', 'm5', 'm6'].includes(musicTrackId)) {
+      return res.status(400).json({ success: false, message: 'The selected music track is invalid' });
+    }
+
+    const profile = await users.findOne({ id: req.user.userId });
+    if (!profile) return res.status(404).json({ success: false, message: 'User profile not found' });
+
+    const mediaUrls: string[] = [];
+    for (const objectPath of mediaPaths as string[]) {
+      const folder = objectPath.split('/')[0];
+      const fileName = objectPath.split('/').pop()!;
+      const { data, error } = await supabaseAdmin.storage
+        .from(REELS_BUCKET)
+        .list(folder, { limit: 100, search: fileName });
+      if (error) throw new Error(`Could not verify uploaded reel media: ${error.message}`);
+      if (!data?.some(file => file.name === fileName)) {
+        return res.status(400).json({ success: false, message: 'Wait for all media uploads to finish before publishing' });
+      }
+      const { data: publicUrl } = supabaseAdmin.storage.from(REELS_BUCKET).getPublicUrl(objectPath);
+      mediaUrls.push(publicUrl.publicUrl);
+    }
+
+    const reel: Reel = {
+      id: crypto.randomUUID(),
+      ownerId: req.user.userId,
+      sellerId: req.user.userId,
+      seller: profile.name,
+      sellerAvatar: profile.profileImageUrl || '',
+      location: profile.location || '',
+      productTitle: productTitle.trim(),
+      price,
+      originalPrice,
+      category: category.trim(),
+      description: description.trim(),
+      mediaType,
+      ...(mediaType === 'video' ? { videoUrl: mediaUrls[0] } : {}),
+      posterUrl: mediaUrls[0],
+      ...(mediaType === 'animation' ? { photos: mediaUrls } : {}),
+      isAnimation: mediaType === 'animation',
+      musicTrackId,
+      likes: 0,
+      commentCount: 0,
+      shares: 0,
+      views: 0,
+      tag: category.trim(),
+      likedBy: [],
+      savedBy: [],
+      mediaPaths,
+      createdAt: new Date().toISOString(),
+    };
+    await reels.insertOne(reel);
+    res.status(201).json({ success: true, reel: publicReel(reel, req.user.userId) });
+  } catch (err: any) {
+    console.error('Reel publish failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to publish reel' });
+  }
+});
+
+app.post('/api/reels/:id/like', authMiddleware, async (req: any, res) => {
+  try {
+    const reel = await reels.findOne({ id: req.params.id });
+    if (!reel) return res.status(404).json({ success: false, message: 'Reel not found' });
+    const likedBy = reel.likedBy || [];
+    const liked = !likedBy.includes(req.user.userId);
+    const nextLikedBy = liked
+      ? [...likedBy, req.user.userId]
+      : likedBy.filter(userId => userId !== req.user.userId);
+    await reels.updateOne({ id: reel.id }, { $set: { likedBy: nextLikedBy, likes: nextLikedBy.length } });
+    res.json({ success: true, liked, likes: nextLikedBy.length });
+  } catch (err: any) {
+    console.error('Reel like update failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to update reel like' });
+  }
+});
+
+app.post('/api/reels/:id/save', authMiddleware, async (req: any, res) => {
+  try {
+    const reel = await reels.findOne({ id: req.params.id });
+    if (!reel) return res.status(404).json({ success: false, message: 'Reel not found' });
+    const savedBy = reel.savedBy || [];
+    const saved = !savedBy.includes(req.user.userId);
+    const nextSavedBy = saved
+      ? [...savedBy, req.user.userId]
+      : savedBy.filter(userId => userId !== req.user.userId);
+    await reels.updateOne({ id: reel.id }, { $set: { savedBy: nextSavedBy } });
+    res.json({ success: true, saved });
+  } catch (err: any) {
+    console.error('Reel save update failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to update saved reel' });
+  }
+});
+
+app.post('/api/reels/:id/view', authMiddleware, async (req: any, res) => {
+  try {
+    const result = await reels.updateOne({ id: req.params.id }, { $inc: { views: 1 } });
+    if (!result.modifiedCount) return res.status(404).json({ success: false, message: 'Reel not found' });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Reel view update failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to record reel view' });
+  }
+});
+
+app.post('/api/reels/:id/share', authMiddleware, async (req: any, res) => {
+  try {
+    const result = await reels.updateOne({ id: req.params.id }, { $inc: { shares: 1 } });
+    if (!result.modifiedCount) return res.status(404).json({ success: false, message: 'Reel not found' });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Reel share update failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to record reel share' });
+  }
+});
+
+app.get('/api/reels/:id/comments', optionalAuthMiddleware, async (req: any, res) => {
+  try {
+    if (!await reels.findOne({ id: req.params.id })) {
+      return res.status(404).json({ success: false, message: 'Reel not found' });
+    }
+    const comments = await reelComments.find({ reelId: req.params.id }).sort({ createdAt: 1 }).limit(100).toArray();
+    res.json({
+      success: true,
+      comments: comments.map(comment => publicReelComment(comment, req.user?.userId)),
+    });
+  } catch (err: any) {
+    console.error('Reel comments request failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to load reel comments' });
+  }
+});
+
+app.post('/api/reels/:id/comments', authMiddleware, async (req: any, res) => {
+  try {
+    const reel = await reels.findOne({ id: req.params.id });
+    if (!reel) return res.status(404).json({ success: false, message: 'Reel not found' });
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+    if (!text || text.length > 1000) {
+      return res.status(400).json({ success: false, message: 'Comments must contain 1 to 1000 characters' });
+    }
+    const profile = await users.findOne({ id: req.user.userId });
+    if (!profile) return res.status(404).json({ success: false, message: 'User profile not found' });
+
+    const comment: ReelCommentRecord = {
+      id: crypto.randomUUID(),
+      reelId: reel.id,
+      userId: req.user.userId,
+      user: profile.name,
+      avatar: profile.profileImageUrl || '',
+      text,
+      createdAt: new Date().toISOString(),
+      likedBy: [],
+    };
+    await reelComments.insertOne(comment);
+    await reels.updateOne({ id: reel.id }, { $inc: { commentCount: 1 } });
+    res.status(201).json({ success: true, comment: publicReelComment(comment, req.user.userId) });
+  } catch (err: any) {
+    console.error('Reel comment creation failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to post reel comment' });
+  }
+});
+
+app.post('/api/reels/:id/comments/:commentId/like', authMiddleware, async (req: any, res) => {
+  try {
+    const comment = await reelComments.findOne({ id: req.params.commentId, reelId: req.params.id });
+    if (!comment) return res.status(404).json({ success: false, message: 'Reel comment not found' });
+    const likedBy = comment.likedBy || [];
+    const nextLikedBy = likedBy.includes(req.user.userId)
+      ? likedBy.filter(userId => userId !== req.user.userId)
+      : [...likedBy, req.user.userId];
+    await reelComments.updateOne({ id: comment.id }, { $set: { likedBy: nextLikedBy } });
+    res.json({
+      success: true,
+      comment: publicReelComment({ ...comment, likedBy: nextLikedBy }, req.user.userId),
+    });
+  } catch (err: any) {
+    console.error('Reel comment like update failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to update comment like' });
+  }
 });
 
 // ── Support ───────────────────────────────────────────────────
@@ -2066,6 +3034,92 @@ app.get('/api/admin/moderation/queue', adminMiddleware, requirePermission('listi
   } catch (error) {
     console.error('Moderation queue lookup failed:', error);
     res.status(500).json({ success: false, message: 'Could not load moderation queue' });
+  }
+});
+
+app.get('/api/admin/listing-reports', adminMiddleware, requirePermission('listings:review'), async (req: any, res) => {
+  try {
+    const requestedStatus = typeof req.query.status === 'string' ? req.query.status : 'pending';
+    const statuses: ListingReport['status'][] = requestedStatus === 'pending'
+      ? ['pending']
+      : requestedStatus === 'all'
+        ? ['pending', 'reviewed', 'dismissed']
+        : requestedStatus === 'reviewed'
+          ? ['reviewed', 'dismissed']
+          : [];
+    if (!statuses.length) {
+      return res.status(400).json({ success: false, message: 'Invalid report status filter' });
+    }
+
+    const reports = await listingReports.find({ status: { $in: statuses } }).sort({ createdAt: -1 }).toArray();
+    const listingIds = [...new Set(reports.map(report => report.listingId))];
+    const userIds = [...new Set(reports.flatMap(report => [report.reporterId, report.listingOwnerId]))];
+    const [reportedListings, reportUsers] = await Promise.all([
+      listings.find({ id: { $in: listingIds } }).toArray(),
+      users.find({ id: { $in: userIds } }, {
+        projection: { id: 1, name: 1, profileImageUrl: 1 },
+      }).toArray(),
+    ]);
+    const listingsById = new Map(reportedListings.map(listing => [listing.id, listing]));
+    const usersById = new Map(reportUsers.map(user => [user.id, user]));
+    const items = reports.map(report => {
+      const listing = listingsById.get(report.listingId);
+      return {
+        ...report,
+        listingTitle: listing?.data?.title ?? listing?.data?.name ?? 'Listing no longer available',
+        section: listing?.section ?? 'unknown',
+        listingStatus: listing?.status ?? 'removed',
+        listingImage: listing?.data?.image,
+        reporterName: usersById.get(report.reporterId)?.name ?? 'Community member',
+        sellerName: usersById.get(report.listingOwnerId)?.name ?? 'Community member',
+      };
+    });
+    res.json({ success: true, items, total: items.length });
+  } catch (error) {
+    console.error('Listing report queue lookup failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load listing reports' });
+  }
+});
+
+app.patch('/api/admin/listing-reports/:id', adminMiddleware, requirePermission('listings:review'), async (req: any, res) => {
+  try {
+    const { action, notes } = req.body;
+    if (!['dismiss', 'flag_listing'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'Choose a valid report review action' });
+    }
+    if (typeof notes !== 'undefined' && typeof notes !== 'string') {
+      return res.status(400).json({ success: false, message: 'Review notes must be text' });
+    }
+    const report = await listingReports.findOne({ id: req.params.id });
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
+    if (report.status !== 'pending') {
+      return res.status(409).json({ success: false, message: 'This report has already been reviewed' });
+    }
+
+    const now = new Date().toISOString();
+    await listingReports.updateOne({ id: report.id }, { $set: {
+      status: action === 'dismiss' ? 'dismissed' : 'reviewed',
+      reviewedAt: now,
+      reviewedBy: req.user.userId,
+      reviewNotes: typeof notes === 'string' ? notes.trim().slice(0, 500) : '',
+    } });
+    if (action === 'flag_listing') {
+      const listing = await listings.findOne({ id: report.listingId });
+      if (listing?.status === 'active') {
+        await listings.updateOne({ id: listing.id }, { $set: { status: 'flagged' } });
+      }
+    }
+    await adminLogs.insertOne({
+      id: uid(),
+      action: action === 'dismiss' ? 'listing_report_dismissed' : 'listing_report_escalated',
+      performedBy: req.user.userId,
+      timestamp: new Date(),
+      details: { reportId: report.id, listingId: report.listingId, notes: typeof notes === 'string' ? notes.trim().slice(0, 500) : '' },
+    });
+    res.json({ success: true, status: action === 'dismiss' ? 'dismissed' : 'reviewed' });
+  } catch (error) {
+    console.error('Listing report review failed:', error);
+    res.status(500).json({ success: false, message: 'Could not review listing report' });
   }
 });
 
@@ -3303,12 +4357,52 @@ app.get('/api/users/me', authMiddleware, async (req: any, res) => {
 app.patch('/api/users/me', authMiddleware, async (req: any, res) => {
   try {
     const allowed = ['name', 'bio', 'location', 'profileImageUrl', 'contactPhone',
-      'whatsapp', 'viber', 'telegram', 'signal', 'messenger'];
+      'whatsapp', 'viber', 'telegram', 'signal', 'messenger',
+      'storeName', 'storeSlug', 'storeTagline', 'storeDescription', 'storeLogoUrl',
+      'storeBannerUrl', 'storeWebsite', 'storeContactPhone', 'storeEmail'];
     const updates: Record<string, any> = {};
     for (const key of allowed) {
-      if (key in req.body) updates[key] = req.body[key];
+      if (!(key in req.body)) continue;
+      const value = req.body[key];
+      if (key === 'whatsapp' || key === 'viber' || key === 'telegram' || key === 'signal' || key === 'messenger') {
+        if (typeof value !== 'boolean') return res.status(400).json({ message: `${key} must be a boolean` });
+      } else if (typeof value !== 'string') {
+        return res.status(400).json({ message: `${key} must be text` });
+      } else {
+        const maxLength = key === 'storeDescription' || key === 'bio' ? 2000 : key === 'storeBannerUrl' || key === 'storeLogoUrl' || key === 'profileImageUrl' ? 2048 : 300;
+        if (value.length > maxLength) return res.status(400).json({ message: `${key} is too long` });
+        updates[key] = value.trim();
+      }
     }
     if (Object.keys(updates).length === 0) return res.status(400).json({ message: 'No valid fields to update' });
+
+    if (typeof updates.storeSlug === 'string' && updates.storeSlug !== '') {
+      if (!/^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?$/.test(updates.storeSlug)) {
+        return res.status(400).json({ message: 'Store URL must be 3–32 lowercase letters, numbers, or hyphens' });
+      }
+      const duplicate = (await users.find().toArray()).find(user =>
+        user.id !== req.user.userId &&
+        (user.storeSlug === updates.storeSlug || user.id === updates.storeSlug),
+      );
+      if (duplicate) return res.status(409).json({ message: 'That store URL is already taken' });
+    }
+    for (const key of ['storeWebsite', 'storeLogoUrl', 'storeBannerUrl'] as const) {
+      const value = updates[key];
+      if (typeof value !== 'string' || value === '') continue;
+      try {
+        const url = new URL(value);
+        if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+          return res.status(400).json({ message: `${key} must use http or https` });
+        }
+      } catch {
+        return res.status(400).json({ message: `${key} must be a valid URL` });
+      }
+    }
+    if (typeof updates.storeEmail === 'string' && updates.storeEmail !== '' &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updates.storeEmail)) {
+      return res.status(400).json({ message: 'Store email must be a valid email address' });
+    }
+
     await users.updateOne({ id: req.user.userId }, { $set: updates });
     const updated = await users.findOne({ id: req.user.userId });
     res.json({ success: true, user: safeUser(updated!) });
@@ -3423,7 +4517,7 @@ async function start() {
   if (process.env.NODE_ENV === 'production') {
     const distPath = path.resolve(__dirname, 'registropolis-main/dist');
     app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
+    app.get('/{*path}', (_req, res) => {
       res.sendFile(path.resolve(distPath, 'index.html'));
     });
   } else {

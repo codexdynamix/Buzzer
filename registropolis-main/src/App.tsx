@@ -22,6 +22,7 @@ import ListingDetailRoute from "./pages/ListingDetailRoute";
 import SavedListingsPage from "./pages/SavedListingsPage";
 import RecentlyViewedPage from "./pages/RecentlyViewedPage";
 import SellerProfilePage from "./pages/SellerProfilePage";
+import PublicStorePage from "./pages/PublicStorePage";
 import SellerComparePage from "./pages/SellerComparePage";
 import PriceAlertsPage from "./pages/PriceAlertsPage";
 import NotFound from "./pages/NotFound";
@@ -140,6 +141,7 @@ const App = () => (
                   <Route path="/dashboard/:section"        element={<SectionRoute><Dashboard /></SectionRoute>} />
 
                   {/* Listing detail + seller profile — browsable, interactions gated */}
+                  <Route path="/shop/:slug" element={<BrowseRoute><PublicStorePage /></BrowseRoute>} />
                   <Route path="/dashboard/seller/:sellerName" element={<BrowseRoute><SellerProfilePage /></BrowseRoute>} />
                   <Route path="/dashboard/:section/:id"       element={<BrowseRoute><ListingDetailRoute /></BrowseRoute>} />
 

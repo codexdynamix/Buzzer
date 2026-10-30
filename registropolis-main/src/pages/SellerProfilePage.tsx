@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, MessageCircle, Pin, PinOff, Share2 } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageCircle, Pin, PinOff, Share2, Store } from 'lucide-react';
 import { useUserListings } from '@/context/UserListingsContext';
 import { useChatContext } from '@/context/ChatContext';
 import { useSellerCompare, buildPinnedSeller } from '@/context/SellerCompareContext';
@@ -91,6 +91,13 @@ export default function SellerProfilePage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => navigate(`/shop/${encodeURIComponent(profile?.storeSlug || profile?.id || firstListing.userId || '')}`)}
+                className="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold"
+                style={{ borderColor: '#E8E2D8', color: '#1A3353' }}
+              >
+                <Store size={15} /> Visit store
+              </button>
               <button onClick={handleMessage} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ backgroundColor: '#1A3353', color: '#fff' }}>
                 <MessageCircle size={15} /> Message seller
               </button>

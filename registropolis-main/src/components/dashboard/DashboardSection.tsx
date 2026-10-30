@@ -12,6 +12,7 @@ const TransportSection  = React.lazy(() => import('../transport/TransportSection
 const EventsSection     = React.lazy(() => import('../events/EventsSection'));
 const MyListingsSection = React.lazy(() => import('../my-listings/MyListingsSection'));
 const SettingsSection   = React.lazy(() => import('../settings/SettingsSection'));
+const HelpSettings      = React.lazy(() => import('../settings/HelpSettings'));
 const BusinessSection   = React.lazy(() => import('../business/BusinessSection'));
 
 interface DashboardSectionProps {
@@ -34,6 +35,7 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({ activeSection }) =>
       case 'events':      return <EventsSection />;
       case 'my-listings': return <MyListingsSection />;
       case 'settings':    return <SettingsSection />;
+      case 'help':        return <HelpSettings />;
       case 'business':    return <BusinessSection />;
       default:            return <MessagesSection />;
     }

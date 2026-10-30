@@ -31,6 +31,9 @@ export const listingsAPI = {
   setStatus: (id: string, status: string): Promise<{ success: boolean }> =>
     apiCall(`/listings/${id}/status`, 'PATCH', { status }),
 
+  setPromotion: (id: string, active: boolean): Promise<{ success: boolean; promotionEndAt: string | null }> =>
+    apiCall(`/listings/${encodeURIComponent(id)}/promotion`, 'PATCH', { active }),
+
   remove: (id: string): Promise<{ success: boolean }> =>
     apiCall(`/listings/${id}`, 'DELETE'),
 };

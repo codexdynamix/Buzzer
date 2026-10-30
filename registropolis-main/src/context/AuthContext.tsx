@@ -22,6 +22,15 @@ type User = {
   telegram?: boolean;
   signal?: boolean;
   messenger?: boolean;
+  storeName?: string;
+  storeSlug?: string;
+  storeTagline?: string;
+  storeDescription?: string;
+  storeLogoUrl?: string;
+  storeBannerUrl?: string;
+  storeWebsite?: string;
+  storeContactPhone?: string;
+  storeEmail?: string;
 };
 
 interface AuthContextType {
@@ -102,7 +111,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      localStorage.setItem('auth_token', session.access_token);
+    localStorage.setItem('auth_token', session.access_token);
       const sessionUser = {
         id: session.user.id,
         email: session.user.email,

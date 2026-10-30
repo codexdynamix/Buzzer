@@ -473,6 +473,7 @@ export default function MarketplaceSection() {
                           listingImage: p.image,
                           listingCategory: 'Marketplace',
                           sellerName: p.seller,
+                          sellerId: p.userId,
                           triggerOffer: true,
                         });
                       }}
@@ -495,6 +496,7 @@ export default function MarketplaceSection() {
                             listingImage: p.image,
                             listingCategory: 'Marketplace',
                             sellerName: p.seller,
+                            sellerId: p.userId,
                           });
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"

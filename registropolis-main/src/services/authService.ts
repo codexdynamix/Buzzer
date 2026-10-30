@@ -21,6 +21,15 @@ export type AuthUser = {
   telegram?: boolean;
   signal?: boolean;
   messenger?: boolean;
+  storeName?: string;
+  storeSlug?: string;
+  storeTagline?: string;
+  storeDescription?: string;
+  storeLogoUrl?: string;
+  storeBannerUrl?: string;
+  storeWebsite?: string;
+  storeContactPhone?: string;
+  storeEmail?: string;
 };
 
 function mapAuthUser(user: SupabaseUser): AuthUser {
@@ -134,7 +143,6 @@ export const realAuthAPI = {
     const { error: signOutError } = await client.auth.signOut();
     if (signOutError) throw signOutError;
   },
-
   updateProfile: (updates: Record<string, unknown>) =>
     apiCall<{ success: boolean; user: AuthUser }>('/users/me', 'PATCH', updates),
 

@@ -6,7 +6,7 @@ export interface SupportTicket {
   description: string;
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  category: 'general' | 'technical' | 'billing' | 'report' | 'complaint';
+  category: 'general' | 'technical' | 'billing' | 'report' | 'complaint' | 'feature_request';
   createdAt: Date;
   updatedAt: Date;
   assignedTo?: string;

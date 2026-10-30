@@ -260,6 +260,24 @@
   }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
 
+  .scrollbar-gold {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(201, 169, 110, 0.42) transparent;
+  }
+  .scrollbar-gold::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-gold::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-gold::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(201, 169, 110, 0.38);
+  }
+  .scrollbar-gold::-webkit-scrollbar-thumb:hover {
+    background: rgba(201, 169, 110, 0.62);
+  }
+
   .theme-transition { @apply transition-colors duration-200; }
 
   .gradient-text {

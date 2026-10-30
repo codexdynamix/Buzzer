@@ -17,6 +17,9 @@ import { useEffect } from 'react';
 import ReviewsSection from './ReviewsSection';
 import ContactModal from '@/components/shared/ContactModal';
 import ShareModal from '@/components/shared/ShareModal';
+import { useAuth } from '@/context/AuthContext';
+import { useGuestGate } from '@/context/GuestGateContext';
+import { listingEngagementAPI, type ListingEngagementStats } from '@/services/listingEngagementService';
 
 function generateDescription(listing: any): string {
   return typeof listing.description === 'string' ? listing.description : '';
@@ -123,19 +126,41 @@ export default function ListingDetailPage() {
   const { openChatWithListing } = useChatContext();
   const { getAllListings } = useUserListings();
   const { isSaved, toggleSaved } = useSaved();
+  const { isAuthenticated, user } = useAuth();
+  const { requireAuth } = useGuestGate();
   const { isWatched, addWatch, removeWatch: removeWatchAlert } = usePriceAlerts();
   const { recordView } = useRecentlyViewed();
   const [reportOpen, setReportOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [engagement, setEngagement] = useState<ListingEngagementStats>({
+    views: 0, likes: 0, saves: 0, shares: 0, inquiries: 0, liked: false, saved: false,
+  });
 
   const listing: any = state?.listing ?? decodeListingData(searchParams.get('d') ?? '');
 
   useEffect(() => {
     if (listing && section) {
       recordView(section, listing);
+      if (isAuthenticated && listing.userId !== user?.id) {
+        void listingEngagementAPI.record(listing.id, 'view')
+          .catch(error => console.error('Could not record listing view:', error));
+      }
     }
-  }, [listing?.id, section]);
+  }, [listing?.id, section, isAuthenticated, user?.id]);
+
+  useEffect(() => {
+    if (!listing?.id) return;
+    let active = true;
+    listingEngagementAPI.get(listing.id)
+      .then(result => {
+        if (active) setEngagement(result.stats);
+      })
+      .catch(error => {
+        console.error('Could not load listing engagement:', error);
+      });
+    return () => { active = false; };
+  }, [listing?.id]);
 
   if (!listing) {
     return (
@@ -154,11 +179,42 @@ export default function ListingDetailPage() {
   }
 
   const sec = section ?? 'marketplace';
+  const isOwnListing = user?.id === listing.userId;
   const sellerListingCount = getAllListings().filter(item =>
     item.seller === listing.seller && item.userId === listing.userId
   ).length;
 
   const shareUrl = `${window.location.origin}/dashboard/${sec}/${id ?? listing.id}?d=${encodeListingData(listing)}`;
+
+  const handleSave = () => {
+    void toggleSaved(sec, listing).then(stats => {
+      if (stats) setEngagement(stats);
+    });
+  };
+  const handleLike = () => {
+    if (isOwnListing || !requireAuth()) return;
+    void listingEngagementAPI.record(listing.id, 'like', !engagement.liked)
+      .then(setEngagement)
+      .catch(error => console.error('Could not update listing like:', error));
+  };
+  const recordShare = () => {
+    if (!isAuthenticated || isOwnListing) return;
+    void listingEngagementAPI.record(listing.id, 'share')
+      .then(setEngagement)
+      .catch(error => console.error('Could not record listing share:', error));
+  };
+  const startInquiry = (info: Parameters<typeof openChatWithListing>[0]) => {
+    if (isAuthenticated && !isOwnListing) {
+      void listingEngagementAPI.record(listing.id, 'inquiry')
+        .then(setEngagement)
+        .catch(error => console.error('Could not record listing inquiry:', error));
+    }
+    openChatWithListing(info);
+  };
+  const submitReport = async (reason: string, details: string) => {
+    if (!requireAuth()) throw new Error('Sign in to submit a report.');
+    await listingEngagementAPI.report(listing.id, reason, details);
+  };
 
   const gallery = Array.isArray(listing.galleryImages) ? listing.galleryImages : [];
   const images = [listing.image, ...gallery].filter(Boolean);
@@ -179,8 +235,8 @@ export default function ListingDetailPage() {
 
     return (
       <div className="section-padding">
-        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec!, listing?.id)} onSave={() => toggleSaved(sec!, listing)} shareUrl={shareUrl} onShare={() => setShareOpen(true)} onReport={() => setReportOpen(true)} />
-        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} />
+        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec, listing.id)} onSave={handleSave} saveCount={engagement.saves} liked={engagement.liked} likeCount={engagement.likes} onLike={!isOwnListing ? handleLike : undefined} shareCount={engagement.shares} shareUrl={shareUrl} onShare={() => setShareOpen(true)} onShareRecord={recordShare} onReport={() => setReportOpen(true)} />
+        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} onSubmit={submitReport} />
 
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-8">
           {/* Left */}
@@ -245,7 +301,7 @@ export default function ListingDetailPage() {
                 </div>
 
                 <button
-                  onClick={() => openChatWithListing({
+                  onClick={() => startInquiry({
                     listingId: listing.id,
                     listingTitle: listing.title,
                     listingPrice: `$${listing.price?.toLocaleString()}`,
@@ -263,7 +319,7 @@ export default function ListingDetailPage() {
                 </button>
 
                 <button
-                  onClick={() => openChatWithListing({
+                  onClick={() => startInquiry({
                     listingId: listing.id,
                     listingTitle: listing.title,
                     listingPrice: `$${listing.price?.toLocaleString()}`,
@@ -283,7 +339,14 @@ export default function ListingDetailPage() {
 
                 {listing.phone && (
                   <button
-                    onClick={() => setContactOpen(true)}
+                    onClick={() => {
+                      if (isAuthenticated && !isOwnListing) {
+                        void listingEngagementAPI.record(listing.id, 'inquiry')
+                          .then(setEngagement)
+                          .catch(error => console.error('Could not record listing inquiry:', error));
+                      }
+                      setContactOpen(true);
+                    }}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
                     style={{ backgroundColor: '#F5F2EC', color: '#6E7A8A', border: '1px solid #E8E2D8' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#EDE8DF'; (e.currentTarget as HTMLElement).style.color = '#1A3353'; }}
@@ -294,7 +357,7 @@ export default function ListingDetailPage() {
                 )}
 
                 <button
-                  onClick={() => toggleSaved(sec!, listing)}
+                  onClick={handleSave}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
                   style={{ backgroundColor: isSaved(sec!, listing?.id) ? '#FEF2F2' : '#F5F2EC', color: isSaved(sec!, listing?.id) ? '#B91C1C' : '#1A3353', border: `1px solid ${isSaved(sec!, listing?.id) ? '#FECACA' : '#E8E2D8'}` }}
                 >
@@ -385,8 +448,8 @@ export default function ListingDetailPage() {
 
     return (
       <div className="section-padding">
-        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec!, listing?.id)} onSave={() => toggleSaved(sec!, listing)} saveLabel="Bookmark" shareUrl={shareUrl} onReport={() => setReportOpen(true)} />
-        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} />
+        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec, listing.id)} onSave={handleSave} saveLabel="Bookmark" saveCount={engagement.saves} liked={engagement.liked} likeCount={engagement.likes} onLike={!isOwnListing ? handleLike : undefined} shareCount={engagement.shares} shareUrl={shareUrl} onShareRecord={recordShare} onReport={() => setReportOpen(true)} />
+        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} onSubmit={submitReport} />
 
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3 space-y-6">
@@ -461,7 +524,7 @@ export default function ListingDetailPage() {
                 </button>
 
                 <button
-                  onClick={() => toggleSaved(sec!, listing)}
+                  onClick={handleSave}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
                   style={{ backgroundColor: isSaved(sec!, listing?.id) ? '#FFFBEB' : '#F5F2EC', color: isSaved(sec!, listing?.id) ? '#B45309' : '#1A3353', border: `1px solid ${isSaved(sec!, listing?.id) ? '#FDE68A' : '#E8E2D8'}` }}
                 >
@@ -500,8 +563,8 @@ export default function ListingDetailPage() {
 
     return (
       <div className="section-padding">
-        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec!, listing?.id)} onSave={() => toggleSaved(sec!, listing)} shareUrl={shareUrl} onReport={() => setReportOpen(true)} />
-        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} />
+        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec, listing.id)} onSave={handleSave} saveCount={engagement.saves} liked={engagement.liked} likeCount={engagement.likes} onLike={!isOwnListing ? handleLike : undefined} shareCount={engagement.shares} shareUrl={shareUrl} onShareRecord={recordShare} onReport={() => setReportOpen(true)} />
+        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} onSubmit={submitReport} />
 
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3 space-y-6">
@@ -575,7 +638,7 @@ export default function ListingDetailPage() {
                 </button>
 
                 <button
-                  onClick={() => toggleSaved(sec!, listing)}
+                  onClick={handleSave}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
                   style={{ backgroundColor: isSaved(sec!, listing?.id) ? '#FEF2F2' : '#F5F2EC', color: isSaved(sec!, listing?.id) ? '#B91C1C' : '#1A3353', border: `1px solid ${isSaved(sec!, listing?.id) ? '#FECACA' : '#E8E2D8'}` }}
                 >
@@ -587,15 +650,19 @@ export default function ListingDetailPage() {
               <div className="rounded-2xl p-4 space-y-3" style={{ backgroundColor: '#fff', border: '1px solid #E8E2D8' }}>
                 <h3 className="text-xs font-bold uppercase tracking-wide" style={{ color: '#6E7A8A' }}>Listed By</h3>
                 <div className="flex items-center gap-3">
-                  {listing.agentImg ? (
-                    <img src={listing.agentImg} alt={listing.agent} className="w-12 h-12 rounded-full object-cover" style={{ border: '2px solid #E8E2D8' }} />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ backgroundColor: '#1A3353' }}>
-                      {listing.agent?.[0]}
-                    </div>
-                  )}
+                  <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full font-bold text-white" style={{ backgroundColor: '#1A3353', border: '2px solid #E8E2D8' }}>
+                    {listing.agent?.[0] ?? listing.owner?.name?.[0] ?? listing.seller?.[0] ?? 'A'}
+                    {(listing.agentImg ?? listing.owner?.profileImageUrl ?? listing.profileImageUrl) && (
+                      <img
+                        src={listing.agentImg ?? listing.owner?.profileImageUrl ?? listing.profileImageUrl}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover"
+                        onError={event => { event.currentTarget.style.display = 'none'; }}
+                      />
+                    )}
+                  </div>
                   <div>
-                    <p className="font-semibold text-sm" style={{ color: '#0F1923' }}>{listing.agent}</p>
+                    <p className="font-semibold text-sm" style={{ color: '#0F1923' }}>{listing.agent ?? listing.owner?.name ?? listing.seller ?? 'Agent'}</p>
                     <div className="flex items-center gap-1 text-xs" style={{ color: '#6E7A8A' }}>
                       <CheckCircle2 size={11} style={{ color: '#C9A96E' }} /> Licensed Agent
                     </div>
@@ -623,8 +690,8 @@ export default function ListingDetailPage() {
   if (sec === 'services') {
     return (
       <div className="section-padding">
-        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec!, listing?.id)} onSave={() => toggleSaved(sec!, listing)} shareUrl={shareUrl} onReport={() => setReportOpen(true)} />
-        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} />
+        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec, listing.id)} onSave={handleSave} saveCount={engagement.saves} liked={engagement.liked} likeCount={engagement.likes} onLike={!isOwnListing ? handleLike : undefined} shareCount={engagement.shares} shareUrl={shareUrl} onShareRecord={recordShare} onReport={() => setReportOpen(true)} />
+        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} onSubmit={submitReport} />
 
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3 space-y-6">
@@ -755,8 +822,8 @@ export default function ListingDetailPage() {
 
     return (
       <div className="section-padding">
-        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec!, listing?.id)} onSave={() => toggleSaved(sec!, listing)} shareUrl={shareUrl} onReport={() => setReportOpen(true)} />
-        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} />
+        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec, listing.id)} onSave={handleSave} saveCount={engagement.saves} liked={engagement.liked} likeCount={engagement.likes} onLike={!isOwnListing ? handleLike : undefined} shareCount={engagement.shares} shareUrl={shareUrl} onShareRecord={recordShare} onReport={() => setReportOpen(true)} />
+        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} onSubmit={submitReport} />
 
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3 space-y-6">
@@ -826,7 +893,7 @@ export default function ListingDetailPage() {
                 </button>
 
                 <button
-                  onClick={() => toggleSaved(sec!, listing)}
+                  onClick={handleSave}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
                   style={{ backgroundColor: isSaved(sec!, listing?.id) ? '#FEF2F2' : '#F5F2EC', color: isSaved(sec!, listing?.id) ? '#B91C1C' : '#1A3353', border: `1px solid ${isSaved(sec!, listing?.id) ? '#FECACA' : '#E8E2D8'}` }}
                 >
@@ -860,8 +927,8 @@ export default function ListingDetailPage() {
 
     return (
       <div className="section-padding">
-        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec!, listing?.id)} onSave={() => toggleSaved(sec!, listing)} shareUrl={shareUrl} onReport={() => setReportOpen(true)} />
-        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} />
+        <TopBar onBack={() => navigate(`/dashboard/${sec}`)} saved={isSaved(sec, listing.id)} onSave={handleSave} saveCount={engagement.saves} liked={engagement.liked} likeCount={engagement.likes} onLike={!isOwnListing ? handleLike : undefined} shareCount={engagement.shares} shareUrl={shareUrl} onShareRecord={recordShare} onReport={() => setReportOpen(true)} />
+        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} listingTitle={listing.title ?? listing.name ?? ''} onSubmit={submitReport} />
 
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3 space-y-6">
@@ -918,7 +985,7 @@ export default function ListingDetailPage() {
                 </div>
 
                 <button
-                  onClick={() => openChatWithListing({
+                  onClick={() => startInquiry({
                     listingId: listing.id,
                     listingTitle: listing.title,
                     listingPrice: `$${listing.price?.toLocaleString()}`,
@@ -936,7 +1003,7 @@ export default function ListingDetailPage() {
                 </button>
 
                 <button
-                  onClick={() => toggleSaved(sec!, listing)}
+                  onClick={handleSave}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
                   style={{ backgroundColor: isSaved(sec!, listing?.id) ? '#FEF2F2' : '#F5F2EC', color: isSaved(sec!, listing?.id) ? '#B91C1C' : '#1A3353', border: `1px solid ${isSaved(sec!, listing?.id) ? '#FECACA' : '#E8E2D8'}` }}
                 >
@@ -1051,19 +1118,43 @@ const REPORT_REASONS = [
   { id: 'other',       label: 'Other',                  icon: '💬' },
 ];
 
-function ReportModal({ open, onClose, listingTitle }: { open: boolean; onClose: () => void; listingTitle: string }) {
+function ReportModal({ open, onClose, listingTitle, onSubmit }: {
+  open: boolean;
+  onClose: () => void;
+  listingTitle: string;
+  onSubmit: (reason: string, details: string) => Promise<void>;
+}) {
   const [selected, setSelected] = useState<string>('');
   const [details, setDetails] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  function handleSubmit() {
-    if (!selected) return;
-    setSubmitted(true);
+  async function handleSubmit() {
+    if (!selected || submitting) return;
+    setSubmitting(true);
+    setErrorMessage('');
+    try {
+      await onSubmit(selected, details);
+      setSubmitted(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not submit report';
+      setErrorMessage(message);
+      console.error('Listing report submission failed:', error);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function handleClose() {
     onClose();
-    setTimeout(() => { setSelected(''); setDetails(''); setSubmitted(false); }, 300);
+    setTimeout(() => {
+      setSelected('');
+      setDetails('');
+      setSubmitted(false);
+      setSubmitting(false);
+      setErrorMessage('');
+    }, 300);
   }
 
   if (!open) return null;
@@ -1162,6 +1253,10 @@ function ReportModal({ open, onClose, listingTitle }: { open: boolean; onClose: 
                 <p className="text-right text-xs mt-1" style={{ color: '#B0BAC4' }}>{details.length}/500</p>
               </div>
 
+              {errorMessage && (
+                <p role="alert" className="mb-3 text-xs text-red-600">{errorMessage}</p>
+              )}
+
               <div className="flex gap-2">
                 <button
                   onClick={handleClose}
@@ -1172,16 +1267,16 @@ function ReportModal({ open, onClose, listingTitle }: { open: boolean; onClose: 
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={!selected}
+                  disabled={!selected || submitting}
                   className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
                   style={{
-                    backgroundColor: selected ? '#DC2626' : '#F5F2EC',
-                    color: selected ? '#fff' : '#B0BAC4',
-                    cursor: selected ? 'pointer' : 'not-allowed',
+                    backgroundColor: selected && !submitting ? '#DC2626' : '#F5F2EC',
+                    color: selected && !submitting ? '#fff' : '#B0BAC4',
+                    cursor: selected && !submitting ? 'pointer' : 'not-allowed',
                   }}
                 >
                   <Flag size={13} />
-                  Submit Report
+                  {submitting ? 'Submitting…' : 'Submit Report'}
                 </button>
               </div>
             </>
@@ -1193,10 +1288,39 @@ function ReportModal({ open, onClose, listingTitle }: { open: boolean; onClose: 
 }
 
 /* ─── shared sub-components ──────────────────────────────────────── */
-function TopBar({ onBack, saved, onSave, saveLabel = 'Save', shareUrl, onReport, onShare }: { onBack: () => void; saved: boolean; onSave: () => void; saveLabel?: string; shareUrl?: string; onReport?: () => void; onShare?: () => void }) {
+function TopBar({
+  onBack,
+  saved,
+  onSave,
+  saveLabel = 'Save',
+  saveCount = 0,
+  liked = false,
+  likeCount = 0,
+  onLike,
+  shareCount = 0,
+  shareUrl,
+  onReport,
+  onShare,
+  onShareRecord,
+}: {
+  onBack: () => void;
+  saved: boolean;
+  onSave: () => void;
+  saveLabel?: string;
+  saveCount?: number;
+  liked?: boolean;
+  likeCount?: number;
+  onLike?: () => void;
+  shareCount?: number;
+  shareUrl?: string;
+  onReport?: () => void;
+  onShare?: () => void;
+  onShareRecord?: () => void;
+}) {
   const [copied, setCopied] = useState(false);
 
   function handleShare() {
+    onShareRecord?.();
     if (onShare) { onShare(); return; }
     const url = shareUrl ?? window.location.href;
     navigator.clipboard?.writeText(url).then(() => {
@@ -1215,45 +1339,53 @@ function TopBar({ onBack, saved, onSave, saveLabel = 'Save', shareUrl, onReport,
   }
 
   return (
-    <div className="flex items-center justify-between mb-1">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
-        style={{ backgroundColor: '#F5F2EC', color: '#1A3353', border: '1px solid #E8E2D8' }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#EDE8DF'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#F5F2EC'; }}
-      >
-        <ArrowLeft size={15} /> Back to listings
-      </button>
-
-      <div className="flex items-center gap-2">
+    <div className="sticky top-2 z-30 mb-1 flex items-center justify-between">
+      <div className="rounded-xl border border-border bg-background p-1 shadow-sm">
         <button
-          onClick={onSave}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all"
-          style={{ backgroundColor: saved ? '#FEF2F2' : '#F5F2EC', color: saved ? '#B91C1C' : '#6E7A8A', border: `1px solid ${saved ? '#FECACA' : '#E8E2D8'}` }}
+          onClick={onBack}
+          className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent/40"
         >
-          <Heart size={14} className={saved ? 'fill-red-500' : ''} />
-          <span className="hidden sm:inline">{saveLabel}</span>
+          <ArrowLeft size={15} /> Back to listings
+        </button>
+      </div>
+
+      <div className="flex items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm">
+        {onLike && (
+          <button
+            type="button"
+            onClick={onLike}
+            aria-pressed={liked}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold transition-colors hover:bg-accent/40"
+            style={{ color: liked ? '#B91C1C' : '#6E7A8A' }}
+            title="Like listing"
+          >
+            <Heart size={14} className={liked ? 'fill-red-500' : ''} />
+            <span>{likeCount}</span>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onSave}
+          aria-pressed={saved}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors hover:bg-accent/40"
+          style={{ color: saved ? '#B91C1C' : '#6E7A8A' }}
+        >
+          <Bookmark size={14} className={saved ? 'fill-current' : ''} />
+          <span className="hidden sm:inline">{saveLabel}{saveCount > 0 ? ` · ${saveCount}` : ''}</span>
         </button>
         <button
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all"
-          style={{
-            backgroundColor: copied ? '#F0FDF4' : '#F5F2EC',
-            color: copied ? '#15803D' : '#6E7A8A',
-            border: `1px solid ${copied ? '#BBF7D0' : '#E8E2D8'}`,
-          }}
+          type="button"
+          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors hover:bg-accent/40"
+          style={{ color: copied ? '#15803D' : '#6E7A8A' }}
           onClick={handleShare}
         >
           {copied ? <Check size={14} /> : <Share2 size={14} />}
-          <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
+          <span className="hidden sm:inline">{copied ? 'Copied!' : `Share${shareCount > 0 ? ` · ${shareCount}` : ''}`}</span>
         </button>
         {onReport && (
           <button
             onClick={onReport}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all"
-            style={{ backgroundColor: '#F5F2EC', color: '#6E7A8A', border: '1px solid #E8E2D8' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#FEF2F2'; (e.currentTarget as HTMLElement).style.color = '#DC2626'; (e.currentTarget as HTMLElement).style.borderColor = '#FECACA'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#F5F2EC'; (e.currentTarget as HTMLElement).style.color = '#6E7A8A'; (e.currentTarget as HTMLElement).style.borderColor = '#E8E2D8'; }}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
             title="Report this listing"
           >
             <Flag size={14} />
