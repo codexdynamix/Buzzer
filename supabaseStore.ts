@@ -103,46 +103,6 @@ class SupabaseRecordCursor<T extends Record<string, any>> implements RecordCurso
   }
 }
 
-function applySet(target: any, values: Record<string, any>) {
-  for (const [path, value] of Object.entries(values)) {
-    const parts = path.split('.');
-    let current = target;
-    for (const part of parts.slice(0, -1)) {
-      if (!current[part] || typeof current[part] !== 'object') current[part] = {};
-      current = current[part];
-    }
-    current[parts[parts.length - 1]] = value;
-  }
-}
-
-function applyInc(target: any, values: Record<string, number>) {
-  for (const [path, value] of Object.entries(values)) {
-    const parts = path.split('.');
-    let current = target;
-    for (const part of parts.slice(0, -1)) {
-      if (!current[part] || typeof current[part] !== 'object') current[part] = {};
-      current = current[part];
-    }
-    const key = parts[parts.length - 1];
-    current[key] = (current[key] || 0) + value;
-  }
-}
-
-function applyUnset(target: any, values: Record<string, unknown>) {
-  for (const path of Object.keys(values)) {
-    const parts = path.split('.');
-    let current = target;
-    for (const part of parts.slice(0, -1)) {
-      if (!current[part] || typeof current[part] !== 'object') {
-        current = undefined;
-        break;
-      }
-      current = current[part];
-    }
-    if (current) delete current[parts[parts.length - 1]];
-  }
-}
-
 function getRecordId(document: Record<string, any>) {
   const value = document.id ?? document._id ?? document.ticketId ?? document.token ??
     document.date ?? document.name;
@@ -193,44 +153,31 @@ export class SupabaseCollection<T extends Record<string, any>> implements Record
   }
 
   async updateOne(filter: any, update: any, options?: { upsert?: boolean }) {
-    const document = await this.findOne(filter);
-    if (!document) {
-      if (!options?.upsert) return { acknowledged: true, modifiedCount: 0 };
+    const existing = await this.findOne(filter);
+    if (!existing && !options?.upsert) return { acknowledged: true, modifiedCount: 0 };
 
-      const inserted: Record<string, any> = {};
-      for (const [key, value] of Object.entries(filter ?? {})) {
-        if (!(value && typeof value === 'object')) inserted[key] = value;
-      }
-      if (update.$setOnInsert) applySet(inserted, update.$setOnInsert);
-      if (update.$set) applySet(inserted, update.$set);
-      if (update.$inc) applyInc(inserted, update.$inc);
-      if (!inserted.id) inserted.id = crypto.randomUUID();
-      await this.insertOne(inserted as T);
-      return { acknowledged: true, modifiedCount: 1, upsertedCount: 1 };
+    const initialDocument: Record<string, any> = {};
+    for (const [key, value] of Object.entries(filter ?? {})) {
+      if (!(value && typeof value === 'object')) initialDocument[key] = value;
     }
-
-    const updated = structuredClone(document) as Record<string, any>;
-    if (update.$set) applySet(updated, update.$set);
-    if (update.$inc) applyInc(updated, update.$inc);
-    if (update.$unset) applyUnset(updated, update.$unset);
-    if (update.$addToSet) {
-      for (const [key, value] of Object.entries(update.$addToSet)) {
-        if (!Array.isArray(updated[key])) updated[key] = [];
-        const present = updated[key].some((item: any) => JSON.stringify(item) === JSON.stringify(value));
-        if (!present) updated[key].push(value);
-      }
-    }
-
-    const id = getRecordId(document);
+    const id = existing ? getRecordId(existing) : getRecordId(initialDocument) || crypto.randomUUID();
     if (!id) throw new Error(`Supabase record in ${this.collection} has no id`);
-    const { error } = await this.client
-      .from('app_records')
-      .update({ document: updated, updated_at: new Date().toISOString() })
-      .eq('collection', this.collection)
-      .eq('id', id);
+
+    initialDocument.id = id;
+    const { data, error } = await this.client.rpc('update_app_record', {
+      p_collection: this.collection,
+      p_id: id,
+      p_initial_document: initialDocument,
+      p_update: update,
+      p_upsert: Boolean(options?.upsert),
+    });
     if (error) throw new Error(`Supabase update failed for ${this.collection}: ${error.message}`);
 
-    return { acknowledged: true, modifiedCount: 1 };
+    return {
+      acknowledged: true,
+      modifiedCount: data ? 1 : 0,
+      ...(options?.upsert && !existing && data ? { upsertedCount: 1 } : {}),
+    };
   }
 
   async deleteOne(filter: any) {

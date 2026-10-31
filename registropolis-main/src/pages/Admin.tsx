@@ -92,10 +92,10 @@ const isAdminTab = (value: string | null): value is AdminTab =>
 const Admin = () => {
   const { user, signOut } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const staffRole: StaffRole = isStaffRole(user?.staffRole) ? user.staffRole : 'superadmin';
-  const staffProfile = STAFF_PROFILES[staffRole];
+  const staffRole: StaffRole | null = isStaffRole(user?.staffRole) ? user.staffRole : null;
+  const staffProfile = staffRole ? STAFF_PROFILES[staffRole] : { title: 'No assigned role', badge: 'Unassigned' };
   const allowedNavigation = useMemo(
-    () => NAVIGATION.filter(item => hasAdminPermission(staffRole, ADMIN_TAB_PERMISSIONS[item.id])),
+    () => staffRole ? NAVIGATION.filter(item => hasAdminPermission(staffRole, ADMIN_TAB_PERMISSIONS[item.id])) : [],
     [staffRole],
   );
   const requestedTab = searchParams.get('tab');
@@ -179,7 +179,7 @@ const Admin = () => {
     setSearchParams({ tab });
   };
 
-  const canRevealPii = hasAdminPermission(staffRole, 'users:pii');
+  const canRevealPii = staffRole ? hasAdminPermission(staffRole, 'users:pii') : false;
   const sections = (['OPERATIONS', 'ADMINISTRATION'] as const).map(group => ({
     group,
     items: allowedNavigation.filter(item => item.group === group),
@@ -373,7 +373,7 @@ const Admin = () => {
                 </div>
               </div>
             )}
-            {activeTab === 'users' && <AdminUsers piiMasked={piiMasked} canManageUsers={hasAdminPermission(staffRole, 'users:write')} canRestrictUsers={hasAdminPermission(staffRole, 'users:ban')} />}
+            {activeTab === 'users' && <AdminUsers piiMasked={piiMasked} canManageUsers={!!staffRole && hasAdminPermission(staffRole, 'users:write')} canRestrictUsers={!!staffRole && hasAdminPermission(staffRole, 'users:ban')} />}
             {activeTab === 'moderation' && <AdminModerationQueue />}
             {activeTab === 'reports' && <AdminListingReports />}
             {activeTab === 'merchants' && <AdminMerchantPortal />}

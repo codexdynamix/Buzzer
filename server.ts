@@ -928,7 +928,7 @@ async function getOrCreateAuthProfile(authUser: {
         name: profileByEmail.name || profileById.name,
         role: profileByEmail.role === 'admin' ? 'admin' : profileById.role,
         ...(profileByEmail.role === 'admin' ? {
-          staffRole: profileByEmail.staffRole ?? 'superadmin',
+          staffRole: profileByEmail.staffRole,
           staffTitle: profileByEmail.staffTitle,
         } : {}),
       };
@@ -1052,7 +1052,7 @@ async function adminMiddleware(req: any, res: any, next: any) {
   try {
     const user = await users.findOne({ id: req.user.userId });
     const staffRole = user?.role === 'admin'
-      ? user.staffRole ?? 'superadmin'
+      ? user.staffRole
       : user?.role === 'moderator' ? 'moderator' : undefined;
     const validRoles: AdminStaffRole[] = ['superadmin', 'operations', 'moderator', 'support'];
     if (!user || !staffRole || !validRoles.includes(staffRole)) {
@@ -2292,7 +2292,7 @@ app.get('/api/support/tickets', authMiddleware, async (req: any, res) => {
   try {
     const user = await users.findOne({ id: req.user.userId });
     const staffRole = user?.role === 'admin'
-      ? user.staffRole ?? 'superadmin'
+      ? user.staffRole
       : user?.role === 'moderator' ? 'moderator' : undefined;
     const validRoles: AdminStaffRole[] = ['superadmin', 'operations', 'moderator', 'support'];
     const mayReadAllTickets = !!staffRole && validRoles.includes(staffRole) &&
@@ -2540,7 +2540,7 @@ app.patch('/api/businesses/:id/sponsor', authMiddleware, async (req: any, res) =
     if (!biz) return res.status(404).json({ success: false, message: 'Business not found' });
     const user = await users.findOne({ id: req.user.userId });
     const staffRole = user?.role === 'admin'
-      ? user.staffRole ?? 'superadmin'
+      ? user.staffRole
       : user?.role === 'moderator' ? 'moderator' : undefined;
     const validRoles: AdminStaffRole[] = ['superadmin', 'operations', 'moderator', 'support'];
     const mayManageAds = !!staffRole && validRoles.includes(staffRole) &&

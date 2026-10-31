@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { realAuthAPI } from '@/services/authService';
 import { authAPI } from '@/services/apiService';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
-import type { StaffRole } from '@/config/adminAccess';
+import { isStaffRole, type StaffRole } from '@/config/adminAccess';
 
 type User = {
   id: string;
@@ -163,7 +163,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const isAdmin = useMemo(
-    () => user?.role === 'admin',
+    () => user?.role === 'admin' && isStaffRole(user.staffRole),
     [user]
   );
 

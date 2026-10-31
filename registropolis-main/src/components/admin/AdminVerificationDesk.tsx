@@ -101,9 +101,9 @@ export const AdminVerificationDesk: React.FC = () => {
             <BadgeCheck size={26} />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-white">Rieltor.ua-Style Trust & Verification Desk</h3>
+            <h3 className="font-bold text-lg text-white">Verification requests</h3>
             <p className="text-xs text-slate-300">
-              Strict document accreditation review. Verified accounts receive the official Gold Shield badge and algorithmic priority.
+              Review submitted documents and record an approval decision.
             </p>
           </div>
         </div>
@@ -233,7 +233,7 @@ export const AdminVerificationDesk: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
                       <div className="text-xs text-slate-200 font-mono">
-                        Security Hash: SHA256:{selectedReq.id}-SECURE-VERIFY
+                        Request ID: {selectedReq.id}
                       </div>
                     </div>
                   </div>
