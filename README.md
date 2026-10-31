@@ -22,6 +22,8 @@ Buzzer uses Supabase Auth for email accounts and Supabase Postgres for app data.
    npm run dev
    ```
 
+For Hostinger Web Apps, set the Node.js entry file to `index.mjs`. It registers `tsx` so the Express server can start from `server.ts`; the build script generates the production frontend in `registropolis-main/dist`.
+
 Without Supabase environment variables, the server uses its local development data store. Supabase authentication and cloud persistence are unavailable in that mode.
 
 The first account is assigned the normal `user` role. To grant admin access after creating that account, run this SQL with its email address:
@@ -37,6 +39,8 @@ WHERE collection = 'users'
 ## Account access
 
 The client sign-in page does not offer demo-account shortcuts. New users create their own Supabase Auth account with an email address they control and confirm it using the verification email. Staff use the separate `/admin/login` page and must be granted an appropriate staff role by an administrator. Seed profiles and sample listings used during local development are example data, not login credentials or verified customer identities.
+
+Keep the Supabase service-role key only in the server's private environment variables. Never commit it, place it in a `VITE_` variable, or expose it in frontend source. If a service-role key has been committed previously, rotate it in Supabase before deploying.
 
 ## Data model
 

@@ -11,7 +11,6 @@ import { createAdapter as createRedisAdapter } from '@socket.io/redis-adapter';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer as createViteServer } from 'vite';
 import { SEED_USERS as ACCOUNTS_DATA, SEED_LISTINGS as LISTINGS_DATA, SEED_BUSINESSES as BUSINESSES_DATA, SeedBusiness } from './registropolis-main/src/data/seedAccounts';
-import { SUPABASE_CREDENTIALS } from './registropolis-main/src/config/supabaseCredentials';
 import { SupabaseCollection, type RecordCollection } from './supabaseStore';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,9 +23,9 @@ let socketServer: SocketIOServer | null = null;
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 
-const rawSupabaseUrl = (SUPABASE_CREDENTIALS.url || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
+const rawSupabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
 const SUPABASE_URL = rawSupabaseUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
-const SUPABASE_SERVICE_ROLE_KEY = (SUPABASE_CREDENTIALS.serviceRoleKey || process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const REELS_BUCKET = 'buzzer-reels';
 const REEL_MEDIA_TYPES: Record<string, string> = {
   'video/mp4': 'mp4',
@@ -3346,7 +3345,7 @@ app.get('/api/database/status', async (_req, res) => {
 
 // ── Start Server & Mount Vite ─────────────────────────────────
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 async function start() {
   await initializeDatabase();
