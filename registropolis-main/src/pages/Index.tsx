@@ -238,7 +238,6 @@ export default function Index() {
             </button>
           </motion.div>
           <div className="landing-hero-note"><span className="landing-live-dot" /> {t('A little more local. A lot more connected.')}</div>
-          <LandingHeroSearch />
           </div>
 
           <motion.div {...fade(0.18)} className="landing-visual" aria-label="Scenes from a connected neighborhood">
@@ -257,6 +256,7 @@ export default function Index() {
             </motion.div>
             <div className="landing-visual-stamp"><span>YOUR</span><strong>CITY</strong><span>IS CALLING</span><ArrowUpRight size={17} /></div>
           </motion.div>
+          <LandingHeroSearch />
         </div>
       </section>
 
