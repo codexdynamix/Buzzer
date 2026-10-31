@@ -1182,12 +1182,14 @@
 
 @media (max-width: 1023px) {
   .landing-hero-inner {
-    grid-template-columns: minmax(0, 0.9fr) minmax(390px, 1fr);
-    gap: 30px;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: clamp(28px, 4vw, 42px);
   }
 
   .landing-visual {
-    min-height: 470px;
+    min-height: clamp(400px, 55vw, 470px);
   }
 
   .landing-discovery-inner {
