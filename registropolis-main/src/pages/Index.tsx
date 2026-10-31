@@ -175,10 +175,12 @@ export default function Index() {
               {menuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
+        </div>
+
         {/* Mobile menu */}
         {menuOpen && (
           <div className="lg:hidden px-6 pb-5 pt-2 flex flex-col gap-3 border-t" style={{ backgroundColor: '#FAFAF7', borderColor: '#E8E2D8' }}>
-                        <button onClick={() => { setSearchOpen(true); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium sm:hidden" style={{ color: '#6E7A8A' }}>{t('Search')}</button><button onClick={() => { navigate('/dashboard/home'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Browse')}</button>
+            <button onClick={() => { setSearchOpen(true); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium sm:hidden" style={{ color: '#6E7A8A' }}>{t('Search')}</button>`n            <button onClick={() => { navigate('/dashboard/home'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Browse')}</button>
             <button onClick={() => { navigate('/dashboard/business?tab=ads'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Advertisements')}</button>
             <button onClick={() => { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('About')}</button>
             <button
