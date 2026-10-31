@@ -20,7 +20,14 @@ const app = express();
 const server = http.createServer(app);
 let socketServer: SocketIOServer | null = null;
 
-app.use(cors({ origin: '*', credentials: true }));
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3002,http://localhost:5000')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+app.use(cors({
+  origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
+  credentials: true,
+}));
 app.use(express.json({ limit: '10mb' }));
 
 const rawSupabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
