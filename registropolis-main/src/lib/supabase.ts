@@ -18,7 +18,7 @@ export function isSupabaseConfigured() {
 
 export function getSupabaseClient() {
   if (!isSupabaseConfigured()) {
-    throw new Error('Supabase is not configured. Set your credentials in registropolis-main/src/config/supabaseCredentials.ts or the .env file.');
+    throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the deployment environment.');
   }
 
   if (!client) {
@@ -27,4 +27,3 @@ export function getSupabaseClient() {
 
   return client;
 }
-
