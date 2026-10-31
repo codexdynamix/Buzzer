@@ -99,14 +99,14 @@ export default function Index() {
           </button>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-7 text-sm font-medium" style={{ color: '#6E7A8A' }}>
+          <div className="hidden lg:flex items-center gap-7 text-sm font-medium" style={{ color: '#6E7A8A' }}>
             <button onClick={() => navigate('/dashboard/home')} className="hover:text-[#0F1923] transition-colors">{t('Browse')}</button>
             <button onClick={() => navigate('/dashboard/business?tab=ads')} className="hover:text-[#0F1923] transition-colors">{t('Advertisements')}</button>
             <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-[#0F1923] transition-colors">{t('About')}</button>
           </div>
 
           {/* Desktop search + auth buttons + Post Listing */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
             {/* Quick Search Trigger */}
             <button
               onClick={() => setSearchOpen(true)}
@@ -148,25 +148,37 @@ export default function Index() {
             </button>
           </div>
 
-          {/* Mobile hamburger */}
-          <div className="flex md:hidden items-center gap-2">
+          {/* Compact navigation with account actions kept visible */}
+          <div className="flex lg:hidden items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setSearchOpen(true)}
-              className="p-2 text-[#0F1923] rounded-lg border border-[#D1C9BC] bg-white"
+              className="hidden sm:inline-flex p-2 text-[#0F1923] rounded-lg border border-[#D1C9BC] bg-white"
               aria-label="Search"
             >
               <Search size={18} />
             </button>
-            <button className="landing-menu-button" aria-label={t(menuOpen ? 'Close menu' : 'Open menu')} aria-expanded={menuOpen} onClick={() => setMenuOpen(o => !o)} style={{ color: '#0F1923' }}>
+            <button
+              onClick={() => navigate('/auth?mode=signin&method=email')}
+              className="shrink-0 whitespace-nowrap px-2.5 sm:px-3 py-2 text-[11px] sm:text-xs font-semibold rounded-lg border"
+              style={{ borderColor: '#D1C9BC', color: '#4A5568', backgroundColor: 'transparent' }}
+            >
+              {t('Sign In')}
+            </button>
+            <button
+              onClick={() => navigate('/auth?mode=signup')}
+              className="shrink-0 whitespace-nowrap px-2.5 sm:px-3 py-2 text-[11px] sm:text-xs font-semibold rounded-lg"
+              style={{ backgroundColor: '#1A3353', color: '#ffffff' }}
+            >
+              {t('Sign Up')}
+            </button>
+            <button className="landing-menu-button shrink-0" aria-label={t(menuOpen ? 'Close menu' : 'Open menu')} aria-expanded={menuOpen} onClick={() => setMenuOpen(o => !o)} style={{ color: '#0F1923' }}>
               {menuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
-        </div>
-
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="md:hidden px-6 pb-5 pt-2 flex flex-col gap-3 border-t" style={{ backgroundColor: '#FAFAF7', borderColor: '#E8E2D8' }}>
-            <button onClick={() => { navigate('/dashboard/home'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Browse')}</button>
+          <div className="lg:hidden px-6 pb-5 pt-2 flex flex-col gap-3 border-t" style={{ backgroundColor: '#FAFAF7', borderColor: '#E8E2D8' }}>
+                        <button onClick={() => { setSearchOpen(true); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium sm:hidden" style={{ color: '#6E7A8A' }}>{t('Search')}</button><button onClick={() => { navigate('/dashboard/home'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Browse')}</button>
             <button onClick={() => { navigate('/dashboard/business?tab=ads'); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('Advertisements')}</button>
             <button onClick={() => { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); setMenuOpen(false); }} className="text-left py-2 text-sm font-medium" style={{ color: '#6E7A8A' }}>{t('About')}</button>
             <button
@@ -177,22 +189,6 @@ export default function Index() {
               <PlusCircle size={15} /> + Post a Listing
             </button>
             <LanguagePicker className="w-full" />
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={() => { navigate('/auth?mode=signin&method=email'); setMenuOpen(false); }}
-                className="flex-1 py-3 text-sm font-semibold rounded-lg border"
-                style={{ borderColor: '#D1C9BC', color: '#4A5568' }}
-              >
-                {t('Sign In')}
-              </button>
-              <button
-                onClick={() => { navigate('/auth?mode=signup'); setMenuOpen(false); }}
-                className="flex-1 py-3 text-sm font-semibold rounded-lg"
-                style={{ backgroundColor: '#1A3353', color: '#ffffff' }}
-              >
-                {t('Sign Up')}
-              </button>
-            </div>
           </div>
         )}
       </nav>
