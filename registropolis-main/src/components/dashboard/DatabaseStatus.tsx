@@ -1,3 +1,4 @@
+import { apiUrl } from '@/lib/apiUrl';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ const DatabaseStatus: React.FC = () => {
   const loadCollectionStats = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch('/api/admin/db-stats', {
+      const res = await fetch(apiUrl('/api/admin/db-stats'), {
         headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
       });
       if (!res.ok) throw new Error('Failed to fetch stats');
