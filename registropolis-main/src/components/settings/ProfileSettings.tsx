@@ -1,3 +1,4 @@
+import { apiUrl } from '@/lib/apiUrl';
 import React, { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { Camera, Save, User, AtSign, Phone, MapPin, Info, Edit2, Check, X } from 'lucide-react';
@@ -79,7 +80,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user: propUser }) => 
         signal: profileData.signal,
         messenger: profileData.messenger,
       };
-      const res = await fetch('/api/users/me', {
+      const res = await fetch(apiUrl('/api/users/me'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
