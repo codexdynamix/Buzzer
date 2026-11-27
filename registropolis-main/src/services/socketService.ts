@@ -1,10 +1,11 @@
+import { getApiOrigin } from '@/lib/apiUrl';
 import { io, Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io('/', {
+    socket = io(getApiOrigin(), {
       transports: ['websocket', 'polling'],
       auth: callback => callback({ token: localStorage.getItem('auth_token') }),
       reconnection: true,

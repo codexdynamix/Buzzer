@@ -1,3 +1,4 @@
+import { apiUrl } from '@/lib/apiUrl';
 import { toast } from 'sonner';
 import type { CreateReelPayload, ReelComment, ReelRecord, UploadedReelMedia } from '@/types/reelTypes';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -68,7 +69,7 @@ export const apiRequest = async (
     throw new Error('Authentication required');
   }
   try {
-    const response = await fetch(`/api${endpoint}`, {
+    const response = await fetch(apiUrl(`/api${endpoint}`), {
       method,
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
       body: data !== undefined ? JSON.stringify(data) : undefined,

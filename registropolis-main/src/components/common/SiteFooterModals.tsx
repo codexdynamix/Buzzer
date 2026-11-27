@@ -1,3 +1,4 @@
+import { apiUrl } from '@/lib/apiUrl';
 import React, { useState } from 'react';
 import { X, ShieldCheck, FileText, Send, CheckCircle2, Lock, MessageSquare, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,7 +34,7 @@ export default function SiteFooterModals({ activeModal, onClose }: SiteFooterMod
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/support/contact', {
+      const res = await fetch(apiUrl('/api/support/contact'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,3 +1,4 @@
+import { apiUrl } from '@/lib/apiUrl';
 export interface AnalyticsData {
   date: string;
   metrics: {
@@ -23,7 +24,7 @@ function getAuthHeader(): Record<string, string> {
 }
 
 async function apiFetch(path: string, method = 'GET', body?: any) {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(apiUrl(`/api${path}`), {
     method,
     headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: body ? JSON.stringify(body) : undefined,

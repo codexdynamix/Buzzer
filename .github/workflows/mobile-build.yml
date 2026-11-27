@@ -1,0 +1,63 @@
+name: Mobile builds
+
+on:
+  push:
+    branches: [main, feat/capacitor-mobile]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://lightgray-pig-556081.hostingersite.com' }}
+  VITE_AUTH_REDIRECT_URL: ${{ vars.VITE_AUTH_REDIRECT_URL || 'https://lightgray-pig-556081.hostingersite.com/auth/reset-password' }}
+  VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+  VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm install
+      - run: npm run lint
+      - run: npm run build
+      - run: npx cap add android
+      - run: npx @capacitor/assets generate --android --iconBackgroundColor "#1e2d4a" --iconBackgroundColorDark "#1e2d4a" --splashBackgroundColor "#1e2d4a" --splashBackgroundColorDark "#1e2d4a"
+      - run: npx cap sync android
+      - run: cd android && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: buzzer-android-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run lint
+      - run: npm run build
+      - run: npx cap add ios
+      - run: npx @capacitor/assets generate --ios --iconBackgroundColor "#1e2d4a" --iconBackgroundColorDark "#1e2d4a" --splashBackgroundColor "#1e2d4a" --splashBackgroundColorDark "#1e2d4a"
+      - run: npx cap sync ios
+      - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build
+      - run: ditto -c -k --sequesterRsrc --keepParent build/ios/Build/Products/Debug-iphonesimulator/App.app build/Buzzer-iOS-Simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: buzzer-ios-simulator-app
+          path: build/Buzzer-iOS-Simulator.zip
+          if-no-files-found: error

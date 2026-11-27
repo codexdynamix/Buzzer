@@ -1,3 +1,4 @@
+import { apiUrl } from '@/lib/apiUrl';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessagesState, Message } from '@/types/messageTypes';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,7 +22,7 @@ function getAuthHeader(): Record<string, string> {
 
 async function fetchMessages(chatId: string): Promise<Message[]> {
   try {
-    const res = await fetch(`/api/messages/${chatId}`, { headers: getAuthHeader() });
+    const res = await fetch(apiUrl(`/api/messages/${chatId}`), { headers: getAuthHeader() });
     if (!res.ok) return [];
     const data = await res.json();
     const myId = getCurrentUserId();
@@ -40,7 +41,7 @@ async function fetchMessages(chatId: string): Promise<Message[]> {
 
 async function persistMessage(chatId: string, content: string, replyTo?: any): Promise<void> {
   try {
-    await fetch('/api/messages', {
+    await fetch(apiUrl('/api/messages'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
       body: JSON.stringify({ chatId, content, replyTo }),

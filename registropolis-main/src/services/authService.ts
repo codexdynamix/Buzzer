@@ -1,8 +1,9 @@
+import { apiUrl } from '@/lib/apiUrl';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { StaffRole } from '@/config/adminAccess';
 
-const API_BASE = '/api';
+const API_BASE = apiUrl('/api');
 
 export type AuthUser = {
   id: string;
@@ -105,7 +106,7 @@ export const realAuthAPI = {
 
   async sendPasswordReset(email: string) {
     const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo: (import.meta.env.VITE_AUTH_REDIRECT_URL || '').trim() || `${window.location.origin}/auth/reset-password`,
     });
     if (error) throw error;
   },
