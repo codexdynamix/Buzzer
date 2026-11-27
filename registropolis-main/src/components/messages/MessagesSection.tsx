@@ -1,3 +1,4 @@
+import { apiUrl } from '@/lib/apiUrl';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useChatContext } from '@/context/ChatContext';
@@ -860,7 +861,7 @@ const MessagesSection: React.FC = () => {
     }
 
     setIsContactsLoading(true);
-    fetch('/api/contacts', { headers: getAuthHeaders() })
+    fetch(apiUrl('/api/contacts'), { headers: getAuthHeaders() })
       .then(async response => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Could not load contacts');
@@ -970,7 +971,7 @@ const MessagesSection: React.FC = () => {
       }));
 
       const status = readNow ? 'read' : 'delivered';
-      void fetch(`/api/messages/${encodeURIComponent(msg.id)}/status`, {
+      void fetch(apiUrl(`/api/messages/${encodeURIComponent(msg.id)}/status`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ status }),
@@ -1115,7 +1116,7 @@ const MessagesSection: React.FC = () => {
 
     const chatId = getChatRoomId(user.id, id);
     try {
-      const response = await fetch(`/api/messages/${encodeURIComponent(chatId)}`, {
+      const response = await fetch(apiUrl(`/api/messages/${encodeURIComponent(chatId)}`), {
         headers: getAuthHeaders(),
       });
       const data = await response.json();
@@ -1146,7 +1147,7 @@ const MessagesSection: React.FC = () => {
         : contact
       ));
 
-      const readResponse = await fetch(`/api/messages/${encodeURIComponent(chatId)}/read`, {
+      const readResponse = await fetch(apiUrl(`/api/messages/${encodeURIComponent(chatId)}/read`), {
         method: 'PATCH',
         headers: getAuthHeaders(),
       });
@@ -1273,7 +1274,7 @@ const MessagesSection: React.FC = () => {
     setInput('');
 
     try {
-      const response = await fetch('/api/messages', {
+      const response = await fetch(apiUrl('/api/messages'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
