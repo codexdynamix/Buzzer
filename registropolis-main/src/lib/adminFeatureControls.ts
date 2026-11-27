@@ -1,3 +1,4 @@
+import { apiUrl } from '@/lib/apiUrl';
 import { APP_FEATURES } from '@/config/features';
 
 export interface AdminFeatureControl {
@@ -11,7 +12,7 @@ function getAuthHeader(): Record<string, string> {
 }
 
 async function apiFetch(path: string, method = 'GET', body?: any) {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(apiUrl(`/api${path}`), {
     method,
     headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
     body: body ? JSON.stringify(body) : undefined,
