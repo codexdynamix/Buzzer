@@ -1,3 +1,4 @@
+import { apiUrl } from '@/lib/apiUrl';
 import { AdminStats } from '@/types/adminTypes';
 import { BaseAdminService } from './BaseAdminService';
 
@@ -7,7 +8,7 @@ function getAuthHeader(): Record<string, string> {
 }
 
 async function apiFetch(path: string) {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(apiUrl(`/api${path}`), {
     headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
   });
   const data = await res.json().catch(() => ({}));
