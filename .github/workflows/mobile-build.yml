@@ -34,7 +34,7 @@ jobs:
       - run: npx cap add android
       - run: npx @capacitor/assets generate --android --iconBackgroundColor "#1e2d4a" --iconBackgroundColorDark "#1e2d4a" --splashBackgroundColor "#1e2d4a" --splashBackgroundColorDark "#1e2d4a"
       - run: npx cap sync android
-      - run: android/gradlew assembleDebug
+      - run: cd android && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: buzzer-android-debug-apk
@@ -54,7 +54,7 @@ jobs:
       - run: npx cap add ios
       - run: npx @capacitor/assets generate --ios --iconBackgroundColor "#1e2d4a" --iconBackgroundColorDark "#1e2d4a" --splashBackgroundColor "#1e2d4a" --splashBackgroundColorDark "#1e2d4a"
       - run: npx cap sync ios
-      - run: xcodebuild -workspace ios/App/App.xcworkspace -scheme App -sdk iphonesimulator -configuration Debug -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build
+      - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build
       - run: ditto -c -k --sequesterRsrc --keepParent build/ios/Build/Products/Debug-iphonesimulator/App.app build/Buzzer-iOS-Simulator.zip
       - uses: actions/upload-artifact@v4
         with:
