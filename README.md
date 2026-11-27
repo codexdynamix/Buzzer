@@ -45,3 +45,24 @@ Keep the Supabase service-role key only in the server's private environment vari
 ## Data model
 
 To keep the existing API behavior intact during migration, app records are stored as JSON documents in `app_records`, keyed by collection name and record ID. The table is not exposed to browser roles; the Express server accesses it with the service-role key. Supabase Auth owns credentials and sessions, while the app API continues to enforce profile, listing, messaging, and admin permissions.
+
+## iOS and Android apps
+
+Buzzer uses Capacitor to package the existing React app for iOS and Android. The app ID is currently `com.codexdynamix.buzzer`; confirm it is available and owned by your organization before store submission.
+
+For local development, install dependencies, build the web client, and generate the native project for the platform you are using:
+
+```sh
+npm install
+npm run build
+npm run mobile:add:android  # Android only
+npx cap sync android
+```
+
+On macOS, use `npm run mobile:add:ios` and `npx cap sync ios` instead. The `assets/icon.svg` file is the source used by the mobile asset generator.
+
+The mobile build uses `VITE_API_BASE_URL` to reach the deployed Express API. Set the GitHub Actions variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as well; without them, mobile sign-in and cloud data are not configured. `VITE_AUTH_REDIRECT_URL` should point to the deployed `/auth/reset-password` page.
+
+In Hostinger, preserve the current `CORS_ORIGIN` entries and add `https://localhost` and `capacitor://localhost` so the native WebViews can call the API and Socket.IO server. Do not place the Supabase service-role key in the mobile build.
+
+The Mobile builds workflow produces an Android debug APK and an iOS Simulator app for testing. They are not signed store-release packages. App Store and Play Store submission still requires organization-owned developer accounts, signing credentials, store metadata, privacy disclosures, and review approval.
