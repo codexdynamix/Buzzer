@@ -1,3 +1,4 @@
+import { getApiOrigin } from '@/lib/apiUrl';
 
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
@@ -26,7 +27,7 @@ class WebRTCService {
     this.username = username;
     
     // Connect to signaling server
-    this.socket = io('http://localhost:5000', {
+    this.socket = io(getApiOrigin(), {
       auth: {
         token: localStorage.getItem('auth_token') || ''
       }
