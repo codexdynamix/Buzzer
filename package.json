@@ -9,7 +9,10 @@
     "start": "tsx server.ts",
     "preview": "vite preview",
     "lint": "tsc -b registropolis-main/tsconfig.json",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "mobile:add:android": "cap add android",
+    "mobile:add:ios": "cap add ios",
+    "mobile:sync": "npm run build && cap sync"
   },
   "keywords": [],
   "author": "",
@@ -93,6 +96,13 @@
     "uuid": "^14.0.0",
     "vaul": "^1.1.2",
     "vite": "^8.0.16",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@capacitor/android": "^8.6.3",
+    "@capacitor/core": "^8.6.3",
+    "@capacitor/ios": "^8.6.3"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^8.6.3"
   }
 }
