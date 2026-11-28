@@ -9,7 +9,7 @@
     "start": "tsx server.ts",
     "preview": "vite preview",
     "lint": "tsc -b registropolis-main/tsconfig.json",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsx --test tests/listing-detail.test.mjs"
   },
   "keywords": [],
   "author": "",

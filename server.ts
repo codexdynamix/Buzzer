@@ -525,7 +525,7 @@ const SEED_USERS: User[] = [
     contactPhone: '+1 (555) 010-0001',
     createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
   },
-  // All 30 Real User accounts across the 6 sections!
+  // Development-only sample accounts across the six listing sections.
   ...ACCOUNTS_DATA.map(u => ({
     id: u.id,
     email: u.email,
@@ -551,6 +551,10 @@ const SEED_LISTINGS: Listing[] = [
     data: l.data,
   })),
 ];
+
+const PRODUCTION_FIXTURE_LISTING_IDS = new Set(SEED_LISTINGS.map(listing => String(listing.id)));
+const PRODUCTION_FIXTURE_BUSINESS_IDS = new Set(BUSINESSES_DATA.map(business => String(business.id)));
+const PRODUCTION_FIXTURE_USER_IDS = new Set(SEED_USERS.map(user => String(user.id)));
 
 const SEED_GROUPS: Group[] = [
   {
@@ -628,6 +632,8 @@ const SEED_STORIES: Story[] = [
   },
 ];
 
+const PRODUCTION_FIXTURE_STORY_IDS = new Set(SEED_STORIES.map(story => String(story.id)));
+
 async function initializeDatabase() {
   const hasSupabaseConfig = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
   if (hasSupabaseConfig) {
@@ -662,57 +668,28 @@ async function initializeDatabase() {
     analytics = new SupabaseCollection<AnalyticsRecord>(supabaseAdmin, 'analytics');
     verificationRequests = new SupabaseCollection<VerificationRequest>(supabaseAdmin, 'verification_requests');
 
-    const seedMissingRecords = async <T extends Record<string, any>>(
-      collection: RecordCollection<T>,
-      records: T[],
-    ) => {
-      const existingIds = new Set((await collection.find().toArray()).map(record => String(record.id ?? record.name ?? record.date ?? record.ticketId ?? record.token)));
-      for (const record of records) {
-        const key = String(record.id ?? record.name ?? record.date ?? record.ticketId ?? record.token);
-        if (!existingIds.has(key)) await collection.insertOne(record);
+    const defaultFeatureFlags: FeatureFlag[] = [
+      { name: 'instant_chat', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'system' },
+      { name: 'reels_feed', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'system' },
+    ];
+    for (const flag of defaultFeatureFlags) {
+      if (!(await featureFlags.findOne({ name: flag.name }))) {
+        await featureFlags.insertOne(flag);
       }
-    };
-
-    const initialAnalytics: AnalyticsRecord[] = [{
-      date: new Date().toISOString().split('T')[0],
-      metrics: { activeUsers: 31, newUsers: 30, messagesSent: 12, avgResponseTime: 45, errorRate: 0 },
-      pageViews: { home: 34, marketplace: 22, messages: 18, jobs: 12, services: 9 },
-      userActions: { login: 6, view_listing: 28, send_message: 8 },
-    }];
-
-    await Promise.all([
-      seedMissingRecords(users, SEED_USERS),
-      seedMissingRecords(listings, SEED_LISTINGS),
-      seedMissingRecords(businesses, BUSINESSES_DATA),
-      seedMissingRecords(groups, SEED_GROUPS),
-      seedMissingRecords(groupMessages, SEED_GROUP_MESSAGES),
-      seedMissingRecords(stories, SEED_STORIES),
-      seedMissingRecords(featureFlags, [
-        { name: 'instant_chat', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
-        { name: 'reels_feed', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
-      ]),
-      seedMissingRecords(supportTickets, [{
-        ticketId: 'tck_101',
-        userId: 'u_jordan',
-        subject: 'Feature Suggestion: Category Filter Tags',
-        description: 'Would love to filter marketplace listings by multiple tags.',
-        priority: 'low',
-        category: 'feature_request',
-        status: 'open',
-        createdAt: new Date(Date.now() - 3600000),
-        updatedAt: new Date(Date.now() - 3600000),
-      }]),
-      seedMissingRecords(analytics, initialAnalytics),
-    ]);
-
+    }
     databaseProvider = 'supabase';
     onDatabaseChange = null;
     console.log('Connected to Supabase Postgres');
     return;
     } catch (err) {
-      console.warn('Supabase initialization failed, falling back to local database store:', err);
+      console.error('Supabase initialization failed:', err);
       supabaseAdmin = null;
+      if (process.env.NODE_ENV === 'production') throw err;
     }
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Production requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY; local fixture storage is disabled.');
   }
 
   databaseProvider = 'local';
@@ -761,7 +738,7 @@ async function initializeDatabase() {
     console.warn('Could not read existing database file, bootstrapping clean data:', e);
   }
 
-  console.log('Booting database with 30 real user accounts across 6 sections.');
+  console.log('Booting local development database with sample fixture data.');
   users = new InMemoryCollection<User>(initialDump?.users || SEED_USERS);
   listings = new InMemoryCollection<Listing>(initialDump?.listings || SEED_LISTINGS);
   listingInteractions = new InMemoryCollection<ListingInteraction>(initialDump?.listingInteractions || []);
@@ -774,8 +751,8 @@ async function initializeDatabase() {
   groupMessages = new InMemoryCollection<GroupMessage>(initialDump?.groupMessages || SEED_GROUP_MESSAGES);
   adminLogs = new InMemoryCollection<AdminLog>(initialDump?.adminLogs || []);
   featureFlags = new InMemoryCollection<FeatureFlag>(initialDump?.featureFlags || [
-    { name: 'instant_chat', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
-    { name: 'reels_feed', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
+    { name: 'instant_chat', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'system' },
+    { name: 'reels_feed', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'system' },
   ]);
   userRestrictions = new InMemoryCollection<UserRestriction>(initialDump?.userRestrictions || []);
   stories = new InMemoryCollection<Story>(initialDump?.stories || SEED_STORIES);
@@ -1120,18 +1097,6 @@ function requireFeature(name: string) {
 app.get('/api/auth/me', authMiddleware, async (req: any, res) => {
   try {
     const user = await getOrCreateAuthProfile(req.authUser);
-    const seededProfile = ACCOUNTS_DATA.find(
-      account => account.email.trim().toLowerCase() === user.email?.trim().toLowerCase(),
-    );
-    if (seededProfile && seededProfile.id !== user.id) {
-      const seededListings = await listings.find({ userId: seededProfile.id }).toArray();
-      await Promise.all(seededListings.map(listing =>
-        listings.updateOne(
-          { id: listing.id, userId: seededProfile.id },
-          { $set: { userId: user.id } },
-        ),
-      ));
-    }
     res.json({ success: true, user: safeUser(user) });
   } catch (error) {
     console.error('Authenticated user profile lookup failed:', error);
@@ -1188,6 +1153,7 @@ app.get('/api/stores/:slug', async (req, res) => {
 app.get('/api/listings', async (_req, res) => {
   try {
     const all = (await listings.find({ status: 'active' }).sort({ createdAt: -1 }).toArray())
+      .filter(listing => databaseProvider !== 'supabase' || !PRODUCTION_FIXTURE_LISTING_IDS.has(String(listing.id)))
       .sort((left, right) => {
         const leftFeatured = left.promotionEndAt && new Date(left.promotionEndAt).getTime() > Date.now();
         const rightFeatured = right.promotionEndAt && new Date(right.promotionEndAt).getTime() > Date.now();
@@ -1757,7 +1723,9 @@ app.get('/api/jobs/:listingId/applications', authMiddleware, async (req: any, re
 app.get('/api/contacts', authMiddleware, async (req: any, res) => {
   try {
     const all = await users.find({ id: { $ne: req.user.userId } }).toArray();
-    const activeContacts = all.filter(contact => contact.role !== 'banned');
+    const activeContacts = all.filter(contact => contact.role !== 'banned' && (
+      databaseProvider !== 'supabase' || !PRODUCTION_FIXTURE_USER_IDS.has(String(contact.id))
+    ));
     res.json({ success: true, contacts: activeContacts.map(safeUser) });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
@@ -1949,7 +1917,8 @@ app.post('/api/groups/:id/messages', authMiddleware, requireFeature('group_creat
 app.get('/api/stories', authMiddleware, async (_req, res) => {
   try {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const activeStories = await stories.find({ timestamp: { $gte: oneDayAgo }, isExpired: false }).sort({ timestamp: -1 }).toArray();
+    const activeStories = (await stories.find({ timestamp: { $gte: oneDayAgo }, isExpired: false }).sort({ timestamp: -1 }).toArray())
+      .filter(story => databaseProvider !== 'supabase' || !PRODUCTION_FIXTURE_STORY_IDS.has(String(story.id)));
     res.json({ success: true, stories: activeStories });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
@@ -2449,6 +2418,9 @@ app.get('/api/businesses', async (req, res) => {
       query.isSponsored = true;
     }
     let list = await businesses.find(query).toArray();
+    if (databaseProvider === 'supabase') {
+      list = list.filter(business => !PRODUCTION_FIXTURE_BUSINESS_IDS.has(String(business.id)));
+    }
     if (search && search.trim()) {
       const q = search.toLowerCase().trim();
       list = list.filter((b: any) =>
@@ -2466,7 +2438,8 @@ app.get('/api/businesses', async (req, res) => {
 
 app.get('/api/advertisements', async (_req, res) => {
   try {
-    const ads = await businesses.find({ isSponsored: true }).toArray();
+    const ads = (await businesses.find({ isSponsored: true }).toArray())
+      .filter(business => databaseProvider !== 'supabase' || !PRODUCTION_FIXTURE_BUSINESS_IDS.has(String(business.id)));
     res.json({ success: true, advertisements: ads, data: ads });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
@@ -2476,7 +2449,9 @@ app.get('/api/advertisements', async (_req, res) => {
 app.get('/api/businesses/:id', async (req, res) => {
   try {
     const business = await businesses.findOne({ id: req.params.id });
-    if (!business) return res.status(404).json({ success: false, message: 'Business not found' });
+    if (!business || (databaseProvider === 'supabase' && PRODUCTION_FIXTURE_BUSINESS_IDS.has(String(business.id)))) {
+      return res.status(404).json({ success: false, message: 'Business not found' });
+    }
     res.json({ success: true, business, data: business });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });

@@ -81,9 +81,9 @@ export default function SiteFooterModals({ activeModal, onClose }: SiteFooterMod
                 {activeModal === 'contact' && 'Contact Buzzer Support'}
               </h3>
               <p className="text-xs text-[#6E7A8A]">
-                {activeModal === 'terms' && 'Community guidelines, seller code of conduct & guarantees'}
-                {activeModal === 'privacy' && 'End-to-end encryption & zero-data-sale commitment'}
-                {activeModal === 'contact' && 'Get in touch with our operations and trust team'}
+                {activeModal === 'terms' && 'Community guidelines & marketplace policies'}
+                {activeModal === 'privacy' && 'How Buzzer handles account, listing, and message data'}
+                {activeModal === 'contact' && 'Send a question or report a problem'}
               </p>
             </div>
           </div>
@@ -107,14 +107,14 @@ export default function SiteFooterModals({ activeModal, onClose }: SiteFooterMod
               <section className="space-y-1.5">
                 <h4 className="font-bold text-[#0F1923] text-sm">1. Community Conduct & Safe Trading</h4>
                 <p>
-                  Buzzer connects local residents, verified artisans, contractors, and merchants. All users agree to treat members with mutual respect, provide accurate descriptions for all listings, and conduct transactions in safe, public meeting places.
+                  Buzzer connects community members. Users agree to treat others respectfully, provide accurate listing descriptions, and take reasonable precautions when meeting or completing a transaction.
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-[#0F1923] text-sm">2. Prohibited Goods & Services</h4>
                 <p>
-                  Listings involving counterfeit goods, illegal substances, unregistered firearms, pyramid schemes, or unverified hazardous materials are strictly prohibited. Violators face immediate permanent suspension and listing removal via our moderation desk.
+                  Listings involving illegal goods or services, fraud, or other content prohibited by Buzzer policy are not allowed. Listings may be removed and accounts may be restricted when policy violations are found.
                 </p>
               </section>
 
@@ -126,14 +126,14 @@ export default function SiteFooterModals({ activeModal, onClose }: SiteFooterMod
               </section>
 
               <section className="space-y-1.5">
-                <h4 className="font-bold text-[#0F1923] text-sm">4. Buyer Protection & Disputes</h4>
+                <h4 className="font-bold text-[#0F1923] text-sm">4. Peer-to-Peer Transactions</h4>
                 <p>
-                  While Buzzer provides encrypted chat and seller verification badges, transactions are executed peer-to-peer. We recommend inspecting all goods prior to payment and reporting any fraudulent seller to our 24/7 moderation desk immediately.
+                  Buzzer helps users connect, but buyers and sellers arrange payment and delivery directly. Buzzer does not provide a buyer guarantee. Review listings carefully, meet safely, and use the in-app report option if you have a concern.
                 </p>
               </section>
 
               <p className="text-xs text-[#9CA3AF] pt-2">
-                Last updated: October 2026. For questions regarding terms, contact support@buzzer.local.
+                For help, use the contact form in the app.
               </p>
             </div>
           )}
@@ -143,21 +143,21 @@ export default function SiteFooterModals({ activeModal, onClose }: SiteFooterMod
               <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#1A3353]/10 border border-[#1A3353]/20 text-xs text-[#1A3353]">
                 <ShieldCheck size={20} className="shrink-0 text-[#1A3353]" />
                 <span>
-                  <strong>Zero-Data-Sale Policy:</strong> We never sell your personal data, chat logs, search history, or location records to third-party ad networks or brokers.
+                  <strong>Data Usage:</strong> Information submitted to Buzzer is processed to provide account, listing, messaging, and other app features. Avoid sharing sensitive information in public listings or messages.
                 </span>
               </div>
 
               <section className="space-y-1.5">
-                <h4 className="font-bold text-[#0F1923] text-sm">1. Encrypted Peer-to-Peer Messaging</h4>
+                <h4 className="font-bold text-[#0F1923] text-sm">1. Messages and In-App Communications</h4>
                 <p>
-                  Direct chat between buyers, sellers, service providers, and job seekers is encrypted in transit and protected by granular Row-Level Security (RLS) rules in our verified database. No third party or unauthorized user can inspect your private messages.
+                  Messages are sent through Buzzer and stored so participants can access their conversations. Messages are not end-to-end encrypted. Avoid sharing passwords, financial credentials, or other sensitive information in chat.
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-[#0F1923] text-sm">2. Account Credentials & Security</h4>
                 <p>
-                  User authentication is securely managed through Supabase cryptographic tokens. Passwords and identity credentials are encrypted with salt hashing and never stored in plain text.
+                  Buzzer uses Supabase Authentication to manage sign-in credentials. Keep your password private and use a strong, unique password for your account.
                 </p>
               </section>
 

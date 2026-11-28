@@ -175,7 +175,7 @@ export default function LandingHeroSearch() {
       <div className="mt-4 pt-3 border-t border-[#E8E2D8]/80 flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-[#6E7A8A]">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-semibold text-[#0F1923]">65+ Active Community Members</span>
+          <span className="font-semibold text-[#0F1923]">Explore local community listings</span>
         </div>
         <div className="flex items-center gap-1">
           <span className="text-[#C9A96E]">★</span>
@@ -183,7 +183,7 @@ export default function LandingHeroSearch() {
         </div>
         <div className="flex items-center gap-1">
           <span className="text-[#C9A96E]">✓</span>
-          <span>Instant Encrypted Chat</span>
+          <span>Message sellers directly</span>
         </div>
       </div>
     </div>
