@@ -552,6 +552,9 @@ const SEED_LISTINGS: Listing[] = [
   })),
 ];
 
+const PRODUCTION_FIXTURE_LISTING_IDS = new Set(SEED_LISTINGS.map(listing => String(listing.id)));
+const PRODUCTION_FIXTURE_BUSINESS_IDS = new Set(BUSINESSES_DATA.map(business => String(business.id)));
+
 const SEED_GROUPS: Group[] = [
   {
     id: 'grp_1',
@@ -1147,6 +1150,7 @@ app.get('/api/stores/:slug', async (req, res) => {
 app.get('/api/listings', async (_req, res) => {
   try {
     const all = (await listings.find({ status: 'active' }).sort({ createdAt: -1 }).toArray())
+      .filter(listing => databaseProvider !== 'supabase' || !PRODUCTION_FIXTURE_LISTING_IDS.has(String(listing.id)))
       .sort((left, right) => {
         const leftFeatured = left.promotionEndAt && new Date(left.promotionEndAt).getTime() > Date.now();
         const rightFeatured = right.promotionEndAt && new Date(right.promotionEndAt).getTime() > Date.now();
@@ -2408,6 +2412,9 @@ app.get('/api/businesses', async (req, res) => {
       query.isSponsored = true;
     }
     let list = await businesses.find(query).toArray();
+    if (databaseProvider === 'supabase') {
+      list = list.filter(business => !PRODUCTION_FIXTURE_BUSINESS_IDS.has(String(business.id)));
+    }
     if (search && search.trim()) {
       const q = search.toLowerCase().trim();
       list = list.filter((b: any) =>
@@ -2425,7 +2432,8 @@ app.get('/api/businesses', async (req, res) => {
 
 app.get('/api/advertisements', async (_req, res) => {
   try {
-    const ads = await businesses.find({ isSponsored: true }).toArray();
+    const ads = (await businesses.find({ isSponsored: true }).toArray())
+      .filter(business => databaseProvider !== 'supabase' || !PRODUCTION_FIXTURE_BUSINESS_IDS.has(String(business.id)));
     res.json({ success: true, advertisements: ads, data: ads });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
@@ -2435,7 +2443,9 @@ app.get('/api/advertisements', async (_req, res) => {
 app.get('/api/businesses/:id', async (req, res) => {
   try {
     const business = await businesses.findOne({ id: req.params.id });
-    if (!business) return res.status(404).json({ success: false, message: 'Business not found' });
+    if (!business || (databaseProvider === 'supabase' && PRODUCTION_FIXTURE_BUSINESS_IDS.has(String(business.id)))) {
+      return res.status(404).json({ success: false, message: 'Business not found' });
+    }
     res.json({ success: true, business, data: business });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
