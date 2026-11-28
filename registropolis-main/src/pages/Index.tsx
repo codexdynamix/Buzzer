@@ -36,14 +36,14 @@ const FEATURES = [
   { icon: ShoppingBag, title: 'Marketplace', desc: 'Browse local listings and connect directly with sellers.', section: 'marketplace' },
   { icon: Briefcase, title: 'Careers', desc: 'Explore job listings shared by employers and community members.', section: 'jobs' },
   { icon: Wrench, title: 'Professional Services', desc: 'Find service listings shared by providers in your community.', section: 'services' },
-  { icon: Home, title: 'Real Estate', desc: 'Residential and commercial listings. Partner directly with licensed agents. No intermediaries.', section: 'real-estate' },
+  { icon: Home, title: 'Real Estate', desc: 'Browse residential and commercial listings shared by local providers.', section: 'real-estate' },
   { icon: Bus, title: 'Transport', desc: 'Browse available vehicles and transport listings from the community.', section: 'transport' },
-  { icon: Calendar, title: 'Events', desc: 'Curated cultural, professional, and community events. Discover what defines your city.', section: 'events' },
+  { icon: Calendar, title: 'Events', desc: 'Find cultural, professional, and community events shared in your area.', section: 'events' },
   { icon: Megaphone, title: 'Businesses & Advertisements', desc: 'Browse local businesses and all sponsored community advertisements.', section: 'business?tab=ads' },
 ];
 
 const PILLARS = [
-  { icon: Shield, title: 'Privacy First', desc: 'End-to-end encryption and zero-data-sale policy.' },
+  { icon: Shield, title: 'Privacy First', desc: 'Manage your account and communicate with the community in one place.' },
   { icon: Zap, title: 'Instant Access', desc: 'Real-time listings, messaging, and updates.' },
   { icon: Globe, title: 'Local Precision', desc: 'Hyperlocal intelligence for your exact community.' },
 ];
