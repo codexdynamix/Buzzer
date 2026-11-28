@@ -8,7 +8,7 @@ import {
   Flag, X, AlertTriangle, Bell, BellOff,
 } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
-import { cn, listingDetailPath } from '@/lib/utils';
+import { cn, listingDetailPath, normalizeListingSection } from '@/lib/utils';
 import { useSaved } from '@/context/SavedContext';
 import { useRecentlyViewed } from '@/context/RecentlyViewedContext';
 import { usePriceAlerts } from '@/context/PriceAlertContext';
@@ -138,16 +138,17 @@ export default function ListingDetailPage() {
   });
 
   const listing: any = state?.listing ?? decodeListingData(searchParams.get('d') ?? '');
+  const sec = normalizeListingSection(section ?? 'marketplace');
 
   useEffect(() => {
-    if (listing && section) {
-      recordView(section, listing);
+    if (listing) {
+      recordView(sec, listing);
       if (isAuthenticated && listing.userId !== user?.id) {
         void listingEngagementAPI.record(listing.id, 'view')
           .catch(error => console.error('Could not record listing view:', error));
       }
     }
-  }, [listing?.id, section, isAuthenticated, user?.id]);
+  }, [listing?.id, sec, isAuthenticated, user?.id]);
 
   useEffect(() => {
     if (!listing?.id) return;
@@ -178,7 +179,6 @@ export default function ListingDetailPage() {
     );
   }
 
-  const sec = section ?? 'marketplace';
   const isOwnListing = user?.id === listing.userId;
   const sellerListingCount = getAllListings().filter(item =>
     item.seller === listing.seller && item.userId === listing.userId
@@ -1027,7 +1027,19 @@ export default function ListingDetailPage() {
     );
   }
 
-  return null;
+  return (
+    <div className="flex flex-col items-center justify-center py-32 text-center" style={{ color: '#6E7A8A' }}>
+      <p className="text-lg font-semibold mb-2" style={{ color: '#0F1923' }}>This listing type is unavailable</p>
+      <p className="text-sm mb-6">You can return to the marketplace and continue browsing.</p>
+      <button
+        onClick={() => navigate('/dashboard/marketplace')}
+        className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+        style={{ backgroundColor: '#1A3353', color: '#fff' }}
+      >
+        Browse marketplace
+      </button>
+    </div>
+  );
 }
 
 /* ─── similar listings ───────────────────────────────────────────── */
