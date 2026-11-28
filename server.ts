@@ -554,6 +554,7 @@ const SEED_LISTINGS: Listing[] = [
 
 const PRODUCTION_FIXTURE_LISTING_IDS = new Set(SEED_LISTINGS.map(listing => String(listing.id)));
 const PRODUCTION_FIXTURE_BUSINESS_IDS = new Set(BUSINESSES_DATA.map(business => String(business.id)));
+const PRODUCTION_FIXTURE_USER_IDS = new Set(SEED_USERS.map(user => String(user.id)));
 
 const SEED_GROUPS: Group[] = [
   {
@@ -630,6 +631,8 @@ const SEED_STORIES: Story[] = [
     isExpired: false,
   },
 ];
+
+const PRODUCTION_FIXTURE_STORY_IDS = new Set(SEED_STORIES.map(story => String(story.id)));
 
 async function initializeDatabase() {
   const hasSupabaseConfig = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
@@ -1720,7 +1723,9 @@ app.get('/api/jobs/:listingId/applications', authMiddleware, async (req: any, re
 app.get('/api/contacts', authMiddleware, async (req: any, res) => {
   try {
     const all = await users.find({ id: { $ne: req.user.userId } }).toArray();
-    const activeContacts = all.filter(contact => contact.role !== 'banned');
+    const activeContacts = all.filter(contact => contact.role !== 'banned' && (
+      databaseProvider !== 'supabase' || !PRODUCTION_FIXTURE_USER_IDS.has(String(contact.id))
+    ));
     res.json({ success: true, contacts: activeContacts.map(safeUser) });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
@@ -1912,7 +1917,8 @@ app.post('/api/groups/:id/messages', authMiddleware, requireFeature('group_creat
 app.get('/api/stories', authMiddleware, async (_req, res) => {
   try {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const activeStories = await stories.find({ timestamp: { $gte: oneDayAgo }, isExpired: false }).sort({ timestamp: -1 }).toArray();
+    const activeStories = (await stories.find({ timestamp: { $gte: oneDayAgo }, isExpired: false }).sort({ timestamp: -1 }).toArray())
+      .filter(story => databaseProvider !== 'supabase' || !PRODUCTION_FIXTURE_STORY_IDS.has(String(story.id)));
     res.json({ success: true, stories: activeStories });
   } catch (err: any) { res.status(500).json({ message: err.message }); }
 });
