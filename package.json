@@ -9,7 +9,7 @@
     "start": "tsx server.ts",
     "preview": "vite preview",
     "lint": "tsc -b registropolis-main/tsconfig.json",
-    "test": "tsx --test registropolis-main/src/lib/utils.test.ts"
+    "test": "tsx --test tests/listing-detail.test.mjs"
   },
   "keywords": [],
   "author": "",
