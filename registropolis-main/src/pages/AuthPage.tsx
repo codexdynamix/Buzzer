@@ -202,7 +202,7 @@ export default function AuthPage() {
                 <div className="w-9 h-9 rounded-lg bg-[#F5F0E8] flex items-center justify-center text-[#1A3353] mb-2.5">
                   <MessageSquare size={18} />
                 </div>
-                <h3 className="font-bold text-sm text-[#0F1923]">Encrypted Chat</h3>
+                <h3 className="font-bold text-sm text-[#0F1923]">Direct Messaging</h3>
                 <p className="text-xs text-[#6E7A8A] mt-0.5">Real-time messaging, instant offers, and direct negotiations.</p>
               </div>
             </div>
