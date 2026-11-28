@@ -166,10 +166,10 @@ export default function AuthPage() {
                 One Account for Everything in Your City
               </div>
               <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-[#0F1923] leading-tight">
-                Connect, trade, and discover with verified local creators.
+                Connect, trade, and discover in your local community.
               </h1>
               <p className="mt-3 text-base text-[#6E7A8A] leading-relaxed">
-                Join a decentralized community of artisans, professionals, brokers, and verified sellers across 6 thriving city verticals.
+                Join community members sharing local listings, services, opportunities, and events.
               </p>
             </div>
 
@@ -187,7 +187,7 @@ export default function AuthPage() {
                   <Home size={18} />
                 </div>
                 <h3 className="font-bold text-sm text-[#0F1923]">Real Estate</h3>
-                <p className="text-xs text-[#6E7A8A] mt-0.5">Architectural lofts, live-work studios & verified rentals.</p>
+                <p className="text-xs text-[#6E7A8A] mt-0.5">Explore residential and commercial property listings.</p>
               </div>
 
               <div className="p-4 rounded-xl border border-[#E8E2D8] bg-white shadow-xs">
@@ -210,7 +210,7 @@ export default function AuthPage() {
             <div className="flex items-center gap-3 pt-2 text-xs text-[#6E7A8A]">
               <div className="flex items-center gap-1.5 text-emerald-600 font-semibold">
                 <ShieldCheck size={16} />
-                <span>Supabase Protected & Verified</span>
+                <span>Sign-in managed by Supabase</span>
               </div>
               <span>•</span>
               <span>No spam, private data never sold</span>
