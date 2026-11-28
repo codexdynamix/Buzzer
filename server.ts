@@ -525,7 +525,7 @@ const SEED_USERS: User[] = [
     contactPhone: '+1 (555) 010-0001',
     createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
   },
-  // All 30 Real User accounts across the 6 sections!
+  // Development-only sample accounts across the six listing sections.
   ...ACCOUNTS_DATA.map(u => ({
     id: u.id,
     email: u.email,
@@ -662,57 +662,28 @@ async function initializeDatabase() {
     analytics = new SupabaseCollection<AnalyticsRecord>(supabaseAdmin, 'analytics');
     verificationRequests = new SupabaseCollection<VerificationRequest>(supabaseAdmin, 'verification_requests');
 
-    const seedMissingRecords = async <T extends Record<string, any>>(
-      collection: RecordCollection<T>,
-      records: T[],
-    ) => {
-      const existingIds = new Set((await collection.find().toArray()).map(record => String(record.id ?? record.name ?? record.date ?? record.ticketId ?? record.token)));
-      for (const record of records) {
-        const key = String(record.id ?? record.name ?? record.date ?? record.ticketId ?? record.token);
-        if (!existingIds.has(key)) await collection.insertOne(record);
+    const defaultFeatureFlags: FeatureFlag[] = [
+      { name: 'instant_chat', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'system' },
+      { name: 'reels_feed', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'system' },
+    ];
+    for (const flag of defaultFeatureFlags) {
+      if (!(await featureFlags.findOne({ name: flag.name }))) {
+        await featureFlags.insertOne(flag);
       }
-    };
-
-    const initialAnalytics: AnalyticsRecord[] = [{
-      date: new Date().toISOString().split('T')[0],
-      metrics: { activeUsers: 31, newUsers: 30, messagesSent: 12, avgResponseTime: 45, errorRate: 0 },
-      pageViews: { home: 34, marketplace: 22, messages: 18, jobs: 12, services: 9 },
-      userActions: { login: 6, view_listing: 28, send_message: 8 },
-    }];
-
-    await Promise.all([
-      seedMissingRecords(users, SEED_USERS),
-      seedMissingRecords(listings, SEED_LISTINGS),
-      seedMissingRecords(businesses, BUSINESSES_DATA),
-      seedMissingRecords(groups, SEED_GROUPS),
-      seedMissingRecords(groupMessages, SEED_GROUP_MESSAGES),
-      seedMissingRecords(stories, SEED_STORIES),
-      seedMissingRecords(featureFlags, [
-        { name: 'instant_chat', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
-        { name: 'reels_feed', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
-      ]),
-      seedMissingRecords(supportTickets, [{
-        ticketId: 'tck_101',
-        userId: 'u_jordan',
-        subject: 'Feature Suggestion: Category Filter Tags',
-        description: 'Would love to filter marketplace listings by multiple tags.',
-        priority: 'low',
-        category: 'feature_request',
-        status: 'open',
-        createdAt: new Date(Date.now() - 3600000),
-        updatedAt: new Date(Date.now() - 3600000),
-      }]),
-      seedMissingRecords(analytics, initialAnalytics),
-    ]);
-
+    }
     databaseProvider = 'supabase';
     onDatabaseChange = null;
     console.log('Connected to Supabase Postgres');
     return;
     } catch (err) {
-      console.warn('Supabase initialization failed, falling back to local database store:', err);
+      console.error('Supabase initialization failed:', err);
       supabaseAdmin = null;
+      if (process.env.NODE_ENV === 'production') throw err;
     }
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Production requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY; local fixture storage is disabled.');
   }
 
   databaseProvider = 'local';
@@ -761,7 +732,7 @@ async function initializeDatabase() {
     console.warn('Could not read existing database file, bootstrapping clean data:', e);
   }
 
-  console.log('Booting database with 30 real user accounts across 6 sections.');
+  console.log('Booting local development database with sample fixture data.');
   users = new InMemoryCollection<User>(initialDump?.users || SEED_USERS);
   listings = new InMemoryCollection<Listing>(initialDump?.listings || SEED_LISTINGS);
   listingInteractions = new InMemoryCollection<ListingInteraction>(initialDump?.listingInteractions || []);
@@ -774,8 +745,8 @@ async function initializeDatabase() {
   groupMessages = new InMemoryCollection<GroupMessage>(initialDump?.groupMessages || SEED_GROUP_MESSAGES);
   adminLogs = new InMemoryCollection<AdminLog>(initialDump?.adminLogs || []);
   featureFlags = new InMemoryCollection<FeatureFlag>(initialDump?.featureFlags || [
-    { name: 'instant_chat', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
-    { name: 'reels_feed', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'u_admin' },
+    { name: 'instant_chat', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'system' },
+    { name: 'reels_feed', enabled: true, scope: 'global', lastModified: new Date(), modifiedBy: 'system' },
   ]);
   userRestrictions = new InMemoryCollection<UserRestriction>(initialDump?.userRestrictions || []);
   stories = new InMemoryCollection<Story>(initialDump?.stories || SEED_STORIES);
@@ -1120,18 +1091,6 @@ function requireFeature(name: string) {
 app.get('/api/auth/me', authMiddleware, async (req: any, res) => {
   try {
     const user = await getOrCreateAuthProfile(req.authUser);
-    const seededProfile = ACCOUNTS_DATA.find(
-      account => account.email.trim().toLowerCase() === user.email?.trim().toLowerCase(),
-    );
-    if (seededProfile && seededProfile.id !== user.id) {
-      const seededListings = await listings.find({ userId: seededProfile.id }).toArray();
-      await Promise.all(seededListings.map(listing =>
-        listings.updateOne(
-          { id: listing.id, userId: seededProfile.id },
-          { $set: { userId: user.id } },
-        ),
-      ));
-    }
     res.json({ success: true, user: safeUser(user) });
   } catch (error) {
     console.error('Authenticated user profile lookup failed:', error);
