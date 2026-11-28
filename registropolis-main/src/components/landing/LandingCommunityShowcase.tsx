@@ -55,7 +55,7 @@ export default function LandingCommunityShowcase() {
   useEffect(() => {
     businessesAPI.getAdvertisements()
       .then(res => setSponsoredAds(res.advertisements || res.data || []))
-      .catch(() => {});
+      .catch(error => console.error('Could not load sponsored listings:', error));
   }, []);
 
   const listings = useMemo(
