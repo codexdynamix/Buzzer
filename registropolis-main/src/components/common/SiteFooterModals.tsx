@@ -143,7 +143,7 @@ export default function SiteFooterModals({ activeModal, onClose }: SiteFooterMod
               <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#1A3353]/10 border border-[#1A3353]/20 text-xs text-[#1A3353]">
                 <ShieldCheck size={20} className="shrink-0 text-[#1A3353]" />
                 <span>
-                  <strong>Zero-Data-Sale Policy:</strong> We never sell your personal data, chat logs, search history, or location records to third-party ad networks or brokers.
+                  <strong>Data Usage:</strong> Information submitted to Buzzer is processed to provide account, listing, messaging, and other app features. Avoid sharing sensitive information in public listings or messages.
                 </span>
               </div>
 
