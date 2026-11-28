@@ -31,13 +31,13 @@ function LanguagePicker({ className = '' }: { className?: string }) {
 }
 
 const FEATURES = [
-  { icon: MessageSquare, title: 'Encrypted Messaging', desc: 'Military-grade end-to-end encryption for every conversation. Privacy is not a feature — it is the foundation.', section: 'messages' },
+  { icon: MessageSquare, title: 'Direct Messaging', desc: 'Chat with community members to ask questions and coordinate.', section: 'messages' },
   { icon: Play, title: 'Community Reels', desc: 'Discover short videos, creators, and community stories from around your city.', section: 'reels' },
-  { icon: ShoppingBag, title: 'Marketplace', desc: 'Buy and sell locally with zero commission. Every transaction protected by our Buyer Guarantee.', section: 'marketplace' },
-  { icon: Briefcase, title: 'Careers', desc: 'Curated opportunities from the world\'s most innovative companies and emerging local leaders.', section: 'jobs' },
-  { icon: Wrench, title: 'Professional Services', desc: 'Verified, insured, and rated professionals. From architects to plumbers — all in one address book.', section: 'services' },
+  { icon: ShoppingBag, title: 'Marketplace', desc: 'Browse local listings and connect directly with sellers.', section: 'marketplace' },
+  { icon: Briefcase, title: 'Careers', desc: 'Explore job listings shared by employers and community members.', section: 'jobs' },
+  { icon: Wrench, title: 'Professional Services', desc: 'Find service listings shared by providers in your community.', section: 'services' },
   { icon: Home, title: 'Real Estate', desc: 'Residential and commercial listings. Partner directly with licensed agents. No intermediaries.', section: 'real-estate' },
-  { icon: Bus, title: 'Transport', desc: 'Premium vehicles and verified sellers. Every listing inspected and certified by our team.', section: 'transport' },
+  { icon: Bus, title: 'Transport', desc: 'Browse available vehicles and transport listings from the community.', section: 'transport' },
   { icon: Calendar, title: 'Events', desc: 'Curated cultural, professional, and community events. Discover what defines your city.', section: 'events' },
   { icon: Megaphone, title: 'Businesses & Advertisements', desc: 'Browse local businesses and all sponsored community advertisements.', section: 'business?tab=ads' },
 ];
@@ -427,7 +427,7 @@ export default function Index() {
             Ready to join your community?
           </h2>
           <p className="text-lg mb-12" style={{ color: '#6E7A8A', maxWidth: '40ch', margin: '0 auto 3rem' }}>
-            Millions of users are already connected. Free to join, forever.
+            Free to join. Explore local listings, services, jobs, and events from your community.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
